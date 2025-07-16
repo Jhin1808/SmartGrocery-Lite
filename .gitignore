@@ -3,6 +3,24 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Python envs
+__pycache__/
+*.py[cod]
+.venv/
+env/
+*.egg-info/
+
+# Node / React
+node_modules/
+build/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Docker
+*.env
+
 # C extensions
 *.so
 
