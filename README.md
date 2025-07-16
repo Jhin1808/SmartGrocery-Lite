@@ -1,2 +1,2 @@
 # SmartGrocery-Lite
-A collaborative grocery-list &amp; simple meal-planner 
+SmartGrocery Lite is a PWA for shared grocery lists, expiry reminders, and one-click recipe→list conversion
