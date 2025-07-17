@@ -1,9 +1,12 @@
-uvicorn[standard]
-sqlalchemy
-psycopg2-binary
-python-jose[cryptography]     # for JWT
-pyotp                         # for TOTP 2FA
-google-auth                   # or authlib for OAuth
-python-dotenv                 # to load .env vars
+#ORM  & Database Migrations
+alembic
+sqlmodel
 fastapi==0.116.1
 uvicorn[standard]==0.22.0
+sqlalchemy
+psycopg2-binary
+python-jose[cryptography]
+pyotp
+google-auth
+python-dotenv
+
