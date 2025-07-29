@@ -26,6 +26,7 @@ class User(Base):
 class GroceryList(Base):
     __tablename__ = "grocery_list"
     id = Column(Integer, primary_key=True)
+    name     = Column(String, nullable=False)            # ← add this
     owner_id = Column(Integer, ForeignKey("user.id"))
     owner = relationship("User", back_populates="lists")
 
