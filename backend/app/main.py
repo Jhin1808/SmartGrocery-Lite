@@ -1,11 +1,22 @@
 # app/main.py
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
+from app.routers.lists import router as lists_router
+
 import os
 import sqlalchemy
 
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-app = FastAPI()
+app = FastAPI(
+    title="SmartGrocery Lite API",
+    version="0.1.0"
+)
+
+# # Mount your lists router at /lists
+# app.include_router(lists_router, prefix="/lists", tags=["lists"])
+
+# mount your /lists endpoints
+app.include_router(lists_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -14,6 +25,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 #Checking connection to database
 engine = sqlalchemy.create_engine(os.getenv("DATABASE_URL"))
@@ -24,7 +36,8 @@ with engine.connect() as conn:
 
 @app.get("/")
 def read_root():
-    return {"Hello": "World"}
+    return {"message": "Welcome to SmartGrocery Lite API"}
+
 
 
 @app.get("/items/{item_id}")
