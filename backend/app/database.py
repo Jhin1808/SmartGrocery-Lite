@@ -26,8 +26,17 @@ def get_db():
         db.close()
 
 def init_db():
-    """
-    Create tables (and optionally seed a default user).
-    """
+    # create tables (no-op if they already exist)
     Base.metadata.create_all(bind=engine)
-    # Optional seed logic here...
+
+    # ensure default dev user exists
+    default_email = os.getenv("DEFAULT_USER_EMAIL", "demo@example.com")
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.email == default_email).first()
+        if not user:
+            user = User(email=default_email)
+            db.add(user)
+            db.commit()
+    finally:
+        db.close()
