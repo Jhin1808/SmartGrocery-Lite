@@ -3,13 +3,20 @@ from datetime import date
 from sqlalchemy import Column, String, Integer, Date, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, relationship
 
+from argon2 import PasswordHasher
+from jwt import PyJWTError
+
+
+
 class Base(DeclarativeBase):
     pass
 
 class User(Base):
     __tablename__ = "user"
     id = Column(Integer, primary_key=True)
-    email = Column(String, unique=True, index=True)
+    #adding hash password
+    password_hash = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
 
     # one-to-many
     lists = relationship(
