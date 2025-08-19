@@ -2,6 +2,7 @@
 from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import date
+from pydantic import BaseModel, EmailStr, Field
 
 class ListCreate(BaseModel):
     name: str
@@ -25,3 +26,17 @@ class ItemRead(BaseModel):
     expiry: Optional[date]
     list_id: int
     model_config = ConfigDict(from_attributes=True)
+
+
+# --- Auth ---
+class RegisterRequest(BaseModel):
+    email: EmailStr = Field(..., examples=["alice@example.com"])
+    password: str = Field(..., min_length=8, examples=["pass12345"])
+
+class UserRead(BaseModel):
+    id: int
+    email: EmailStr
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"

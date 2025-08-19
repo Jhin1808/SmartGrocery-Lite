@@ -5,7 +5,7 @@ import jwt
 
 from app.database import get_db
 from app.models import User
-from app.security import decode_token  # uses the same SECRET_KEY/ALGORITHM
+from app.security import decode_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
