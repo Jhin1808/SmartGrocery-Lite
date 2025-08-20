@@ -1,25 +1,22 @@
-import logo from './logo.svg';
-import './App.css';
+import { useState } from "react";
+import Login from "./pages/Login";
+import Lists from "./pages/Lists";
+import { setToken } from "./api";
 
-function App() {
+export default function App() {
+  const [token, setTok] = useState(null);
+
+  const onLoggedIn = (t) => { setTok(t); setToken(t); };
+  const logout = () => { setTok(null); setToken(null); };
+
+  if (!token) return <Login onLoggedIn={onLoggedIn} />;
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <div style={{display:"flex",justifyContent:"flex-end",padding:12}}>
+        <button onClick={logout}>Log out</button>
+      </div>
+      <Lists />
     </div>
   );
 }
-
-export default App;
