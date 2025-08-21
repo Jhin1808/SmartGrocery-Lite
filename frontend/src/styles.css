@@ -1,0 +1,98 @@
+:root {
+    --p: #1266f1;
+    --b: #111;
+    --muted: #666;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    color: var(--b);
+}
+
+.auth-wrap {
+    max-width: 520px;
+    margin: 48px auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.tab {
+    padding: 10px 16px;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    border-radius: 10px 10px 0 0;
+}
+
+.tab.active {
+    background: #eef4ff;
+    color: var(--p);
+    font-weight: 600;
+}
+
+.row {
+    display: grid;
+    gap: 10px;
+}
+
+.input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.btn {
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--p);
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+.btn-ghost {
+    background: transparent;
+    border: 1px solid #ddd;
+    color: var(--b);
+}
+
+.center {
+    text-align: center;
+}
+
+.socials {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.error {
+    color: #b00020;
+}
+
+.header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
