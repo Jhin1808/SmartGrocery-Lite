@@ -115,26 +115,50 @@ def get_items(
 #     return db.execute(select(ListItem).where(ListItem.list_id == list_id)).scalars().all()
 
 
-# Delete an item only if it belongs to one of your lists
+# # Delete an item only if it belongs to one of your lists
+# @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+# def delete_item(
+#     item_id: int,
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_current_user),
+# ):
+#     item = db.get(ListItem, item_id)
+#     if not item:
+#         raise HTTPException(status_code=404, detail="Item not found")
+
+#     parent = db.get(GroceryList, item.list_id)
+#     if not parent or parent.owner_id != current_user.id:
+#         # Don’t leak existence
+#         raise HTTPException(status_code=404, detail="Item not found")
+
+#     db.delete(item); db.commit()
+#     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_item(
-    item_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+def delete_item(item_id: int, db: Session = Depends(get_db)):
     item = db.get(ListItem, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
-
-    parent = db.get(GroceryList, item.list_id)
-    if not parent or parent.owner_id != current_user.id:
-        # Don’t leak existence
-        raise HTTPException(status_code=404, detail="Item not found")
-
-    db.delete(item); db.commit()
+    db.delete(item)
+    db.commit()
+    # IMPORTANT: return an empty response (no JSON body)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-
+# @router.patch("/items/{item_id}", response_model=ItemRead)
+# def update_item(item_id: int, payload: ItemUpdate, db: Session = Depends(get_db)):
+#     item = db.get(ListItem, item_id)
+#     if not item:
+#         raise HTTPException(status_code=404, detail="Item not found")
+#     if payload.name is not None:
+#         item.name = payload.name
+#     if payload.quantity is not None:
+#         item.quantity = payload.quantity
+#     if payload.expiry is not None or payload.expiry is None:
+#         # allow clearing expiry by sending null
+#         item.expiry = payload.expiry
+#     db.commit()
+#     db.refresh(item)
+#     return item
 # Update an item only if it belongs to one of your lists
 @router.patch("/items/{item_id}", response_model=ItemRead)
 def update_item(

@@ -96,3 +96,28 @@ body {
     padding: 12px;
     border-bottom: 1px solid #eee;
 }
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+/* Make inline edit inputs fill the cell and not collapse */
+.table td input,
+.table td .input,
+.table td .form-control {
+    width: 100%;
+    min-width: 220px;
+    /* stops the “one character wide” issue */
+}
+
+/* Let the first column take remaining space nicely */
+.table {
+    table-layout: fixed;
+    /* consistent column widths */
+}
+
+.table th:first-child,
+.table td:first-child {
+    width: auto;
+    /* allow to grow */
+}

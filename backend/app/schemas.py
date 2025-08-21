@@ -26,6 +26,11 @@ class ItemRead(BaseModel):
     expiry: Optional[date]
     list_id: int
     model_config = ConfigDict(from_attributes=True)
+    
+class ItemUpdate(BaseModel):
+    name: Optional[str] = None
+    quantity: Optional[int] = None
+    expiry: Optional[date] = None
 
 
 # --- Auth ---

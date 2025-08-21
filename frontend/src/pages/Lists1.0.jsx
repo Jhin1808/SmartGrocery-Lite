@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   apiGetLists, apiCreateList,
-  apiGetItems, apiAddItem, apiDeleteItem, apiUpdateItem
+  apiGetItems, apiAddItem, apiDeleteItem
 } from "../api";
 
 export default function Lists() {
@@ -10,13 +10,12 @@ export default function Lists() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
+  // which list panels are open
   const [openIds, setOpenIds] = useState(new Set());
+  // cache items per list id: { [listId]: Item[] }
   const [itemsByList, setItemsByList] = useState({});
-  const [drafts, setDrafts] = useState({}); // per-list add-item draft
-
-  // inline edit state
-  const [editing, setEditing] = useState(new Set());           // itemIds being edited
-  const [editDrafts, setEditDrafts] = useState({});            // { itemId: {name, quantity, expiry} }
+  // per-list add-item form state
+  const [drafts, setDrafts] = useState({}); // { [listId]: {name, quantity, expiry} }
 
   const loadLists = async () => {
     try {
@@ -27,6 +26,7 @@ export default function Lists() {
       setErr(e.message || "Failed to load lists");
     }
   };
+
   useEffect(() => { loadLists(); }, []);
 
   const addList = async (e) => {
@@ -53,6 +53,7 @@ export default function Lists() {
     }
     next.add(listId);
     setOpenIds(next);
+    // lazy-load items the first time we open
     if (!itemsByList[listId]) {
       try {
         const items = await apiGetItems(listId);
@@ -75,10 +76,12 @@ export default function Lists() {
       const payload = {
         name: nm,
         quantity: Number(draft.quantity || 1),
+        // HTML date input gives 'YYYY-MM-DD' or "" → send null when empty
         expiry: draft.expiry ? draft.expiry : null,
       };
       const item = await apiAddItem(listId, payload);
       setItemsByList((m) => ({ ...m, [listId]: [item, ...(m[listId] || [])] }));
+      // clear just this draft
       setDrafts((d) => ({ ...d, [listId]: { name: "", quantity: 1, expiry: "" } }));
     } catch (e) {
       setErr(e.message || "Failed to add item");
@@ -87,43 +90,10 @@ export default function Lists() {
 
   const removeItem = async (listId, itemId) => {
     try {
-      await apiDeleteItem(itemId);              // now returns null; no JSON parse crash
+      await apiDeleteItem(itemId);
       setItemsByList((m) => ({ ...m, [listId]: (m[listId] || []).filter(i => i.id !== itemId) }));
-      // clean up any edit state for that item
-      setEditing((s) => { const n = new Set(s); n.delete(itemId); return n; });
-      setEditDrafts(({ [itemId]: _, ...rest }) => rest);
     } catch (e) {
       setErr(e.message || "Failed to delete item");
-    }
-  };
-
-  // ----- inline edit helpers -----
-  const startEdit = (it) => {
-    setEditing((s) => new Set(s).add(it.id));
-    setEditDrafts((d) => ({ ...d, [it.id]: { name: it.name, quantity: it.quantity, expiry: it.expiry || "" } }));
-  };
-  const cancelEdit = (id) => {
-    setEditing((s) => { const n = new Set(s); n.delete(id); return n; });
-    setEditDrafts((d) => { const { [id]: _, ...rest } = d; return rest; });
-  };
-  const updateEditDraft = (id, patch) =>
-    setEditDrafts((d) => ({ ...d, [id]: { ...(d[id] || {}), ...patch } }));
-  const saveEdit = async (listId, id) => {
-    const draft = editDrafts[id];
-    const patch = {
-      name: draft.name,
-      quantity: Number(draft.quantity),
-      expiry: draft.expiry ? draft.expiry : null, // allow clearing
-    };
-    try {
-      const updated = await apiUpdateItem(id, patch);
-      setItemsByList((m) => ({
-        ...m,
-        [listId]: (m[listId] || []).map((x) => (x.id === id ? updated : x)),
-      }));
-      cancelEdit(id);
-    } catch (e) {
-      setErr(e.message || "Failed to update item");
     }
   };
 
@@ -165,14 +135,9 @@ export default function Lists() {
                       <input className="input" type="number" min="1" step="1" placeholder="Qty"
                              value={draft.quantity}
                              onChange={e => updateDraft(l.id, { quantity: e.target.value })} />
-                      <div style={{ display:"flex", gap:8 }}>
-                        <input className="input" type="date"
-                               value={draft.expiry}
-                               onChange={e => updateDraft(l.id, { expiry: e.target.value })} />
-                        <button type="button" className="btn-ghost" onClick={() => updateDraft(l.id, { expiry: "" })}>
-                          Clear
-                        </button>
-                      </div>
+                      <input className="input" type="date"
+                             value={draft.expiry}
+                             onChange={e => updateDraft(l.id, { expiry: e.target.value })} />
                       <button className="btn">Add</button>
                     </div>
                   </form>
@@ -185,60 +150,25 @@ export default function Lists() {
                           <th style={{textAlign:"left"}}>Item</th>
                           <th>Qty</th>
                           <th>Expiry</th>
-                          <th style={{width:200}}></th>
+                          <th></th>
                         </tr>
                       </thead>
                       <tbody>
                         {items.length === 0 && (
                           <tr><td colSpan={4} style={{ color: "#666", textAlign:"center" }}>No items yet</td></tr>
                         )}
-                        {items.map((it) => {
-                          const isEditing = editing.has(it.id);
-                          const d = editDrafts[it.id] || {};
-                          return (
-                            <tr key={it.id}>
-                              <td style={{textAlign:"left"}}>
-                                {isEditing ? (
-                                  <input className="input" value={d.name}
-                                         onChange={e=>updateEditDraft(it.id, { name: e.target.value })}/>
-                                ) : it.name}
-                              </td>
-                              <td style={{ textAlign: "center", width: 100 }}>
-                                {isEditing ? (
-                                  <input className="input" type="number" min="1" step="1"
-                                         value={d.quantity}
-                                         onChange={e=>updateEditDraft(it.id, { quantity: e.target.value })}/>
-                                ) : it.quantity}
-                              </td>
-                              <td style={{ textAlign: "center", width: 160 }}>
-                                {isEditing ? (
-                                  <div style={{display:"flex",gap:8}}>
-                                    <input className="input" type="date"
-                                           value={d.expiry || ""}
-                                           onChange={e=>updateEditDraft(it.id, { expiry: e.target.value })}/>
-                                    <button type="button" className="btn-ghost"
-                                            onClick={()=>updateEditDraft(it.id, { expiry: "" })}>
-                                      Clear
-                                    </button>
-                                  </div>
-                                ) : (it.expiry ?? "—")}
-                              </td>
-                              <td style={{ textAlign: "right" }}>
-                                {!isEditing ? (
-                                  <>
-                                    <button className="btn-ghost" onClick={() => startEdit(it)}>Edit</button>{" "}
-                                    <button className="btn-ghost" onClick={() => removeItem(l.id, it.id)}>Delete</button>
-                                  </>
-                                ) : (
-                                  <>
-                                    <button className="btn" onClick={() => saveEdit(l.id, it.id)}>Save</button>{" "}
-                                    <button className="btn-ghost" onClick={() => cancelEdit(it.id)}>Cancel</button>
-                                  </>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {items.map((it) => (
+                          <tr key={it.id}>
+                            <td style={{textAlign:"left"}}>{it.name}</td>
+                            <td style={{ textAlign: "center", width: 80 }}>{it.quantity}</td>
+                            <td style={{ textAlign: "center", width: 140 }}>{it.expiry ?? "—"}</td>
+                            <td style={{ textAlign: "right", width: 80 }}>
+                              <button className="btn-ghost" onClick={() => removeItem(l.id, it.id)}>
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -251,3 +181,4 @@ export default function Lists() {
     </div>
   );
 }
+
