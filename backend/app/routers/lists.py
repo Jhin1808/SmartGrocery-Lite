@@ -7,7 +7,7 @@ from app.database import get_db
 from app.models import GroceryList, User, ListItem
 from app.schemas import ListCreate, ListRead, ItemCreate, ItemRead
 
-# ✅ Use the cookie-based auth dependency
+
 from app.deps import get_current_user_cookie as get_current_user
 
 router = APIRouter(prefix="/lists", tags=["lists"])

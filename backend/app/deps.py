@@ -1,23 +1,15 @@
-from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
-import jwt
-
-from app.database import get_db
-from app.models import User
-from app.security import decode_token
-
-bearer_scheme = HTTPBearer()
-
 # app/deps.py
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
 from app.security import decode_token
+import os
+
+COOKIE_NAME = os.getenv("COOKIE_NAME", "access_token")
 
 def get_current_user_cookie(request: Request, db: Session = Depends(get_db)) -> User:
-    token = request.cookies.get("access_token")
+    token = request.cookies.get(COOKIE_NAME)
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     try:
@@ -29,6 +21,8 @@ def get_current_user_cookie(request: Request, db: Session = Depends(get_db)) -> 
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
     return user
+
+
 
 
 # def get_current_user(

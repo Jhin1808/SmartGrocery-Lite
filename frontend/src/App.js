@@ -1,32 +1,8 @@
-// import { useState } from "react";
-// import { setToken } from "./api";
-// import AuthTabs from "./pages/AuthTabs";
-// import Lists from "./pages/Lists";
-
-
-// export default function App() {
-//   const [token, setTok] = useState(null);
-//   const onLoggedIn = (t) => { setTok(t); setToken(t); };
-//   const logout = () => { setTok(null); setToken(null); };
-
-//   if (!token) return <AuthTabs onLoggedIn={onLoggedIn} />;
-
-//   return (
-//     <div>
-//       <div className="header">
-//         <button className="btn-ghost" onClick={logout}>Log out</button>
-//       </div>
-//       <Lists />
-//     </div>
-//   );
-// }
-// src/App.js
-// src/App.js
-import React, { useEffect} from "react";
+import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { setToken as setApiToken } from "./api";
+import { API_BASE } from "./api"; // cookie-based auth; we only need the URL
 
-// pages you already have/added
+// pages
 import AuthTabs from "./pages/AuthTabs";
 import Lists from "./pages/Lists";
 import ListDetail from "./pages/ListDetail";
@@ -37,11 +13,26 @@ import OAuthCallback from "./pages/OAuthCallback";
 // navbar
 import NavBar from "./components/NavBar";
 
-// Protect routes by checking localStorage token
+// Guard that checks the cookie session by calling /me
 function RequireAuth({ children }) {
-  const token = localStorage.getItem("token");
+  const [ok, setOk] = useState(null); // null = loading; true/false = result
   const location = useLocation();
-  if (!token) return <Navigate to="/login" replace state={{ from: location }} />;
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/me/`, { credentials: "include" });
+        if (!cancelled) setOk(res.ok);
+      } catch {
+        if (!cancelled) setOk(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (ok === null) return <div className="container py-4">Checking session…</div>;
+  if (!ok) return <Navigate to="/login" replace state={{ from: location }} />;
   return children;
 }
 
@@ -52,7 +43,8 @@ function AppRoutes({ onLoggedIn }) {
 
       {/* Public */}
       <Route path="/login" element={<AuthTabs onLoggedIn={onLoggedIn} />} />
-      <Route path="/oauth/callback" element={<OAuthCallback onLoggedIn={onLoggedIn} />} />
+      <Route path="/oauth/callback" element={<OAuthCallback />} />
+
       {/* Protected */}
       <Route
         path="/lists"
@@ -93,19 +85,10 @@ function AppRoutes({ onLoggedIn }) {
 }
 
 export default function App() {
-  useEffect(() => {
-    const t = localStorage.getItem("token");
-    if (t) setApiToken(t);          // primes the API layer so it sends Authorization header
-  }, []);
-  
-  const onLoggedIn = (t) => {
-    const val = (t && (t.access_token || t.token)) || t || "";
-    if (val) {
-      localStorage.setItem("token", val);
-      setApiToken(val);
-      // after login, go to /lists (no useNavigate needed)
-      window.location.replace("/lists");
-    }
+  // After a successful login (email/pw or Google), backend sets cookie.
+  // We just navigate to /lists.
+  const onLoggedIn = () => {
+    window.location.replace("/lists");
   };
 
   return (

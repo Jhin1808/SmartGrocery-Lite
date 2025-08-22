@@ -44,61 +44,88 @@ async def google_login(request: Request):
 
 @router.get("/callback")
 async def google_callback(request: Request, db: Session = Depends(get_db)):
-    # User canceled → bounce back to login (silent or with flags)
-    error = request.query_params.get("error")
-    if error:
-        # Keep it silent; if you want a toast, add ?error=access_denied and read it on /login
+    # Canceled on Google?
+    if request.query_params.get("error"):
         return RedirectResponse(f"{_frontend_url()}/login")
 
     try:
         token = await oauth.google.authorize_access_token(request)
-    except OAuthError as oe:
-        qs = urlencode({"error": "oauth_error", "reason": str(oe)})
-        return RedirectResponse(f"{_frontend_url()}/login?{qs}")
+    except OAuthError:
+        return RedirectResponse(f"{_frontend_url()}/login")
 
     userinfo = token.get("userinfo") or {}
     email = userinfo.get("email")
-    sub = userinfo.get("sub")
-    if not email or not sub:
-        qs = urlencode({"error": "profile_missing", "reason": "No email or sub"})
-        return RedirectResponse(f"{_frontend_url()}/login?{qs}")
+    if not email:
+        return RedirectResponse(f"{_frontend_url()}/login")
 
-    # Upsert by google_sub OR email, and make sure we store google_sub
-    user = (
-        db.query(User)
-        .filter((User.google_sub == sub) | (User.email == email))
-        .first()
-    )
-    if user is None:
-        user = User(
-            email=email,
-            google_sub=sub,      # << store it
-            name=userinfo.get("name"),
-            picture=userinfo.get("picture"),
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    else:
-        changed = False
-        if not user.google_sub:
-            user.google_sub = sub; changed = True
-        # keep some profile fields in sync
-        new_name = userinfo.get("name")
-        new_pic = userinfo.get("picture")
-        if new_name and new_name != user.name:
-            user.name = new_name; changed = True
-        if new_pic and new_pic != user.picture:
-            user.picture = new_pic; changed = True
-        if changed:
-            db.commit()
-            db.refresh(user)
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        user = User(email=email, google_sub=userinfo.get("sub"), name=userinfo.get("name"), picture=userinfo.get("picture"))
+        db.add(user); db.commit(); db.refresh(user)
 
-    #jwt = create_access_token(user.id)
-    jwt = create_access_token({"sub": str(user.id)})
-    resp = RedirectResponse(f"{_frontend_url()}/oauth/callback")  # or straight to /lists
+    jwt = create_access_token(user.id)
+
+    # Set cookie then bounce to SPA
+    resp = RedirectResponse(f"{_frontend_url()}/lists")
     set_access_cookie(resp, jwt)
     return resp
+# @router.get("/callback")
+# async def google_callback(request: Request, db: Session = Depends(get_db)):
+#     # User canceled → bounce back to login (silent or with flags)
+#     error = request.query_params.get("error")
+#     if error:
+#         # Keep it silent; if you want a toast, add ?error=access_denied and read it on /login
+#         return RedirectResponse(f"{_frontend_url()}/login")
+
+#     try:
+#         token = await oauth.google.authorize_access_token(request)
+#     except OAuthError as oe:
+#         qs = urlencode({"error": "oauth_error", "reason": str(oe)})
+#         return RedirectResponse(f"{_frontend_url()}/login?{qs}")
+
+#     userinfo = token.get("userinfo") or {}
+#     email = userinfo.get("email")
+#     sub = userinfo.get("sub")
+#     if not email or not sub:
+#         qs = urlencode({"error": "profile_missing", "reason": "No email or sub"})
+#         return RedirectResponse(f"{_frontend_url()}/login?{qs}")
+
+#     # Upsert by google_sub OR email, and make sure we store google_sub
+#     user = (
+#         db.query(User)
+#         .filter((User.google_sub == sub) | (User.email == email))
+#         .first()
+#     )
+#     if user is None:
+#         user = User(
+#             email=email,
+#             google_sub=sub,      # << store it
+#             name=userinfo.get("name"),
+#             picture=userinfo.get("picture"),
+#         )
+#         db.add(user)
+#         db.commit()
+#         db.refresh(user)
+#     else:
+#         changed = False
+#         if not user.google_sub:
+#             user.google_sub = sub; changed = True
+#         # keep some profile fields in sync
+#         new_name = userinfo.get("name")
+#         new_pic = userinfo.get("picture")
+#         if new_name and new_name != user.name:
+#             user.name = new_name; changed = True
+#         if new_pic and new_pic != user.picture:
+#             user.picture = new_pic; changed = True
+#         if changed:
+#             db.commit()
+#             db.refresh(user)
+
+#     #jwt = create_access_token(user.id)
+#     jwt = create_access_token({"sub": str(user.id)})
+#     resp = RedirectResponse(f"{_frontend_url()}/oauth/callback")  # or straight to /lists
+#     set_access_cookie(resp, jwt)
+#     return resp
     #return RedirectResponse(f"{_frontend_url()}/oauth/callback?token={jwt}")
 
 # import os

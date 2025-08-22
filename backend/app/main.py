@@ -1,80 +1,132 @@
 # app/main.py
-from fastapi.middleware.cors import CORSMiddleware
+import os
+import sqlalchemy
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.routers.lists import router as lists_router
 from app.routers.auth import router as auth_router
 from app.routers.auth_google import router as google_router
-from starlette.middleware.sessions import SessionMiddleware
 from app.routers.me import router as me_router
 
-import os
-import sqlalchemy
-
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
-app = FastAPI(
-    title="SmartGrocery Lite API",
-    version="0.1.0"
-)
+SESSION_SECRET = os.getenv("SESSION_SECRET") or os.getenv("SECRET_KEY") or "dev-insecure"
 
-# # Mount your lists router at /lists
-# app.include_router(lists_router, prefix="/lists", tags=["lists"])
+app = FastAPI(title="SmartGrocery Lite API", version="0.1.0")
 
-# mount your /lists endpoints
+# Routers
 app.include_router(lists_router)
 app.include_router(auth_router)
 app.include_router(google_router)
 app.include_router(me_router)
 
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["http://localhost:3000"],  # dev server origin
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-# # Sessions (needed for Google OAuth redirect flow)
-# SESSION_SECRET = os.getenv("SESSION_SECRET", os.getenv("SECRET_KEY", "dev-insecure"))
-# app.add_middleware(
-#     SessionMiddleware,
-#     secret_key=SESSION_SECRET,
-#     same_site="lax",     # good default
-#     https_only=true,    # set True in production w/ HTTPS
-#     max_age=60*60*24*7,  # 7 days
-# )
-
-# For Authlib (Google) state storage; not required for JWT cookie itself but harmless
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=SECRET_KEY,
-    same_site=os.getenv("COOKIE_SAMESITE", "lax").lower(),
-    https_only=os.getenv("COOKIE_SECURE", "false").lower() in ("1","true","yes"),
-)
-
+# CORS must allow credentials for cookies
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[FRONTEND_URL],
-    allow_credentials=True,   # <-- required for cookies
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Sessions required by Authlib to keep OAuth "state"
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SESSION_SECRET,
+    same_site="lax",            # good default
+    https_only=False,            # set True in production behind HTTPS
+)
 
-#Checking connection to database
-engine = sqlalchemy.create_engine(os.getenv("DATABASE_URL"))
-with engine.connect() as conn:
-    result = conn.execute(sqlalchemy.text("SELECT 1"))
-    print("DB connectivity OK:", result.scalar())
-
+# Optional: DB check
+if DATABASE_URL:
+    engine = sqlalchemy.create_engine(DATABASE_URL)
+    with engine.connect() as conn:
+        conn.execute(sqlalchemy.text("SELECT 1"))
 
 @app.get("/")
-def read_root():
-    return {"message": "Welcome to SmartGrocery Lite API"}
+def root():
+    return {"ok": True}
+
+
+# # app/main.py
+# from fastapi.middleware.cors import CORSMiddleware
+# from fastapi import FastAPI
+
+# from app.routers.lists import router as lists_router
+# from app.routers.auth import router as auth_router
+# from app.routers.auth_google import router as google_router
+
+# from app.routers.me import router as me_router
+
+# import os
+# import sqlalchemy
+
+# DATABASE_URL = os.getenv("DATABASE_URL", "")
+# app = FastAPI(
+#     title="SmartGrocery Lite API",
+#     version="0.1.0"
+# )
+
+# # # Mount your lists router at /lists
+# # app.include_router(lists_router, prefix="/lists", tags=["lists"])
+
+# # mount your /lists endpoints
+# app.include_router(lists_router)
+# app.include_router(auth_router)
+# app.include_router(google_router)
+# app.include_router(me_router)
+
+# # app.add_middleware(
+# #     CORSMiddleware,
+# #     allow_origins=["http://localhost:3000"],  # dev server origin
+# #     allow_credentials=True,
+# #     allow_methods=["*"],
+# #     allow_headers=["*"],
+# # )
+
+# # # Sessions (needed for Google OAuth redirect flow)
+
+# # app.add_middleware(
+# #     SessionMiddleware,
+# #     secret_key=SESSION_SECRET,
+# #     same_site="lax",     # good default
+# #     https_only=true,    # set True in production w/ HTTPS
+# #     max_age=60*60*24*7,  # 7 days
+# # )
+# #SESSION_SECRET = os.getenv("SESSION_SECRET", os.getenv("SECRET_KEY", "dev-insecure"))
+# # For Authlib (Google) state storage; not required for JWT cookie itself but harmless
+# # app.add_middleware(
+# #     SessionMiddleware,
+# #     secret_key=SECRET_KEY,
+# #     same_site=os.getenv("COOKIE_SAMESITE", "lax").lower(),
+# #     https_only=os.getenv("COOKIE_SECURE", "false").lower() in ("1","true","yes"),
+# # )
+
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=[FRONTEND_URL],
+#     allow_credentials=True,   # <-- required for cookies
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+
+# #Checking connection to database
+# engine = sqlalchemy.create_engine(os.getenv("DATABASE_URL"))
+# with engine.connect() as conn:
+#     result = conn.execute(sqlalchemy.text("SELECT 1"))
+#     print("DB connectivity OK:", result.scalar())
+
+
+# @app.get("/")
+# def read_root():
+#     return {"message": "Welcome to SmartGrocery Lite API"}
 
 
 
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: str = None):
-    return {"item_id": item_id, "q": q}
+# @app.get("/items/{item_id}")
+# def read_item(item_id: int, q: str = None):
+#     return {"item_id": item_id, "q": q}
 
