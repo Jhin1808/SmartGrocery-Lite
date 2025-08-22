@@ -30,6 +30,42 @@ async function request(path, { method="GET", headers={}, body } = {}) {
   return data ?? raw;
 }
 
+// api.js
+async function handle(res) {
+  if (res.status === 204) return null;
+
+  const ct = res.headers.get("content-type") || "";
+  if (!res.ok) {
+    let message = `HTTP ${res.status}`;
+    if (ct.includes("application/json")) {
+      const data = await res.json();
+      // FastAPI validation errors look like: { detail: [ { loc, msg, type }, ... ] }
+      if (data?.detail) {
+        if (Array.isArray(data.detail)) {
+          message = data.detail.map(d => d.msg || d.detail || JSON.stringify(d)).join("\n");
+        } else if (typeof data.detail === "string") {
+          message = data.detail;
+        } else {
+          message = JSON.stringify(data.detail);
+        }
+      } else if (data?.message) {
+        message = data.message;
+      } else {
+        message = JSON.stringify(data);
+      }
+    } else {
+      const text = await res.text();
+      if (text) message = text;
+    }
+    const err = new Error(message);
+    err.status = res.status;
+    throw err;
+  }
+
+  return ct.includes("application/json") ? res.json() : res.text();
+}
+
+
 // async function request(path, { method="GET", headers={}, body } = {}) {
 //   const h = { ...headers };
 //   if (token) h.Authorization = `Bearer ${token}`;
@@ -61,7 +97,7 @@ export async function apiLogin(email, password) {
   const data = await res.json();
   setToken(data.access_token);
   return data.access_token;
-}
+} 
 
 export const apiRegister  = (email, password) => request("/auth/register", { method:"POST", body:{ email, password } });
 export const apiGetLists  = () => request("/lists");

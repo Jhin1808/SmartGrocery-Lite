@@ -43,11 +43,6 @@ body {
     font-weight: 600;
 }
 
-.row {
-    display: grid;
-    gap: 10px;
-}
-
 .input {
     width: 100%;
     padding: 10px 12px;
@@ -55,15 +50,6 @@ body {
     border-radius: 8px;
 }
 
-.btn {
-    padding: 10px 12px;
-    border: 0;
-    border-radius: 8px;
-    background: var(--p);
-    color: white;
-    cursor: pointer;
-    font-weight: 600;
-}
 
 .btn:disabled {
     opacity: .6;
@@ -101,23 +87,15 @@ body {
     width: 100%;
     overflow-x: auto;
 }
-/* Make inline edit inputs fill the cell and not collapse */
-.table td input,
-.table td .input,
-.table td .form-control {
-    width: 100%;
-    min-width: 220px;
-    /* stops the “one character wide” issue */
+
+
+.table th,
+.table td {
+    padding: 8px 10px;
+    border-top: 1px solid #eee;
 }
 
-/* Let the first column take remaining space nicely */
-.table {
-    table-layout: fixed;
-    /* consistent column widths */
-}
-
-.table th:first-child,
-.table td:first-child {
-    width: auto;
-    /* allow to grow */
+.table thead th {
+    border-bottom: 2px solid #eee;
+    font-weight: 600;
 }
