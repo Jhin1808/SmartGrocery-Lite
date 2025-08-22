@@ -15,8 +15,13 @@ class User(Base):
     __tablename__ = "user"
     id = Column(Integer, primary_key=True)
     #adding hash password
-    password_hash = Column(String, nullable=False)
+    password_hash = Column(String, nullable=True)
     email = Column(String, unique=True, index=True, nullable=False)
+    
+    #Google
+    google_sub = Column(String, unique=True, nullable=True)  # link to Google account
+    name = Column(String, nullable=True)
+    picture = Column(String, nullable=True)
 
     # one-to-many
     lists = relationship(

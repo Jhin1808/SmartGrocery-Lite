@@ -1,4 +1,6 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { apiLogin, apiRegister, API_BASE } from "../api";
 
 
@@ -18,9 +20,23 @@ export default function AuthTabs({ onLoggedIn }) {
   const [regBusy, setRegBusy] = useState(false);
   const [regErr, setRegErr] = useState(null);
 
+  const { search } = useLocation();
+
+  useEffect(() => {
+    const p = new URLSearchParams(search);
+    const err = p.get("error");
+    const reason = p.get("reason");
+    if (err) {
+      setLoginErr(reason || err);
+      // optional: clean URL so the message doesn't persist after refresh
+      window.history.replaceState({}, "", "/login");
+    }
+  }, [search]);
+
+
   const googleLogin = () => {
     // backend endpoint you’ll add when we do SSO
-    window.location.href = `${API_BASE}/auth/google/login`;
+     window.location.href = `${API_BASE}/auth/google/login`;
   };
 
   const doLogin = async (e) => {
@@ -41,10 +57,11 @@ export default function AuthTabs({ onLoggedIn }) {
     if (!agree) { setRegErr("Please agree to the terms."); return; }
     setRegBusy(true); setRegErr(null);
     try {
-      await apiRegister(regEmail, regPwd);
+      await apiRegister({ email: regEmail.trim(), password: regPwd });
       const tok = await apiLogin(regEmail, regPwd);
       onLoggedIn(tok);
     } catch (e) {
+      
       setRegErr(e.message || "Registration failed");
     } finally {
       setRegBusy(false);

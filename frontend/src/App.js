@@ -32,6 +32,7 @@ import Lists from "./pages/Lists";
 import ListDetail from "./pages/ListDetail";
 import Account from "./pages/Account";
 import Help from "./pages/Help";
+import OAuthCallback from "./pages/OAuthCallback";
 
 // navbar
 import NavBar from "./components/NavBar";
@@ -51,7 +52,7 @@ function AppRoutes({ onLoggedIn }) {
 
       {/* Public */}
       <Route path="/login" element={<AuthTabs onLoggedIn={onLoggedIn} />} />
-
+      <Route path="/oauth/callback" element={<OAuthCallback onLoggedIn={onLoggedIn} />} />
       {/* Protected */}
       <Route
         path="/lists"

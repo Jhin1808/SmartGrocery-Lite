@@ -1,8 +1,11 @@
 # app/main.py
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
+
 from app.routers.lists import router as lists_router
 from app.routers.auth import router as auth_router
+from app.routers.auth_google import router as google_router
+from starlette.middleware.sessions import SessionMiddleware
 
 import os
 import sqlalchemy
@@ -19,6 +22,7 @@ app = FastAPI(
 # mount your /lists endpoints
 app.include_router(lists_router)
 app.include_router(auth_router)
+app.include_router(google_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,6 +30,16 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# Sessions (needed for Google OAuth redirect flow)
+SESSION_SECRET = os.getenv("SESSION_SECRET", os.getenv("SECRET_KEY", "dev-insecure"))
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SESSION_SECRET,
+    same_site="lax",     # good default
+    https_only=False,    # set True in production w/ HTTPS
+    max_age=60*60*24*7,  # 7 days
 )
 
 
