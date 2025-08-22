@@ -91,7 +91,7 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
             db.commit()
             db.refresh(user)
 
-    jwt = create_access_token({"sub": str(user.id)})
+    jwt = create_access_token(user.id)
     return RedirectResponse(f"{_frontend_url()}/oauth/callback?token={jwt}")
 
 # import os
