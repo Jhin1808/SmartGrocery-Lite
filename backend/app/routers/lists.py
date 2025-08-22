@@ -134,14 +134,31 @@ def get_items(
 #     db.delete(item); db.commit()
 #     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
+# @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+# def delete_item(item_id: int, db: Session = Depends(get_db)):
+#     item = db.get(ListItem, item_id)
+#     if not item:
+#         raise HTTPException(status_code=404, detail="Item not found")
+#     db.delete(item)
+#     db.commit()
+#     # IMPORTANT: return an empty response (no JSON body)
+#     return Response(status_code=status.HTTP_204_NO_CONTENT)
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_item(item_id: int, db: Session = Depends(get_db)):
+def delete_item(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     item = db.get(ListItem, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
+
+    parent = db.get(GroceryList, item.list_id)
+    if not parent or parent.owner_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Item not found")
+
     db.delete(item)
     db.commit()
-    # IMPORTANT: return an empty response (no JSON body)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 # @router.patch("/items/{item_id}", response_model=ItemRead)
