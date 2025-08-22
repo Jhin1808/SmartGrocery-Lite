@@ -26,22 +26,38 @@ app.include_router(auth_router)
 app.include_router(google_router)
 app.include_router(me_router)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # dev server origin
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["http://localhost:3000"],  # dev server origin
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 
-# Sessions (needed for Google OAuth redirect flow)
-SESSION_SECRET = os.getenv("SESSION_SECRET", os.getenv("SECRET_KEY", "dev-insecure"))
+# # Sessions (needed for Google OAuth redirect flow)
+# SESSION_SECRET = os.getenv("SESSION_SECRET", os.getenv("SECRET_KEY", "dev-insecure"))
+# app.add_middleware(
+#     SessionMiddleware,
+#     secret_key=SESSION_SECRET,
+#     same_site="lax",     # good default
+#     https_only=true,    # set True in production w/ HTTPS
+#     max_age=60*60*24*7,  # 7 days
+# )
+
+# For Authlib (Google) state storage; not required for JWT cookie itself but harmless
 app.add_middleware(
     SessionMiddleware,
-    secret_key=SESSION_SECRET,
-    same_site="lax",     # good default
-    https_only=False,    # set True in production w/ HTTPS
-    max_age=60*60*24*7,  # 7 days
+    secret_key=SECRET_KEY,
+    same_site=os.getenv("COOKIE_SAMESITE", "lax").lower(),
+    https_only=os.getenv("COOKIE_SECURE", "false").lower() in ("1","true","yes"),
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[FRONTEND_URL],
+    allow_credentials=True,   # <-- required for cookies
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

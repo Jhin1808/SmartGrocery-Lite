@@ -9,24 +9,46 @@ from app.security import decode_token
 
 bearer_scheme = HTTPBearer()
 
-def get_current_user(
-    db: Session = Depends(get_db),
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-) -> User:
-    token = credentials.credentials
+# app/deps.py
+from fastapi import Depends, HTTPException, Request, status
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models import User
+from app.security import decode_token
+
+def get_current_user_cookie(request: Request, db: Session = Depends(get_db)) -> User:
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     try:
         payload = decode_token(token)
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid token", headers={"WWW-Authenticate": "Bearer"})
-    sub = payload.get("sub")
-    try:
-        user_id = int(sub)
-    except (TypeError, ValueError):
-        raise HTTPException(status_code=401, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"})
-    user = db.get(User, user_id)
+        sub = payload.get("sub")
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
+    user = db.get(User, int(sub)) if sub else None
     if not user:
-        raise HTTPException(status_code=401, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
     return user
+
+
+# def get_current_user(
+#     db: Session = Depends(get_db),
+#     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+# ) -> User:
+#     token = credentials.credentials
+#     try:
+#         payload = decode_token(token)
+#     except jwt.PyJWTError:
+#         raise HTTPException(status_code=401, detail="Invalid token", headers={"WWW-Authenticate": "Bearer"})
+#     sub = payload.get("sub")
+#     try:
+#         user_id = int(sub)
+#     except (TypeError, ValueError):
+#         raise HTTPException(status_code=401, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"})
+#     user = db.get(User, user_id)
+#     if not user:
+#         raise HTTPException(status_code=401, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"})
+#     return user
 
 
 # from fastapi import Depends, HTTPException

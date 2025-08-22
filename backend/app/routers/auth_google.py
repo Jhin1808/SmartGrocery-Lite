@@ -12,6 +12,9 @@ from app.database import get_db
 from app.models import User
 from app.security import create_access_token
 
+from app.security_cookies import set_access_cookie
+from starlette.responses import RedirectResponse
+
 router = APIRouter(prefix="/auth/google", tags=["auth:google"])
 
 def _frontend_url() -> str:
@@ -91,8 +94,12 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
             db.commit()
             db.refresh(user)
 
-    jwt = create_access_token(user.id)
-    return RedirectResponse(f"{_frontend_url()}/oauth/callback?token={jwt}")
+    #jwt = create_access_token(user.id)
+    jwt = create_access_token({"sub": str(user.id)})
+    resp = RedirectResponse(f"{_frontend_url()}/oauth/callback")  # or straight to /lists
+    set_access_cookie(resp, jwt)
+    return resp
+    #return RedirectResponse(f"{_frontend_url()}/oauth/callback?token={jwt}")
 
 # import os
 # from urllib.parse import urlencode
