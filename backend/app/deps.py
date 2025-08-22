@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 import jwt
 
@@ -7,13 +7,16 @@ from app.database import get_db
 from app.models import User
 from app.security import decode_token
 
-oauth2 = OAuth2PasswordBearer(tokenUrl="/auth/token")
+bearer_scheme = HTTPBearer()
 
-def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2)) -> User:
+def get_current_user(
+    db: Session = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+) -> User:
+    token = credentials.credentials
     try:
         payload = decode_token(token)
     except jwt.PyJWTError:
-        # bad signature / expired
         raise HTTPException(status_code=401, detail="Invalid token", headers={"WWW-Authenticate": "Bearer"})
     sub = payload.get("sub")
     try:
@@ -24,6 +27,34 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2)
     if not user:
         raise HTTPException(status_code=401, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"})
     return user
+
+
+# from fastapi import Depends, HTTPException
+# from fastapi.security import OAuth2PasswordBearer
+# from sqlalchemy.orm import Session
+# import jwt
+
+# from app.database import get_db
+# from app.models import User
+# from app.security import decode_token
+
+# oauth2 = OAuth2PasswordBearer(tokenUrl="/auth/token")
+
+# def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2)) -> User:
+#     try:
+#         payload = decode_token(token)
+#     except jwt.PyJWTError:
+#         # bad signature / expired
+#         raise HTTPException(status_code=401, detail="Invalid token", headers={"WWW-Authenticate": "Bearer"})
+#     sub = payload.get("sub")
+#     try:
+#         user_id = int(sub)
+#     except (TypeError, ValueError):
+#         raise HTTPException(status_code=401, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"})
+#     user = db.get(User, user_id)
+#     if not user:
+#         raise HTTPException(status_code=401, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"})
+#     return user
 
 # from fastapi import Depends, HTTPException, status
 # from fastapi.security import OAuth2PasswordBearer
