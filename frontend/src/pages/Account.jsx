@@ -12,11 +12,23 @@ export default function Account() {
   const [name, setName] = useState("");
   const [picture, setPicture] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
+  // Add validation error state for invalid image URLs
+  const [pictureError, setPictureError] = useState("");
 
   // robust preview (avoid infinite onError loops)
   const [previewSrc, setPreviewSrc] = useState("");
   const hadErrorRef = useRef(false);
 
+  // Validate image URLs before accepting them
+  function isSafeImageUrl(url) {
+    // Only allow http(s) URLs. You can adjust as needed for your app's sources.
+    try {
+      const supportedProtocols = ['http:', 'https:'];
+      const u = new URL(url);
+      if (supportedProtocols.includes(u.protocol)) return true;
+    } catch (e) { /* Invalid URL */ }
+    return false;
+  }
   useEffect(() => {
     setName(user?.name || "");
     setPicture(user?.picture || "");
@@ -146,12 +158,26 @@ export default function Account() {
                         <Form.Control
                           placeholder="https://example.com/photo.jpg"
                           value={picture}
-                          onChange={(e) => setPicture(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "") {
+                              setPicture("");
+                              setPictureError("");
+                            } else if (isSafeImageUrl(val)) {
+                              setPicture(val);
+                              setPictureError("");
+                            } else {
+                              setPictureError("Invalid image URL: please enter a valid https:// or http:// URL.");
+                            }
+                          }}
                         />
                         <Button
                           variant="outline-secondary"
                           type="button"
                           onClick={clearPicture}
+                      {pictureError && (
+                        <div className="text-danger small mt-1">{pictureError}</div>
+                      )}
                           title="Clear image"
                         >
                           Clear
