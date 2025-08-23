@@ -4,6 +4,9 @@ from sqlalchemy import (
     Column, String, Integer, Date, ForeignKey,
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
+import enum
+from sqlalchemy import Enum as SAEnum, UniqueConstraint
+
 
 class Base(DeclarativeBase):
     pass
@@ -46,7 +49,14 @@ class GroceryList(Base):
         ForeignKey("user.id", ondelete="CASCADE"),
         nullable=False,
     )
-
+    
+    shares = relationship(
+        "ListShare",
+        back_populates="list",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    
     owner = relationship("User", back_populates="lists")
     items = relationship(
         "ListItem",
@@ -70,3 +80,23 @@ class ListItem(Base):
     )
 
     grocery_list = relationship("GroceryList", back_populates="items")
+    
+    
+class ShareRole(str, enum.Enum):
+    viewer = "viewer"
+    editor = "editor"
+
+class ListShare(Base):
+    __tablename__ = "list_share"
+    id = Column(Integer, primary_key=True)
+    list_id = Column(Integer, ForeignKey("grocery_list.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # name the SQL ENUM type to keep Alembic happy
+    role = Column(SAEnum(ShareRole, name="share_role"), nullable=False, server_default="viewer")
+
+    __table_args__ = (UniqueConstraint("list_id", "user_id", name="uq_list_share_list_user"),)
+
+    user = relationship("User")
+    list = relationship("GroceryList", back_populates="shares")
+

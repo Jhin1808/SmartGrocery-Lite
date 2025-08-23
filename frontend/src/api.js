@@ -87,6 +87,9 @@ export const apiUpdateItem = (itemId, patch) =>
 export const apiDeleteItem = (itemId) =>
   request(`/lists/items/${itemId}`, { method: "DELETE" });
 
+export const apiDeleteList = (listId) =>
+  request(`/lists/${listId}`, { method: "DELETE" });
+
 // Update profile (name, picture)
 export const apiUpdateMe = (patch) =>
   request("/me", { method: "PATCH", body: patch });
@@ -98,5 +101,17 @@ export const apiChangePassword = ({ current_password, new_password }) =>
     body: { current_password, new_password },
   });
 
+// Rename a list (owner-only)
+export const apiRenameList = (listId, name) =>
+  request(`/lists/${listId}`, { method: "PATCH", body: { name } });
 
+// Sharing APIs (owner-only)
+export const apiListShares   = (listId) => request(`/lists/${listId}/share`);
+export const apiCreateShare  = (listId, { email, role }) =>
+  request(`/lists/${listId}/share`, { method: "POST", body: { email, role } });
 
+export const apiUpdateShare  = (listId, shareId, { role }) =>
++  request(`/lists/${listId}/share/${shareId}`, { method: "PATCH", body: { role } });
+
+export const apiRevokeShare  = (listId, shareId) =>
+  request(`/lists/${listId}/share/${shareId}`, { method: "DELETE" });

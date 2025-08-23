@@ -1,6 +1,6 @@
 # backend/app/schemas.py
 from datetime import date
-from typing import Optional
+from typing import Optional, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -64,3 +64,22 @@ class UserMeUpdate(BaseModel):
         if isinstance(v, str) and v.strip() == "":
             return None
         return v
+
+# ----- Sharing -----
+class ShareCreate(BaseModel):
+    email: EmailStr
+    role: Literal["viewer", "editor"] = "viewer"
+
+class ShareRead(BaseModel):
+    id: int
+    list_id: int
+    user_id: int
+    email: EmailStr
+    role: Literal["viewer", "editor"]
+    model_config = ConfigDict(from_attributes=True)
+
+class ListUpdate(BaseModel):
+    name: str
+    
+class ShareRoleUpdate(BaseModel):
+    role: Literal["viewer","editor"]
