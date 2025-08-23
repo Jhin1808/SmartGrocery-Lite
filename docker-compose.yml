@@ -8,6 +8,15 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-smartgrocery}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   backend:
     build:
@@ -37,15 +46,14 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true
       - HOST=0.0.0.0
-      # optional: pass your API base URL into React (only used if your code reads it)
-      - REACT_APP_API_BASE=http://localhost:8000
+
     ports:
       - "3000:3000"
     volumes:
       - ./frontend:/app
       # keep node_modules inside the container so your host doesn’t clobber it
       - frontend_node_modules:/app/node_modules
-    command: ["sh","-c","npm install && npm start"]
+    command: ["sh", "-c", "npm install && npm start"]
 volumes:
   pgdata:
   frontend_node_modules:
