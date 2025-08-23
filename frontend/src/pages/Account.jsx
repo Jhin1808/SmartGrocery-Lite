@@ -13,7 +13,8 @@ export default function Account() {
   const [picture, setPicture] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   // Add validation error state for invalid image URLs
-  const [pictureError, setPictureError] = useState("");
+  const [pictureError, setPictureError] = useState<string | null>(null);
+
 
   // robust preview (avoid infinite onError loops)
   const [previewSrc, setPreviewSrc] = useState("");
@@ -55,7 +56,10 @@ export default function Account() {
   const dirtyProfile =
     name !== (user?.name || "") || picture !== (user?.picture || "");
 
-  const clearPicture = () => setPicture("");
+  const clearPicture = () => {
+  setPicture("");
+  setPictureError(null);
+  };
 
   // Toasts
   const [toast, setToast] = useState(null);
@@ -158,31 +162,24 @@ export default function Account() {
                         <Form.Control
                           placeholder="https://example.com/photo.jpg"
                           value={picture}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val === "") {
-                              setPicture("");
-                              setPictureError("");
-                            } else if (isSafeImageUrl(val)) {
-                              setPicture(val);
-                              setPictureError("");
-                            } else {
-                              setPictureError("Invalid image URL: please enter a valid https:// or http:// URL.");
-                            }
-                          }}
+                          onChange={(e) => setPicture(e.target.value)}
                         />
                         <Button
                           variant="outline-secondary"
                           type="button"
                           onClick={clearPicture}
-                      {pictureError && (
-                        <div className="text-danger small mt-1">{pictureError}</div>
-                      )}
                           title="Clear image"
                         >
                           Clear
                         </Button>
                       </InputGroup>
+
+                      {pictureError && (
+                        <div className="text-danger small mt-1">
+                          {pictureError}
+                        </div>
+                      )}
+
                       <Form.Text className="text-muted">
                         Leave blank and save to remove your picture.
                       </Form.Text>
@@ -191,7 +188,10 @@ export default function Account() {
                 </Row>
 
                 <div className="mt-3 d-flex gap-2">
-                  <Button type="submit" disabled={!dirtyProfile || savingProfile}>
+                  <Button
+                    type="submit"
+                    disabled={!dirtyProfile || savingProfile}
+                  >
                     {savingProfile ? "Saving…" : "Save changes"}
                   </Button>
                   <Button
@@ -250,7 +250,9 @@ export default function Account() {
                         value={confirmPwd}
                         onChange={(e) => setConfirmPwd(e.target.value)}
                         autoComplete="new-password"
-                        isInvalid={confirmPwd.length > 0 && confirmPwd !== newPwd}
+                        isInvalid={
+                          confirmPwd.length > 0 && confirmPwd !== newPwd
+                        }
                       />
                       <Form.Control.Feedback type="invalid">
                         Passwords don’t match.
@@ -266,8 +268,8 @@ export default function Account() {
                 </div>
 
                 <div className="text-muted small mt-3">
-                  If you signed in with Google and never set a password, you can leave
-                  “Current password” empty to create one now.
+                  If you signed in with Google and never set a password, you can
+                  leave “Current password” empty to create one now.
                 </div>
               </Form>
             </Tab>
@@ -277,8 +279,16 @@ export default function Account() {
 
       <ToastContainer position="top-end" className="p-3">
         {toast && (
-          <Toast bg={toast.variant} onClose={() => setToast(null)} show delay={1800} autohide>
-            <Toast.Body className={toast.variant === "danger" ? "" : "text-white"}>
+          <Toast
+            bg={toast.variant}
+            onClose={() => setToast(null)}
+            show
+            delay={1800}
+            autohide
+          >
+            <Toast.Body
+              className={toast.variant === "danger" ? "" : "text-white"}
+            >
               {toast.msg}
             </Toast.Body>
           </Toast>
