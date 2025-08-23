@@ -1,19 +1,4 @@
-// src/pages/Lists.jsx
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  apiGetLists,
-  apiCreateList,
-  apiGetItems,
-  apiAddItem,
-  apiDeleteItem,
-  apiUpdateItem,
-  apiRenameList,
-  apiListShares,
-  apiCreateShare,
-  apiUpdateShare,
-  apiRevokeShare,
-  apiDeleteList,
-} from "../api";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   Badge,
@@ -31,6 +16,22 @@ import {
   Toast,
   ToastContainer,
 } from "react-bootstrap";
+
+import {
+  apiGetLists,
+  apiCreateList,
+  apiGetItems,
+  apiAddItem,
+  apiDeleteItem,
+  apiUpdateItem,
+  apiRenameList,
+  apiListShares,
+  apiCreateShare,
+  apiUpdateShare,
+  apiRevokeShare,
+  apiDeleteList,
+  apiHideList,
+} from "../api";
 
 import { useAuth } from "../pages/AuthContext";
 
@@ -70,6 +71,11 @@ export default function Lists() {
   const [selectedId, setSelectedId] = useState(null);
   const [listQuery, setListQuery] = useState("");
 
+  // left pane sort
+  const [listSort, setListSort] = useState({ key: "name", dir: "asc" });
+  const setSortKey = (key) => setListSort((s) => ({ key, dir: s.dir }));
+  const toggleSortDir = () =>
+    setListSort((s) => ({ ...s, dir: s.dir === "asc" ? "desc" : "asc" }));
 
   // items + cache per list
   const [itemsByList, setItemsByList] = useState({}); // { [listId]: Item[] }
@@ -90,33 +96,112 @@ export default function Lists() {
   const [editing, setEditing] = useState(new Set()); // itemIds
   const [editDrafts, setEditDrafts] = useState({}); // { itemId: {name, quantity, expiry} }
 
+  const [showHidden, setShowHidden] = useState(false);
+
   // UX
+  const [err, setErr] = useState(null);
   const [toast, setToast] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null); // { listId, item }
+  const [confirmDelList, setConfirmDelList] = useState(false);
+
+  // ---- share modal state ----
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shares, setShares] = useState([]);
+  const [shareEmail, setShareEmail] = useState("");
+  const [shareRole, setShareRole] = useState("viewer");
+  const [shareBusy, setShareBusy] = useState(false);
 
   // ---------- owner/permission ----------
   const selectedList = lists.find((l) => l.id === selectedId) || null;
   const isOwner = !!(selectedList && me && selectedList.owner_id === me.id);
-  const [confirmDelList, setConfirmDelList] = useState(false);
-  const [err, setErr] = useState(null);
+  const myRole =
+    selectedList?.role ||
+    (isOwner ? "owner" : selectedList?.shared ? "viewer" : "owner");
+  const canEdit = isOwner || myRole === "editor";
+
+  // ---------- computed lists for left pane ----------
+  const listFilter = listQuery.toLowerCase();
+  const visibleLists = useMemo(() => {
+    const filtered = lists.filter((l) =>
+      l.name.toLowerCase().includes(listFilter)
+    );
+    const dir = listSort.dir === "asc" ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      if (listSort.key === "name") return a.name.localeCompare(b.name) * dir;
+      if (listSort.key === "created") return (a.id - b.id) * dir; // id as created proxy
+      return 0;
+    });
+  }, [lists, listFilter, listSort]);
+
+  // ---------- items view (filter + sort per list) ----------
+  const viewItems = useMemo(() => {
+    if (!selectedId) return [];
+    const items = itemsByList[selectedId] || [];
+    const filterText = (filters[selectedId] || "").toLowerCase();
+    const s = sortBy[selectedId] || { key: "name", dir: "asc" };
+    const filtered = items.filter((it) =>
+      it.name.toLowerCase().includes(filterText)
+    );
+    const dir = s.dir === "asc" ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      if (s.key === "name") return a.name.localeCompare(b.name) * dir;
+      if (s.key === "quantity") return (a.quantity - b.quantity) * dir;
+      if (s.key === "expiry") {
+        const da = parseDate(a.expiry)?.getTime() ?? Number.POSITIVE_INFINITY;
+        const db = parseDate(b.expiry)?.getTime() ?? Number.POSITIVE_INFINITY;
+        return (da - db) * dir;
+      }
+      return 0;
+    });
+  }, [selectedId, itemsByList, filters, sortBy]);
+
+  const loading = selectedId && loadingItems.has(selectedId);
+  const totalItems = (id) => itemsByList[id]?.length ?? 0;
+
+  // ---------- helpers ----------
+  const setFilter = (listId, v) => setFilters((f) => ({ ...f, [listId]: v }));
+
+  const toggleSort = (listId, key) => {
+    setSortBy((s) => {
+      const curr = s[listId] || { key: "name", dir: "asc" };
+      const dir =
+        curr.key === key ? (curr.dir === "asc" ? "desc" : "asc") : "asc";
+      return { ...s, [listId]: { key, dir } };
+    });
+  };
+  const sortIndicator = (listId, key) => {
+    const s = sortBy[listId];
+    if (!s || s.key !== key) return " ";
+    return s.dir === "asc" ? " ▲" : " ▼";
+  };
+
+  const updateDraft = (listId, patch) =>
+    setDrafts((d) => ({
+      ...d,
+      [listId]: {
+        name: "",
+        quantity: 1,
+        expiry: "",
+        ...(d[listId] || {}),
+        ...patch,
+      },
+    }));
 
   // ---------- load lists ----------
-  const loadLists = useCallback(async () => {
+  const loadLists = async () => {
     try {
-      const data = await apiGetLists();
+      setErr(null);
+      const data = await apiGetLists(showHidden); // <-- pass toggle
       setLists(data);
       if (!selectedId && data.length) setSelectedId(data[0].id);
     } catch (e) {
-      setToast({
-        message: e.message || "Failed to load lists",
-        variant: "danger",
-      });
+      setErr(e.message || "Failed to load lists");
     }
-  }, [selectedId]);
-
+  };
+  // re-load whenever the toggle changes
   useEffect(() => {
-    loadLists();
-  }, [loadLists]);
+    loadLists(); /* eslint-disable-next-line */
+  }, [showHidden]);
 
   // ---------- select list -> lazy load items ----------
   useEffect(() => {
@@ -128,10 +213,7 @@ export default function Lists() {
         const items = await apiGetItems(id);
         setItemsByList((m) => ({ ...m, [id]: items }));
       } catch (e) {
-        setToast({
-          message: e.message || "Failed to load items",
-          variant: "danger",
-        });
+        setErr(e.message || "Failed to load items");
       } finally {
         setLoadingItems((s) => {
           const n = new Set(s);
@@ -154,28 +236,14 @@ export default function Lists() {
       await loadLists();
       setToast({ message: "List created", variant: "success" });
     } catch (e) {
-      setToast({
-        message: e.message || "Failed to create list",
-        variant: "danger",
-      });
+      setErr(e.message || "Failed to create list");
+      setToast({ message: "Create failed", variant: "danger" });
     } finally {
       setCreating(false);
     }
   };
 
   // ---------- add item ----------
-  const updateDraft = (listId, patch) =>
-    setDrafts((d) => ({
-      ...d,
-      [listId]: {
-        name: "",
-        quantity: 1,
-        expiry: "",
-        ...(d[listId] || {}),
-        ...patch,
-      },
-    }));
-
   const submitItem = async (e) => {
     e.preventDefault();
     if (!selectedId) return;
@@ -199,14 +267,12 @@ export default function Lists() {
       }));
       setToast({ message: "Item added", variant: "success" });
     } catch (e) {
-      setToast({
-        message: e.message || "Failed to add item",
-        variant: "danger",
-      });
+      setErr(e.message || "Failed to add item");
+      setToast({ message: "Add failed", variant: "danger" });
     }
   };
 
-  // ---------- delete ----------
+  // ---------- delete item ----------
   const askDelete = (listId, item) => setConfirmDel({ listId, item });
   const doDelete = async () => {
     const { listId, item } = confirmDel;
@@ -224,10 +290,8 @@ export default function Lists() {
       setEditDrafts(({ [item.id]: _, ...rest }) => rest);
       setToast({ message: "Item deleted", variant: "success" });
     } catch (e) {
-      setToast({
-        message: e.message || "Failed to delete item",
-        variant: "danger",
-      });
+      setErr(e.message || "Failed to delete item");
+      setToast({ message: "Delete failed", variant: "danger" });
     } finally {
       setConfirmDel(null);
     }
@@ -276,99 +340,62 @@ export default function Lists() {
       cancelEdit(id);
       setToast({ message: "Item updated", variant: "success" });
     } catch (e) {
-      setToast({
-        message: e.message || "Failed to update item",
-        variant: "danger",
-      });
+      setErr(e.message || "Failed to update item");
+      setToast({ message: "Update failed", variant: "danger" });
     }
   };
 
-  //Delete the list
+  // ---------- rename / delete list (owner) ----------
+  const rename = async () => {
+    if (!selectedId) return;
+    const curr = lists.find((l) => l.id === selectedId);
+    const nm = window.prompt("Rename list:", curr?.name || "");
+    if (nm == null) return;
+    const newName = nm.trim();
+    if (!newName) return;
+    try {
+      await apiRenameList(selectedId, newName);
+      await loadLists();
+      setToast({ message: "List renamed", variant: "success" });
+    } catch (e) {
+      setToast({ message: e.message || "Rename failed", variant: "danger" });
+    }
+  };
+
   const onDeleteList = async () => {
     if (!selectedId) return;
+    setConfirmDelList(false);
     try {
       await apiDeleteList(selectedId);
-
-      // Remove the deleted list and its cached items
-      const remaining = lists.filter((l) => l.id !== selectedId);
-      setLists(remaining);
-      setItemsByList(({ [selectedId]: _drop, ...rest }) => rest);
-
-      // Pick a new selection if any lists remain
-      setSelectedId(remaining.length ? remaining[0].id : null);
-
       setToast({ message: "List deleted", variant: "success" });
+      setSelectedId(null); // let loadLists pick the first available
+      await loadLists();
     } catch (e) {
-      setErr(e.message || "Failed to delete list");
-      setToast({ message: "Delete failed", variant: "danger" });
-    } finally {
-      setConfirmDelList(false);
+      setToast({ message: e.message || "Delete failed", variant: "danger" });
     }
   };
 
-
-  // ---------- filter + sort ----------
-  const setFilter = (listId, v) => setFilters((f) => ({ ...f, [listId]: v }));
-  const toggleSort = (listId, key) => {
-    setSortBy((s) => {
-      const curr = s[listId] || { key: "name", dir: "asc" };
-      const dir =
-        curr.key === key ? (curr.dir === "asc" ? "desc" : "asc") : "asc";
-      return { ...s, [listId]: { key, dir } };
-    });
-  };
-  const sortIndicator = (listId, key) => {
-    const s = sortBy[listId];
-    if (!s || s.key !== key) return " ";
-    return s.dir === "asc" ? " ▲" : " ▼";
+  // ---------- hide shared list (non-owner) ----------
+  const hideSelected = async () => {
+    if (!selectedId || isOwner) return;
+    if (!window.confirm("Hide this shared list from your view?")) return;
+    try {
+      await apiHideList(selectedId);
+      setToast({ message: "Hidden", variant: "success" });
+      setSelectedId(null);
+      await loadLists();
+    } catch (e) {
+      setToast({ message: e.message || "Hide failed", variant: "danger" });
+    }
   };
 
-  const listFilter = listQuery.toLowerCase();
-  const visibleLists = useMemo(
-    () => lists.filter((l) => l.name.toLowerCase().includes(listFilter)),
-    [lists, listFilter]
-  );
-
-  const totalItems = (id) => itemsByList[id]?.length ?? 0;
-  const viewItems = useMemo(() => {
-    const items = itemsByList[selectedId] || [];
-    const filterText = (filters[selectedId] || "").toLowerCase();
-    const s = sortBy[selectedId] || { key: "name", dir: "asc" };
-    const filtered = items.filter((it) =>
-      it.name.toLowerCase().includes(filterText)
-    );
-    const dir = s.dir === "asc" ? 1 : -1;
-    return [...filtered].sort((a, b) => {
-      if (s.key === "name") return a.name.localeCompare(b.name) * dir;
-      if (s.key === "quantity") return (a.quantity - b.quantity) * dir;
-      if (s.key === "expiry") {
-        const da = parseDate(a.expiry)?.getTime() ?? Number.POSITIVE_INFINITY;
-        const db = parseDate(b.expiry)?.getTime() ?? Number.POSITIVE_INFINITY;
-        return (da - db) * dir;
-      }
-      return 0;
-    });
-  }, [selectedId, itemsByList, filters, sortBy]);
-
-  const loading = selectedId && loadingItems.has(selectedId);
-
-  // ---- share modal state ----
-  const [shareOpen, setShareOpen] = useState(false);
-  const [shares, setShares] = useState([]);
-  const [shareEmail, setShareEmail] = useState("");
-  const [shareRole, setShareRole] = useState("viewer");
-  const [shareBusy, setShareBusy] = useState(false);
-
-  const loadShares = useCallback(async (listId) => {
-    const rows = await apiListShares(listId);
-    setShares(rows);
-  }, []);
-
+  // ---------- load shares when modal opens (owner only) ----------
   useEffect(() => {
     if (shareOpen && isOwner && selectedId) {
       (async () => {
         try {
-          await loadShares(selectedId);
+          const data = await apiListShares(selectedId);
+          setShares(data);
         } catch (e) {
           setToast({
             message: e.message || "Failed to load shares",
@@ -377,7 +404,7 @@ export default function Lists() {
         }
       })();
     }
-  }, [shareOpen, isOwner, selectedId, loadShares]);
+  }, [shareOpen, isOwner, selectedId]);
 
   const addShare = async (e) => {
     e.preventDefault();
@@ -400,7 +427,6 @@ export default function Lists() {
 
   const changeRole = async (share, role) => {
     try {
-      // IMPORTANT: pass share.id (a number), not undefined
       const updated = await apiUpdateShare(selectedId, share.id, { role });
       setShares((s) => s.map((x) => (x.id === share.id ? updated : x)));
     } catch (e) {
@@ -421,51 +447,37 @@ export default function Lists() {
     }
   };
 
-  // ---- rename (owner-only) ----
-  const rename = async () => {
-    if (!selectedList) return;
-    const next = window.prompt("New list name:", selectedList.name);
-    if (next == null) return; // cancel
-    const nm = next.trim();
-    if (!nm) {
-      setToast({ message: "Name cannot be empty", variant: "warning" });
-      return;
-    }
-    try {
-      const updated = await apiRenameList(selectedId, nm);
-      setLists((ls) => ls.map((l) => (l.id === selectedId ? updated : l)));
-      setToast({ message: "List renamed", variant: "success" });
-    } catch (e) {
-      setToast({ message: e.message || "Rename failed", variant: "danger" });
-    }
-  };
-
+  // ---------- UI ----------
+  // ---------- UI ----------
   return (
     <Container fluid="md" style={{ marginTop: 24 }}>
       <Row className="g-4">
         {/* LEFT: Lists */}
         <Col xs={12} md={4}>
-          <Card>
+          <Card className="shadow-sm">
             <Card.Header>
               <div className="d-flex align-items-center gap-2">
                 <i className="bi bi-list-task" aria-hidden="true" />
-                <span>Lists</span>
+                <span className="fw-semibold">Lists</span>
                 <Badge bg="secondary" className="ms-auto">
                   {visibleLists.length}
                 </Badge>
               </div>
             </Card.Header>
+
             <Card.Body>
+              {/* Create list */}
               <Form onSubmit={onCreateList} className="mb-3">
                 <InputGroup>
                   <Form.Control
-                    placeholder="New list name"
+                    placeholder="New list name (e.g. Costco run)"
                     value={newListName}
                     onChange={(e) => setNewListName(e.target.value)}
                   />
                   <Button
                     type="submit"
                     disabled={!newListName.trim() || creating}
+                    title="Create list"
                   >
                     {creating ? (
                       <Spinner size="sm" animation="border" />
@@ -476,6 +488,7 @@ export default function Lists() {
                 </InputGroup>
               </Form>
 
+              {/* Search lists */}
               <InputGroup className="mb-2">
                 <Form.Control
                   placeholder="Search lists…"
@@ -487,6 +500,37 @@ export default function Lists() {
                 </InputGroup.Text>
               </InputGroup>
 
+              {/* Sort + show hidden */}
+              <div className="d-flex gap-2 align-items-center mb-2">
+                <Form.Select
+                  style={{ maxWidth: 200 }}
+                  value={listSort.key}
+                  onChange={(e) => setSortKey(e.target.value)}
+                  aria-label="Sort lists by"
+                >
+                  <option value="name">Sort: Name</option>
+                  <option value="created">Sort: Created</option>
+                </Form.Select>
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  onClick={toggleSortDir}
+                  title="Toggle sort direction"
+                >
+                  {listSort.dir === "asc" ? "▲ Asc" : "▼ Desc"}
+                </Button>
+
+                <Form.Check
+                  type="checkbox"
+                  id="show-hidden"
+                  label="Show hidden"
+                  checked={showHidden}
+                  onChange={(e) => setShowHidden(e.target.checked)}
+                  className="ms-auto"
+                />
+              </div>
+
+              {/* Lists */}
               <div style={{ maxHeight: 420, overflowY: "auto" }}>
                 <ListGroup>
                   {visibleLists.length === 0 && (
@@ -494,6 +538,7 @@ export default function Lists() {
                       No lists
                     </ListGroup.Item>
                   )}
+
                   {visibleLists.map((l) => (
                     <ListGroup.Item
                       key={l.id}
@@ -501,8 +546,26 @@ export default function Lists() {
                       active={selectedId === l.id}
                       onClick={() => setSelectedId(l.id)}
                       className="d-flex align-items-center justify-content-between"
+                      title={l.shared ? "Shared with you" : "Owned by you"}
                     >
-                      <span>{l.name}</span>
+                      <span className="d-flex align-items-center gap-2">
+                        {l.shared && (
+                          <i
+                            className="bi bi-people text-secondary"
+                            aria-hidden="true"
+                          />
+                        )}
+                        <span className="text-truncate">{l.name}</span>
+
+                        {/* Hidden badge only when user opted to show hidden */}
+                        {l.shared && l.hidden && showHidden && (
+                          <Badge bg="secondary" title="Hidden from your view">
+                            Hidden
+                          </Badge>
+                        )}
+                      </span>
+
+                      {/* Count bubble (optional; remove if you don’t have totalItems) */}
                       <Badge bg="light" text="dark">
                         {totalItems(l.id)}
                       </Badge>
@@ -516,49 +579,83 @@ export default function Lists() {
 
         {/* RIGHT: Items */}
         <Col xs={12} md={8}>
-          <Card>
-            <Card.Header className="d-flex align-items-center">
-              <i className="bi bi-bag-check me-2" aria-hidden="true" />
-              <strong>
-                {selectedId
-                  ? lists.find((l) => l.id === selectedId)?.name || "List"
-                  : "Select a list"}
-              </strong>
-              {selectedId && (
-                <Badge bg="secondary" className="ms-2">
-                  {totalItems(selectedId)}
-                </Badge>
+          <Card className="shadow-sm">
+            <Card.Header className="d-flex align-items-center flex-wrap gap-2">
+              {/* Title + count */}
+              <div className="d-flex align-items-center me-auto gap-2">
+                <i className="bi bi-bag-check" aria-hidden="true" />
+                <strong>
+                  {selectedId
+                    ? lists.find((l) => l.id === selectedId)?.name || "List"
+                    : "Select a list"}
+                </strong>
+
+                {selectedId && (
+                  <Badge bg="secondary" className="ms-1">
+                    {totalItems(selectedId)}
+                  </Badge>
+                )}
+
+                {/* Shared badge when not owner */}
+                {selectedId && !isOwner && (
+                  <Badge bg="info" className="ms-1">
+                    Shared
+                  </Badge>
+                )}
+              </div>
+
+              {/* Loading spinner */}
+              {selectedId && loading && (
+                <Spinner size="sm" animation="border" />
               )}
 
-              <div className="ms-auto d-flex align-items-center gap-2">
-                {loading && <Spinner size="sm" animation="border" />}
-                {/* Owner-only actions */}
-                {selectedId && isOwner && !loading && (
-                  <>
+              {/* Actions */}
+              {selectedId &&
+                !loading &&
+                (isOwner ? (
+                  <div className="d-flex align-items-center gap-2">
                     <Button
                       size="sm"
                       variant="outline-secondary"
                       onClick={rename}
+                      title="Rename list"
                     >
-                      Rename
+                      <i className="bi bi-pencil-square" /> Rename
                     </Button>
-                    <Button size="sm" onClick={() => setShareOpen(true)}>
-                      Share
+                    <Button
+                      size="sm"
+                      variant="outline-primary"
+                      onClick={() => setShareOpen(true)}
+                      title="Share list"
+                    >
+                      <i className="bi bi-people" /> Share
                     </Button>
                     <Button
                       size="sm"
                       variant="outline-danger"
                       onClick={() => setConfirmDelList(true)}
+                      title="Delete list"
                     >
-                      <i className="bi bi-trash" /> Delete List
+                      <i className="bi bi-trash" /> Delete
                     </Button>
-                  </>
-                )}
-              </div>
+                  </div>
+                ) : (
+                  <div className="d-flex align-items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline-secondary"
+                      onClick={hideSelected}
+                      title="Hide this shared list from your view"
+                    >
+                      <i className="bi bi-eye-slash" /> Hide
+                    </Button>
+                  </div>
+                ))}
             </Card.Header>
 
             <Card.Body>
               {err && <div className="alert alert-warning my-2">{err}</div>}
+
               {!selectedId ? (
                 <div className="text-muted">
                   Choose a list from the left to view items.
@@ -575,6 +672,7 @@ export default function Lists() {
                           onChange={(e) =>
                             updateDraft(selectedId, { name: e.target.value })
                           }
+                          disabled={!canEdit}
                         />
                       </Col>
                       <Col md={2}>
@@ -589,6 +687,7 @@ export default function Lists() {
                               quantity: e.target.value,
                             })
                           }
+                          disabled={!canEdit}
                         />
                       </Col>
                       <Col md={3}>
@@ -601,11 +700,11 @@ export default function Lists() {
                                 expiry: e.target.value,
                               })
                             }
+                            disabled={!canEdit}
                           />
                           <Button
                             variant="outline-secondary"
                             type="button"
-                            // Clear ALL fields (name + qty + date)
                             onClick={() =>
                               updateDraft(selectedId, {
                                 name: "",
@@ -613,20 +712,26 @@ export default function Lists() {
                                 expiry: "",
                               })
                             }
+                            disabled={!canEdit}
+                            title="Clear fields"
                           >
                             Clear
                           </Button>
                         </InputGroup>
                       </Col>
                       <Col md={1}>
-                        <Button type="submit" className="w-100">
+                        <Button
+                          type="submit"
+                          className="w-100"
+                          disabled={!canEdit}
+                        >
                           Add
                         </Button>
                       </Col>
                     </Row>
                   </Form>
 
-                  {/* Filter + Sort */}
+                  {/* Filter */}
                   <Row className="g-2 mb-2">
                     <Col md={7}>
                       <InputGroup>
@@ -684,7 +789,9 @@ export default function Lists() {
                         {viewItems.length === 0 && (
                           <tr>
                             <td colSpan={4} className="text-center text-muted">
-                              No matching items
+                              {filters[selectedId]?.trim()
+                                ? "No matching items"
+                                : "No items yet"}
                             </td>
                           </tr>
                         )}
@@ -747,6 +854,7 @@ export default function Lists() {
                                       onClick={() =>
                                         updateEditDraft(it.id, { expiry: "" })
                                       }
+                                      title="Clear date"
                                     >
                                       Clear
                                     </Button>
@@ -766,6 +874,7 @@ export default function Lists() {
                                       variant="outline-secondary"
                                       size="sm"
                                       onClick={() => startEdit(it)}
+                                      disabled={!canEdit}
                                     >
                                       <i className="bi bi-pencil" /> Edit
                                     </Button>{" "}
@@ -773,6 +882,7 @@ export default function Lists() {
                                       variant="outline-danger"
                                       size="sm"
                                       onClick={() => askDelete(selectedId, it)}
+                                      disabled={!canEdit}
                                     >
                                       <i className="bi bi-trash" /> Delete
                                     </Button>
@@ -782,6 +892,7 @@ export default function Lists() {
                                     <Button
                                       size="sm"
                                       onClick={() => saveEdit(it.id)}
+                                      disabled={!canEdit}
                                     >
                                       <i className="bi bi-check2" /> Save
                                     </Button>{" "}

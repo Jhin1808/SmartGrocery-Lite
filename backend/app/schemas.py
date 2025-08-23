@@ -1,7 +1,6 @@
 # backend/app/schemas.py
-from datetime import date
+from datetime import date, datetime
 from typing import Optional, Literal
-
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 # ----- Lists / Items -----
@@ -13,7 +12,12 @@ class ListRead(BaseModel):
     id: int
     name: str
     owner_id: int
+    # include created_at if your model has it (safe if DB column exists)
+    created_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
+
+class ListUpdate(BaseModel):
+    name: str
 
 class ItemCreate(BaseModel):
     name: str
@@ -57,7 +61,6 @@ class UserMeUpdate(BaseModel):
     name: Optional[str] = None
     picture: Optional[str] = None
 
-    # Accept "" from the frontend and treat it as "clear this field"
     @field_validator("name", "picture", mode="before")
     @classmethod
     def blank_to_none(cls, v):
@@ -75,11 +78,14 @@ class ShareRead(BaseModel):
     list_id: int
     user_id: int
     email: EmailStr
-    role: Literal["viewer", "editor"]
+    role: str
     model_config = ConfigDict(from_attributes=True)
 
-class ListUpdate(BaseModel):
-    name: str
-    
 class ShareRoleUpdate(BaseModel):
-    role: Literal["viewer","editor"]
+    role: Literal["viewer", "editor"]
+
+# Extended list shape for /lists/ (includes caller’s relationship)
+class ListReadEx(ListRead):
+    shared: bool = False
+    role: Optional[Literal["owner", "viewer", "editor"]] = None
+    hidden: Optional[bool] = None

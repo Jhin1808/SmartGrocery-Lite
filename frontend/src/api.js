@@ -76,19 +76,30 @@ export const apiRegister = ({ email, password }) =>
 export const apiMe       = () => request("/me");
 
 // -------- Lists / Items --------
-export const apiGetLists   = () => request("/lists/");
+export const apiGetLists = (includeHidden = false) =>
+  request(`/lists/${includeHidden ? "?include_hidden=1" : ""}`);
+
 export const apiCreateList = (name) => request("/lists/", { method: "POST", body: { name } });
 
 export const apiGetItems   = (listId) => request(`/lists/${listId}/items`);
+
 export const apiAddItem    = (listId, { name, quantity = 1, expiry = null }) =>
   request(`/lists/${listId}/items`, { method: "POST", body: { name, quantity, expiry } });
+
 export const apiUpdateItem = (itemId, patch) =>
   request(`/lists/items/${itemId}`, { method: "PATCH", body: patch });
+
 export const apiDeleteItem = (itemId) =>
   request(`/lists/items/${itemId}`, { method: "DELETE" });
 
 export const apiDeleteList = (listId) =>
   request(`/lists/${listId}`, { method: "DELETE" });
+
+// Hide the list
+export const apiHideList   = (listId) => request(`/lists/${listId}/hide`,   { method: "POST" });
+
+//Unhide the list
+export const apiUnhideList = (listId) => request(`/lists/${listId}/unhide`, { method: "POST" });
 
 // Update profile (name, picture)
 export const apiUpdateMe = (patch) =>
@@ -107,6 +118,7 @@ export const apiRenameList = (listId, name) =>
 
 // Sharing APIs (owner-only)
 export const apiListShares   = (listId) => request(`/lists/${listId}/share`);
+
 export const apiCreateShare  = (listId, { email, role }) =>
   request(`/lists/${listId}/share`, { method: "POST", body: { email, role } });
 
