@@ -12,24 +12,12 @@ export default function Account() {
   const [name, setName] = useState("");
   const [picture, setPicture] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
-  // Add validation error state for invalid image URLs
-  const [pictureError, setPictureError] = useState<string | null>(null);
-
+  
 
   // robust preview (avoid infinite onError loops)
   const [previewSrc, setPreviewSrc] = useState("");
   const hadErrorRef = useRef(false);
 
-  // Validate image URLs before accepting them
-  function isSafeImageUrl(url) {
-    // Only allow http(s) URLs. You can adjust as needed for your app's sources.
-    try {
-      const supportedProtocols = ['http:', 'https:'];
-      const u = new URL(url);
-      if (supportedProtocols.includes(u.protocol)) return true;
-    } catch (e) { /* Invalid URL */ }
-    return false;
-  }
   useEffect(() => {
     setName(user?.name || "");
     setPicture(user?.picture || "");
@@ -56,10 +44,7 @@ export default function Account() {
   const dirtyProfile =
     name !== (user?.name || "") || picture !== (user?.picture || "");
 
-  const clearPicture = () => {
-  setPicture("");
-  setPictureError(null);
-  };
+  const clearPicture = () => setPicture("");
 
   // Toasts
   const [toast, setToast] = useState(null);
@@ -173,13 +158,6 @@ export default function Account() {
                           Clear
                         </Button>
                       </InputGroup>
-
-                      {pictureError && (
-                        <div className="text-danger small mt-1">
-                          {pictureError}
-                        </div>
-                      )}
-
                       <Form.Text className="text-muted">
                         Leave blank and save to remove your picture.
                       </Form.Text>
