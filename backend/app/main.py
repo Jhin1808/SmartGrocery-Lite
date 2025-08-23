@@ -1,6 +1,8 @@
 # app/main.py
 import os
 import sqlalchemy
+
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -48,4 +50,5 @@ if DATABASE_URL:
 @app.get("/")
 def root():
     return {"message": "Welcome to SmartGrocery Lite API"}
+
 
