@@ -14,8 +14,8 @@ from app.security_cookies import set_login_cookie
 router = APIRouter(prefix="/auth/google", tags=["auth:google"])
 
 # ---- Env & URLs ----
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
-FRONTEND_URL = (os.getenv("FRONTEND_URL", "http://localhost:3000").split(",")[0]).rstrip("/")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+BACKEND_URL  = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
@@ -48,12 +48,7 @@ def _bounce_frontend(path: str = "/", error: str | None = None) -> RedirectRespo
 async def google_login(request: Request):
     # Use explicit REDIRECT_URI tied to BACKEND_URL
     # (avoids reverse-proxy/Host header surprises)
-    return await oauth.google.authorize_redirect(
-        request,
-        redirect_uri=REDIRECT_URI,
-        # optional: prompt="select_account" to force account chooser each time
-        # prompt="select_account",
-    )
+    return await oauth.google.authorize_redirect(request, REDIRECT_URI)
 
 @router.get("/callback")
 async def google_callback(request: Request, db: Session = Depends(get_db)):
@@ -110,6 +105,6 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
 
     # Issue our session token (HTTP-only cookie)
     jwt = create_access_token(user.id)
-    resp = _bounce_frontend("/oauth/callback")  # Clean URL; SPA can then /me
+    resp = RedirectResponse(f"{FRONTEND_URL}/oauth/callback")
     set_login_cookie(resp, jwt)
     return resp

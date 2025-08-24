@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Container, Row, Col, Card, Form, Button,
-  InputGroup, Alert, Spinner, Tabs, Tab
+  Container,
+  Row,
+  Col,
+  Card,
+  Form,
+  Button,
+  InputGroup,
+  Alert,
+  Spinner,
+  Tabs,
+  Tab,
 } from "react-bootstrap";
 import { apiLogin, apiRegister } from "../api";
 
@@ -15,22 +24,27 @@ export default function Auth({ onLoggedIn }) {
   const [toastMsg, setToastMsg] = useState(null); // simple success note
 
   // ---- login state ----
-  const [email, setEmail] = useState("alice@example.com");
-  const [password, setPassword] = useState("pass12345");
+  const [email, setEmail] = useState("account@example.com");
+  const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [remember, setRemember] = useState(true);
   const [busyLogin, setBusyLogin] = useState(false);
   const emailRef = useRef(null);
 
-  useEffect(() => { emailRef.current?.focus(); }, []);
+  useEffect(() => {
+    emailRef.current?.focus();
+  }, []);
 
   const canSubmitLogin =
-    email.trim().length > 3 && email.includes("@") && password.trim().length >= 6;
+    email.trim().length > 3 &&
+    email.includes("@") &&
+    password.trim().length >= 6;
 
   const submitLogin = async (e) => {
     e.preventDefault();
     if (!canSubmitLogin) return;
-    setErr(null); setBusyLogin(true);
+    setErr(null);
+    setBusyLogin(true);
     try {
       const tok = await apiLogin(email.trim(), password);
       const val = tok?.access_token || tok?.token || tok;
@@ -49,19 +63,24 @@ export default function Auth({ onLoggedIn }) {
   const [rConfirm, setRConfirm] = useState("");
   const [busyReg, setBusyReg] = useState(false);
   const canSubmitReg =
-    rEmail.trim().includes("@") && rPassword.length >= 6 && rPassword === rConfirm;
+    rEmail.trim().includes("@") &&
+    rPassword.length >= 6 &&
+    rPassword === rConfirm;
 
   const submitRegister = async (e) => {
     e.preventDefault();
     if (!canSubmitReg) return;
-    setErr(null); setBusyReg(true);
+    setErr(null);
+    setBusyReg(true);
     try {
       await apiRegister({ email: rEmail.trim(), password: rPassword });
       setToastMsg("Account created! You can log in now.");
       setTab("login");
       setEmail(rEmail.trim());
       setPassword("");
-      setREmail(""); setRPassword(""); setRConfirm("");
+      setREmail("");
+      setRPassword("");
+      setRConfirm("");
     } catch (ex) {
       setErr(ex.message || "Registration failed");
     } finally {
@@ -91,12 +110,20 @@ export default function Auth({ onLoggedIn }) {
               </div>
 
               {err && (
-                <Alert variant="danger" dismissible onClose={() => setErr(null)}>
+                <Alert
+                  variant="danger"
+                  dismissible
+                  onClose={() => setErr(null)}
+                >
                   {err}
                 </Alert>
               )}
               {toastMsg && (
-                <Alert variant="success" dismissible onClose={() => setToastMsg(null)}>
+                <Alert
+                  variant="success"
+                  dismissible
+                  onClose={() => setToastMsg(null)}
+                >
                   {toastMsg}
                 </Alert>
               )}
@@ -143,7 +170,9 @@ export default function Auth({ onLoggedIn }) {
                           onClick={() => setShowPw((s) => !s)}
                           title={showPw ? "Hide password" : "Show password"}
                         >
-                          <i className={showPw ? "bi bi-eye-slash" : "bi bi-eye"} />
+                          <i
+                            className={showPw ? "bi bi-eye-slash" : "bi bi-eye"}
+                          />
                         </Button>
                       </InputGroup>
                     </Form.Group>
@@ -162,10 +191,18 @@ export default function Auth({ onLoggedIn }) {
                     </div>
 
                     <div className="d-grid gap-2">
-                      <Button type="submit" disabled={busyLogin || !canSubmitLogin}>
+                      <Button
+                        type="submit"
+                        disabled={busyLogin || !canSubmitLogin}
+                      >
                         {busyLogin ? (
                           <>
-                            <Spinner as="span" size="sm" animation="border" className="me-2" />
+                            <Spinner
+                              as="span"
+                              size="sm"
+                              animation="border"
+                              className="me-2"
+                            />
                             Signing in…
                           </>
                         ) : (
@@ -235,7 +272,9 @@ export default function Auth({ onLoggedIn }) {
                         autoComplete="new-password"
                         required
                         minLength={6}
-                        isInvalid={rConfirm.length > 0 && rConfirm !== rPassword}
+                        isInvalid={
+                          rConfirm.length > 0 && rConfirm !== rPassword
+                        }
                       />
                       <Form.Control.Feedback type="invalid">
                         Passwords don’t match.
@@ -246,7 +285,12 @@ export default function Auth({ onLoggedIn }) {
                       <Button type="submit" disabled={busyReg || !canSubmitReg}>
                         {busyReg ? (
                           <>
-                            <Spinner as="span" size="sm" animation="border" className="me-2" />
+                            <Spinner
+                              as="span"
+                              size="sm"
+                              animation="border"
+                              className="me-2"
+                            />
                             Creating account…
                           </>
                         ) : (
