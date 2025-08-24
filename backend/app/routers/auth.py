@@ -23,7 +23,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
 
 @router.post("/token", status_code=204)
 def token(form: OAuth2PasswordRequestForm = Depends(),
-          db: Session = Depends(get_db)):
+          db: Session = Depends(get_db), response: Response = None):
     # OAuth2 spec calls it "username" — we use email as username
     u = db.query(User).filter(User.email == form.username).first()
     if not u or not u.password_hash or not verify_password(form.password, u.password_hash):
@@ -33,6 +33,7 @@ def token(form: OAuth2PasswordRequestForm = Depends(),
     jwt = create_access_token(u.id)
     resp = Response(status_code=204)            # no body, just set cookie
     set_login_cookie(resp, jwt)                 # HttpOnly cookie
+    response.status_code = 204
     return resp
 
 @router.post("/logout", status_code=204)
