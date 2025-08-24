@@ -4,6 +4,7 @@ import sqlalchemy
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from app.database import engine
 from app.routers.lists import router as lists_router
@@ -18,6 +19,9 @@ ALLOWED_ORIGINS = [o.strip().rstrip("/") for o in FRONTEND_URL.split(",") if o.s
 SESSION_SECRET = os.getenv("SESSION_SECRET", os.getenv("SECRET_KEY", "dev-insecure"))
 
 app = FastAPI(title="SmartGrocery Lite API", version="0.1.0")
+
+# Trust Koyeb/X-Forwarded-* headers
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 app.add_middleware(
     CORSMiddleware,
