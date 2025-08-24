@@ -1,9 +1,20 @@
 // src/api.js
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8000";
+const rawBase =
+  process.env.REACT_APP_API_BASE ||
+  "";
+const API_BASE = rawBase.replace(/\/+$/, ""); // strip trailing slash if any
 export { API_BASE };
+
+// Safely join base + path
+function joinUrl(base, path) {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${base}${p}`;
+}
 
 // Generic request helper (cookie-based auth)
 async function request(path, { method = "GET", headers = {}, body } = {}) {
+  const url = joinUrl(API_BASE, path);
+
   const h = { ...headers };
   let payload = body;
   if (payload && !(payload instanceof FormData) && !h["Content-Type"]) {
@@ -11,13 +22,13 @@ async function request(path, { method = "GET", headers = {}, body } = {}) {
     payload = JSON.stringify(payload);
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-  method,
-  headers: h,
-  body: payload,
-  credentials: "include",
-  cache: "no-store",
-});
+  const res = await fetch(url, {
+    method,
+    headers: h,
+    body: payload,
+    credentials: "include", // keep cookies
+    cache: "no-store",
+  });
 
   const ct = res.headers.get("content-type") || "";
 
@@ -29,7 +40,9 @@ async function request(path, { method = "GET", headers = {}, body } = {}) {
       const data = await res.json().catch(() => ({}));
       if (data?.detail) {
         if (Array.isArray(data.detail)) {
-          message = data.detail.map(d => d.msg || d.detail || JSON.stringify(d)).join("\n");
+          message = data.detail
+            .map((d) => d.msg || d.detail || JSON.stringify(d))
+            .join("\n");
         } else if (typeof data.detail === "string") {
           message = data.detail;
         } else {
@@ -37,11 +50,11 @@ async function request(path, { method = "GET", headers = {}, body } = {}) {
         }
       } else if (data?.message) {
         message = data.message;
-      } else {
+      } else if (Object.keys(data).length) {
         message = JSON.stringify(data);
       }
     } else {
-      const text = await res.text();
+      const text = await res.text().catch(() => "");
       if (text) message = text;
     }
     const err = new Error(message);
@@ -52,9 +65,10 @@ async function request(path, { method = "GET", headers = {}, body } = {}) {
   return ct.includes("application/json") ? res.json() : res.text();
 }
 
+// ---- Auth ----
 export async function apiLogin(email, password) {
   const body = new URLSearchParams({ username: email, password });
-  const res = await fetch(`${API_BASE}/auth/token`, {
+  const res = await fetch(joinUrl(API_BASE, "/auth/token"), {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
@@ -64,27 +78,31 @@ export async function apiLogin(email, password) {
     const j = await res.json().catch(() => ({}));
     throw new Error(j.detail || res.statusText);
   }
-  // cookie is set by backend; nothing else to return
-  return;
+  // cookie set by backend
 }
 
-
-export const apiLogout   = () => request("/auth/logout", { method: "POST" });
+export const apiLogout = () => request("/auth/logout", { method: "POST" });
 export const apiRegister = ({ email, password }) =>
   request("/auth/register", { method: "POST", body: { email, password } });
 
-export const apiMe       = () => request("/me");
+export const apiMe = () => request("/me");
 
-// -------- Lists / Items --------
-export const apiGetLists = (includeHidden = false) =>
-  request(`/lists/${includeHidden ? "?include_hidden=1" : ""}`);
+// ---- Lists / Items ----
+export const apiGetLists = (includeHidden = false) => {
+  const qs = includeHidden ? `?${new URLSearchParams({ include_hidden: "1" })}` : "";
+  return request(`/lists/${qs}`);
+};
 
-export const apiCreateList = (name) => request("/lists/", { method: "POST", body: { name } });
+export const apiCreateList = (name) =>
+  request("/lists/", { method: "POST", body: { name } });
 
-export const apiGetItems   = (listId) => request(`/lists/${listId}/items`);
+export const apiGetItems = (listId) => request(`/lists/${listId}/items`);
 
-export const apiAddItem    = (listId, { name, quantity = 1, expiry = null }) =>
-  request(`/lists/${listId}/items`, { method: "POST", body: { name, quantity, expiry } });
+export const apiAddItem = (listId, { name, quantity = 1, expiry = null }) =>
+  request(`/lists/${listId}/items`, {
+    method: "POST",
+    body: { name, quantity, expiry },
+  });
 
 export const apiUpdateItem = (itemId, patch) =>
   request(`/lists/items/${itemId}`, { method: "PATCH", body: patch });
@@ -95,35 +113,38 @@ export const apiDeleteItem = (itemId) =>
 export const apiDeleteList = (listId) =>
   request(`/lists/${listId}`, { method: "DELETE" });
 
-// Hide the list
-export const apiHideList   = (listId) => request(`/lists/${listId}/hide`,   { method: "POST" });
+// Hide / Unhide
+export const apiHideList = (listId) =>
+  request(`/lists/${listId}/hide`, { method: "POST" });
 
-//Unhide the list
-export const apiUnhideList = (listId) => request(`/lists/${listId}/unhide`, { method: "POST" });
+export const apiUnhideList = (listId) =>
+  request(`/lists/${listId}/unhide`, { method: "POST" });
 
-// Update profile (name, picture)
+// ---- Profile ----
 export const apiUpdateMe = (patch) =>
   request("/me", { method: "PATCH", body: patch });
 
-// Change/set password
 export const apiChangePassword = ({ current_password, new_password }) =>
   request("/auth/change-password", {
     method: "POST",
     body: { current_password, new_password },
   });
 
-// Rename a list (owner-only)
+// ---- List rename ----
 export const apiRenameList = (listId, name) =>
   request(`/lists/${listId}`, { method: "PATCH", body: { name } });
 
-// Sharing APIs (owner-only)
-export const apiListShares   = (listId) => request(`/lists/${listId}/share`);
+// ---- Sharing (owner-only) ----
+export const apiListShares = (listId) => request(`/lists/${listId}/share`);
 
-export const apiCreateShare  = (listId, { email, role }) =>
+export const apiCreateShare = (listId, { email, role }) =>
   request(`/lists/${listId}/share`, { method: "POST", body: { email, role } });
 
-export const apiUpdateShare  = (listId, shareId, { role }) =>
-+  request(`/lists/${listId}/share/${shareId}`, { method: "PATCH", body: { role } });
+export const apiUpdateShare = (listId, shareId, { role }) =>
+  request(`/lists/${listId}/share/${shareId}`, { method: "PATCH", body: { role } });
 
-export const apiRevokeShare  = (listId, shareId) =>
+export const apiRevokeShare = (listId, shareId) =>
   request(`/lists/${listId}/share/${shareId}`, { method: "DELETE" });
+
+// Optional helper for Google login button in the SPA:
+export const googleLoginUrl = () => joinUrl(API_BASE, "/auth/google/login");

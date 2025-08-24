@@ -12,12 +12,15 @@ from app.routers.me import router as me_router
 
 FRONTEND_URL   = os.getenv("FRONTEND_URL", "http://localhost:3000")
 SESSION_SECRET = os.getenv("SESSION_SECRET", os.getenv("SECRET_KEY", "dev-insecure"))
+# app/main.py
+
+ALLOWED_ORIGINS = [o.strip() for o in FRONTEND_URLS.split(",") if o.strip()]
 
 app = FastAPI(title="SmartGrocery Lite API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL],
+    allow_origins=[ALLOWED_ORIGINS],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
