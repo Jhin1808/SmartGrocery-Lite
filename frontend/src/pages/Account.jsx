@@ -12,23 +12,12 @@ export default function Account() {
   const [name, setName] = useState("");
   const [picture, setPicture] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
-  // Add validation error state for invalid image URLs
-  const [pictureError, setPictureError] = useState("");
+  
 
   // robust preview (avoid infinite onError loops)
   const [previewSrc, setPreviewSrc] = useState("");
   const hadErrorRef = useRef(false);
 
-  // Validate image URLs before accepting them
-  function isSafeImageUrl(url) {
-    // Only allow http(s) URLs. You can adjust as needed for your app's sources.
-    try {
-      const supportedProtocols = ['http:', 'https:'];
-      const u = new URL(url);
-      if (supportedProtocols.includes(u.protocol)) return true;
-    } catch (e) { /* Invalid URL */ }
-    return false;
-  }
   useEffect(() => {
     setName(user?.name || "");
     setPicture(user?.picture || "");
@@ -158,26 +147,12 @@ export default function Account() {
                         <Form.Control
                           placeholder="https://example.com/photo.jpg"
                           value={picture}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val === "") {
-                              setPicture("");
-                              setPictureError("");
-                            } else if (isSafeImageUrl(val)) {
-                              setPicture(val);
-                              setPictureError("");
-                            } else {
-                              setPictureError("Invalid image URL: please enter a valid https:// or http:// URL.");
-                            }
-                          }}
+                          onChange={(e) => setPicture(e.target.value)}
                         />
                         <Button
                           variant="outline-secondary"
                           type="button"
                           onClick={clearPicture}
-                      {pictureError && (
-                        <div className="text-danger small mt-1">{pictureError}</div>
-                      )}
                           title="Clear image"
                         >
                           Clear
@@ -191,7 +166,10 @@ export default function Account() {
                 </Row>
 
                 <div className="mt-3 d-flex gap-2">
-                  <Button type="submit" disabled={!dirtyProfile || savingProfile}>
+                  <Button
+                    type="submit"
+                    disabled={!dirtyProfile || savingProfile}
+                  >
                     {savingProfile ? "Saving…" : "Save changes"}
                   </Button>
                   <Button
@@ -250,7 +228,9 @@ export default function Account() {
                         value={confirmPwd}
                         onChange={(e) => setConfirmPwd(e.target.value)}
                         autoComplete="new-password"
-                        isInvalid={confirmPwd.length > 0 && confirmPwd !== newPwd}
+                        isInvalid={
+                          confirmPwd.length > 0 && confirmPwd !== newPwd
+                        }
                       />
                       <Form.Control.Feedback type="invalid">
                         Passwords don’t match.
@@ -266,8 +246,8 @@ export default function Account() {
                 </div>
 
                 <div className="text-muted small mt-3">
-                  If you signed in with Google and never set a password, you can leave
-                  “Current password” empty to create one now.
+                  If you signed in with Google and never set a password, you can
+                  leave “Current password” empty to create one now.
                 </div>
               </Form>
             </Tab>
@@ -277,8 +257,16 @@ export default function Account() {
 
       <ToastContainer position="top-end" className="p-3">
         {toast && (
-          <Toast bg={toast.variant} onClose={() => setToast(null)} show delay={1800} autohide>
-            <Toast.Body className={toast.variant === "danger" ? "" : "text-white"}>
+          <Toast
+            bg={toast.variant}
+            onClose={() => setToast(null)}
+            show
+            delay={1800}
+            autohide
+          >
+            <Toast.Body
+              className={toast.variant === "danger" ? "" : "text-white"}
+            >
               {toast.msg}
             </Toast.Body>
           </Toast>

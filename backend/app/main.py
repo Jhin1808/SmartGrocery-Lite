@@ -1,24 +1,20 @@
-# app/main.py
 import os
 import sqlalchemy
-
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.database import engine, DATABASE_URL   # <-- import from one place
 from app.routers.lists import router as lists_router
 from app.routers.auth import router as auth_router
 from app.routers.auth_google import router as google_router
 from app.routers.me import router as me_router
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+FRONTEND_URL   = os.getenv("FRONTEND_URL", "http://localhost:3000")
 SESSION_SECRET = os.getenv("SESSION_SECRET", os.getenv("SECRET_KEY", "dev-insecure"))
-DATABASE_URL = os.getenv("DATABASE_URL", "")
 
 app = FastAPI(title="SmartGrocery Lite API", version="0.1.0")
 
-# CORS (must allow credentials for cookies)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[FRONTEND_URL],
@@ -27,7 +23,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Session for Authlib (OAuth state)
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
@@ -35,20 +30,15 @@ app.add_middleware(
     https_only=os.getenv("COOKIE_SECURE", "false").lower() in ("1","true","yes"),
 )
 
-# Routers
 app.include_router(lists_router)
 app.include_router(auth_router)
 app.include_router(google_router)
 app.include_router(me_router)
 
-# Quick DB connectivity check (optional)
-if DATABASE_URL:
-    engine = sqlalchemy.create_engine(DATABASE_URL)
-    with engine.connect() as conn:
-        conn.execute(sqlalchemy.text("SELECT 1"))
+# connectivity check
+with engine.connect() as conn:
+    conn.execute(sqlalchemy.text("SELECT 1"))
 
 @app.get("/")
 def root():
     return {"message": "Welcome to SmartGrocery Lite API"}
-
-
