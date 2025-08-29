@@ -103,13 +103,15 @@ body {
 .auth-wrap .btn-google {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     background: #fff;
     color: #3c4043;
     border: 1px solid #dadce0;
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-weight: 600;
+    border-radius: 4px; /* Google spec */
+    height: 40px;       /* Google spec */
+    padding: 0 12px;    /* Google spec */
+    font-weight: 500;
+    font-size: 14px;
     cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }

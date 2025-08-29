@@ -116,9 +116,9 @@ export default function AuthTabs() {
           <div className="center">
             <p>Sign in with:</p>
             <div className="socials">
-              <button type="button" className="btn-google" onClick={googleLogin}>
-                <img src={googleIcon} alt="Google" />
-                <span>Sign in with Google</span>
+              <button type="button" className="btn-google" onClick={googleLogin} aria-label="Continue with Google">
+                <img src={googleIcon} alt="" aria-hidden="true" />
+                <span>Continue with Google</span>
               </button>
             </div>
             <p className="center" style={{ color: "#666" }}>
@@ -177,9 +177,9 @@ export default function AuthTabs() {
           <div className="center">
             <p>Sign up with:</p>
             <div className="socials">
-              <button type="button" className="btn-google" onClick={googleLogin}>
-                <img src={googleIcon} alt="Google" />
-                <span>Sign up with Google</span>
+              <button type="button" className="btn-google" onClick={googleLogin} aria-label="Continue with Google">
+                <img src={googleIcon} alt="" aria-hidden="true" />
+                <span>Continue with Google</span>
               </button>
             </div>
             <p className="center" style={{ color: "#666" }}>
