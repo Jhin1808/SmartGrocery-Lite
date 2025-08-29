@@ -8,6 +8,7 @@ import Account from "./pages/Account";
 import Help from "./pages/Help";
 import OAuthCallback from "./pages/OAuthCallback";
 import Terms from "./pages/Terms";
+import ResetPassword from "./pages/ResetPassword";
 
 import NavBar from "./components/NavBar";
 
@@ -34,6 +35,7 @@ function AppShell() {
           {/* Public */}
           <Route path="/login" element={<AuthTabs />} />
           <Route path="/oauth/callback" element={<OAuthCallback />} />
+          <Route path="/reset" element={<ResetPassword />} />
           <Route path="/terms" element={<Terms />} />
 
           {/* Protected */}

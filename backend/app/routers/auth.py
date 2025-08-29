@@ -1,13 +1,19 @@
 # app/routers/auth.py
-from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from pydantic import BaseModel, EmailStr
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import User
 from app.schemas import RegisterRequest, UserRead, TokenResponse
-from app.security import hash_password, verify_password, create_access_token
+from app.security import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    create_reset_token,
+    decode_reset_token,
+)
 from app.security_cookies import set_login_cookie, clear_login_cookie
 from app.deps import get_current_user_any as get_current_user
 
@@ -60,6 +66,49 @@ def change_password(payload: ChangePassword,
     current.password_hash = hash_password(payload.new_password)
     db.commit()
     return
+
+
+class ForgotPassword(BaseModel):
+    email: EmailStr
+
+
+class ResetPassword(BaseModel):
+    token: str
+    new_password: str
+
+
+def _frontend_url() -> str:
+    import os
+    return (os.getenv("FRONTEND_URL") or "http://localhost:3000").rstrip("/")
+
+
+@router.post("/forgot-password")
+def forgot_password(payload: ForgotPassword, request: Request, db: Session = Depends(get_db)):
+    # Always respond OK to avoid user enumeration; include reset_url for dev convenience if user exists.
+    user = db.query(User).filter(User.email == payload.email).first()
+    out = {"ok": True}
+    if user:
+        tok = create_reset_token(user.id, expires_minutes=30)
+        out["reset_url"] = f"{_frontend_url()}/reset?token={tok}"
+        # In production you would send this URL via email to the user.
+    return out
+
+
+@router.post("/reset-password", status_code=204)
+def reset_password(payload: ResetPassword, db: Session = Depends(get_db)):
+    try:
+        data = decode_reset_token(payload.token)
+        sub = int(data.get("sub"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+
+    user = db.get(User, sub)
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid token")
+    # Set/replace password without needing the old one
+    user.password_hash = hash_password(payload.new_password)
+    db.commit()
+    return Response(status_code=204)
 
 
 # # app/routers/auth.py

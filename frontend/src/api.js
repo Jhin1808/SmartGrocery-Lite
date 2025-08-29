@@ -140,6 +140,13 @@ export const apiChangePassword = ({ current_password, new_password }) =>
     body: { current_password, new_password },
   });
 
+// ---- Password reset ----
+export const apiForgotPassword = (email) =>
+  request("/auth/forgot-password", { method: "POST", body: { email } });
+
+export const apiResetPassword = ({ token, new_password }) =>
+  request("/auth/reset-password", { method: "POST", body: { token, new_password } });
+
 // ---- List rename ----
 export const apiRenameList = (listId, name) =>
   request(`/lists/${listId}`, { method: "PATCH", body: { name } });
