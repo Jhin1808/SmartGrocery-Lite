@@ -38,9 +38,9 @@ export default function AuthTabs() {
   }, [search]);
 
   const canLogin =
-    loginEmail.trim().includes("@") && loginPwd.trim().length >= 6;
+    loginEmail.trim().includes("@") && loginPwd.trim().length >= 8;
   const canRegister =
-    regEmail.trim().includes("@") && regPwd.trim().length >= 6 && agree;
+    regEmail.trim().includes("@") && regPwd.trim().length >= 8 && agree;
 
   const googleLogin = () => {
     // Optional: add ?next=/lists if want to return to a specific page after SSO
@@ -207,7 +207,7 @@ export default function AuthTabs() {
           <input
             className="input"
             type="password"
-            placeholder="Password (min 6)"
+            placeholder="Password (min 8)"
             value={regPwd}
             onChange={(e) => setRegPwd(e.target.value)}
           />
