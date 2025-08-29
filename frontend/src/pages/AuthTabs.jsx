@@ -116,7 +116,12 @@ export default function AuthTabs() {
           <div className="center">
             <p>Sign in with:</p>
             <div className="socials">
-              <button type="button" className="btn-google" onClick={googleLogin} aria-label="Continue with Google">
+              <button
+                type="button"
+                className="btn-google"
+                onClick={googleLogin}
+                aria-label="Continue with Google"
+              >
                 <img src={googleIcon} alt="" aria-hidden="true" />
                 <span>Continue with Google</span>
               </button>
@@ -177,7 +182,12 @@ export default function AuthTabs() {
           <div className="center">
             <p>Sign up with:</p>
             <div className="socials">
-              <button type="button" className="btn-google" onClick={googleLogin} aria-label="Continue with Google">
+              <button
+                type="button"
+                className="btn-google"
+                onClick={googleLogin}
+                aria-label="Continue with Google"
+              >
                 <img src={googleIcon} alt="" aria-hidden="true" />
                 <span>Continue with Google</span>
               </button>
@@ -208,7 +218,10 @@ export default function AuthTabs() {
               checked={agree}
               onChange={(e) => setAgree(e.target.checked)}
             />{" "}
-            I agree to the <Link to="/terms" target="_blank" rel="noreferrer">Terms of Service</Link>
+            I agree to the{" "}
+            <Link to="/terms" target="_blank" rel="noreferrer">
+              Terms of Service
+            </Link>
           </label>
 
           {regErr &&
