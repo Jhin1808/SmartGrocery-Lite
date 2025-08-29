@@ -8,7 +8,13 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.database import engine
 from app.routers.lists import router as lists_router
 from app.routers.auth import router as auth_router
-from app.routers.auth_google import router as google_router
+google_router = None
+try:
+    from app.routers.auth_google import router as google_router
+except Exception:
+    # In test or minimal environments, Google OAuth deps or env may be missing.
+    # Skip loading the Google router in that case.
+    google_router = None
 from app.routers.me import router as me_router
 
 # One env only; can be single origin or comma-separated list
@@ -39,7 +45,8 @@ app.add_middleware(
 
 app.include_router(lists_router)
 app.include_router(auth_router)
-app.include_router(google_router)
+if google_router is not None:
+    app.include_router(google_router)
 app.include_router(me_router)
 
 # Connectivity check

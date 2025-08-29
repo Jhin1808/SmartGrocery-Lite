@@ -118,9 +118,6 @@ export default function AuthTabs() {
               <button type="button" className="btn-ghost" onClick={googleLogin}>
                 🔵 Google
               </button>
-              <button type="button" className="btn-ghost" disabled>
-                🐙 GitHub
-              </button>
             </div>
             <p className="center" style={{ color: "#666" }}>
               or
@@ -180,9 +177,6 @@ export default function AuthTabs() {
             <div className="socials">
               <button type="button" className="btn-ghost" onClick={googleLogin}>
                 🔵 Google
-              </button>
-              <button type="button" className="btn-ghost" disabled>
-                🐙 GitHub
               </button>
             </div>
             <p className="center" style={{ color: "#666" }}>

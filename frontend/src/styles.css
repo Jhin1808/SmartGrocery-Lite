@@ -50,16 +50,43 @@ body {
     border-radius: 8px;
 }
 
+/* Primary button styling for app actions (scoped to auth screen) */
+.auth-wrap .btn {
+    display: inline-block;
+    padding: 10px 14px;
+    border: 1px solid var(--p);
+    background: var(--p);
+    color: #fff;
+    border-radius: 8px;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, filter 0.15s ease;
+}
 
-.btn:disabled {
+.auth-wrap .btn:hover {
+    filter: brightness(0.95);
+}
+
+.auth-wrap .btn:focus {
+    outline: 2px solid #bcd1ff;
+    outline-offset: 2px;
+}
+
+
+.auth-wrap .btn:disabled {
     opacity: .6;
     cursor: not-allowed;
 }
 
-.btn-ghost {
+.auth-wrap .btn-ghost {
     background: transparent;
     border: 1px solid #ddd;
     color: var(--b);
+}
+
+.auth-wrap .btn-ghost:hover {
+    background: #f7f9ff;
 }
 
 .center {
