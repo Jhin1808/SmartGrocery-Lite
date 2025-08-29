@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
 from app.schemas import UserProfileRead, UserMeUpdate
-from app.deps import get_current_user_cookie as get_current_user
+from app.deps import get_current_user_any as get_current_user
 
 router = APIRouter(tags=["me"])
 
@@ -33,4 +33,3 @@ def update_me(
     db.commit()
     db.refresh(current)
     return current
-

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { API_BASE, apiLogout } from "../api";
+import { apiLogout, apiMe } from "../api";
 
 const AuthCtx = createContext({ user: null, loading: true });
 
@@ -10,16 +10,8 @@ export function AuthProvider({ children }) {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/me`, {
-        method: "GET",
-        credentials: "include",
-      });
-      if (res.ok) {
-        const u = await res.json();
-        setUser(u);
-      } else {
-        setUser(null);
-      }
+      const u = await apiMe();
+      setUser(u);
     } catch {
       setUser(null);
     } finally {
@@ -30,7 +22,11 @@ export function AuthProvider({ children }) {
   useEffect(() => { refresh(); }, [refresh]);
 
   const logout = useCallback(async () => {
-    try { await apiLogout(); } catch {}
+    try {
+      // Clear header token fallback
+      try { localStorage.removeItem("token"); } catch {}
+      await apiLogout();
+    } catch {}
     setUser(null);
   }, []);
 

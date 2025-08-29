@@ -11,7 +11,7 @@ from app.schemas import (
     ShareCreate, ShareRead, ShareRoleUpdate,
     ListReadEx,
 )
-from app.deps import get_current_user_cookie as get_current_user
+from app.deps import get_current_user_any as get_current_user
 
 router = APIRouter(prefix="/lists", tags=["lists"])
 

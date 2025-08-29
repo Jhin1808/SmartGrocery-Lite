@@ -44,6 +44,28 @@ def get_current_user_cookie(request: Request, db: Session = Depends(get_db)) -> 
     token = request.cookies.get("access_token")
     return _user_from_token(token, db)
 
+def get_current_user_any(
+    request: Request,
+    creds: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> User:
+    """Accept either Authorization: Bearer or HttpOnly cookie.
+
+    - Prefer a valid Bearer token when present (helps Safari/iOS where
+      cross-site cookies may be blocked).
+    - Otherwise, fall back to the cookie.
+    """
+    # Try Authorization header first
+    if creds and (creds.scheme or "").lower() == "bearer":
+        try:
+            return _user_from_token(creds.credentials, db)
+        except HTTPException:
+            # Fall through to cookie
+            pass
+    # Cookie fallback
+    token = request.cookies.get("access_token")
+    return _user_from_token(token, db)
+
 
 # # app/deps.py
 # from fastapi import Depends, HTTPException, Request, status
