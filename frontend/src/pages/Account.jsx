@@ -29,8 +29,32 @@ export default function Account() {
     return `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(label)}`;
   }, [user]);
 
+  const sanitizeImageUrl = (u) => {
+    if (!u) return "";
+    const s = String(u).trim();
+    if (!s || s.startsWith("<")) return ""; // avoid accidental HTML
+    // Allow safe data URLs for raster images only
+    if (s.startsWith("data:")) {
+      const head = s.slice(5, 40).toLowerCase();
+      const ok = [
+        "image/png",
+        "image/jpeg",
+        "image/gif",
+        "image/webp",
+      ].some((t) => head.startsWith(t));
+      return ok ? s : ""; // disallow SVG and others
+    }
+    try {
+      const url = new URL(s, window.location.origin);
+      const proto = url.protocol.replace(":", "");
+      if (["http", "https", "blob"].includes(proto)) return url.href;
+    } catch {}
+    return "";
+  };
+
   useEffect(() => {
-    setPreviewSrc(picture || fallbackAvatar);
+    const safe = sanitizeImageUrl(picture);
+    setPreviewSrc(safe || fallbackAvatar);
   }, [picture, fallbackAvatar]);
 
   const onImgError = () => {
