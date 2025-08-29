@@ -99,6 +99,36 @@ body {
     gap: 8px;
 }
 
+/* Google-style sign-in button (light) */
+.auth-wrap .btn-google {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    color: #3c4043;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.auth-wrap .btn-google:hover {
+    background: #f7f8f8;
+}
+
+.auth-wrap .btn-google:focus {
+    outline: 2px solid #bcd1ff;
+    outline-offset: 2px;
+}
+
+.auth-wrap .btn-google img {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
 .error {
     color: #b00020;
 }

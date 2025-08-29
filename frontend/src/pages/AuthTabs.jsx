@@ -1,8 +1,9 @@
 // src/pages/AuthTabs.jsx
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { apiLogin, apiRegister, API_BASE } from "../api";
 import { useAuth } from "./AuthContext";
+import googleIcon from "../googleicon.png";
 
 export default function AuthTabs() {
   const navigate = useNavigate();
@@ -115,8 +116,9 @@ export default function AuthTabs() {
           <div className="center">
             <p>Sign in with:</p>
             <div className="socials">
-              <button type="button" className="btn-ghost" onClick={googleLogin}>
-                🔵 Google
+              <button type="button" className="btn-google" onClick={googleLogin}>
+                <img src={googleIcon} alt="Google" />
+                <span>Sign in with Google</span>
               </button>
             </div>
             <p className="center" style={{ color: "#666" }}>
@@ -175,8 +177,9 @@ export default function AuthTabs() {
           <div className="center">
             <p>Sign up with:</p>
             <div className="socials">
-              <button type="button" className="btn-ghost" onClick={googleLogin}>
-                🔵 Google
+              <button type="button" className="btn-google" onClick={googleLogin}>
+                <img src={googleIcon} alt="Google" />
+                <span>Sign up with Google</span>
               </button>
             </div>
             <p className="center" style={{ color: "#666" }}>
@@ -205,7 +208,7 @@ export default function AuthTabs() {
               checked={agree}
               onChange={(e) => setAgree(e.target.checked)}
             />{" "}
-            I agree to the terms
+            I agree to the <Link to="/terms" target="_blank" rel="noreferrer">Terms of Service</Link>
           </label>
 
           {regErr &&
