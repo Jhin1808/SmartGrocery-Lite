@@ -12,6 +12,7 @@ export default function ResetPassword() {
   const [reqBusy, setReqBusy] = useState(false);
   const [reqMsg, setReqMsg] = useState("");
   const [devLink, setDevLink] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
 
   // Reset state
   const [pw1, setPw1] = useState("");
@@ -29,7 +30,7 @@ export default function ResetPassword() {
     setReqMsg("");
     setDevLink("");
     try {
-      const res = await apiForgotPassword(email.trim());
+      const res = await apiForgotPassword(email.trim(), captchaToken || undefined);
       setReqMsg("If that email exists, we sent a reset link.");
       if (res?.reset_url) setDevLink(res.reset_url);
     } catch (e) {
@@ -70,6 +71,7 @@ export default function ResetPassword() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
+          <Turnstile onVerify={setCaptchaToken} />
           <button className="btn" disabled={reqBusy || !email.trim().includes("@")}> 
             {reqBusy ? "Sending…" : "Send reset link"}
           </button>
@@ -108,6 +110,49 @@ export default function ResetPassword() {
           </p>
         </form>
       )}
+    </div>
+  );
+}
+
+function Turnstile({ onVerify }) {
+  const [ready, setReady] = useState(false);
+  const siteKey = process.env.REACT_APP_TURNSTILE_SITE_KEY || "";
+
+  useEffect(() => {
+    if (!siteKey) return; // no widget if no site key configured
+    if (window.turnstile) {
+      setReady(true);
+      return;
+    }
+    const s = document.createElement("script");
+    s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    s.async = true;
+    s.defer = true;
+    s.onload = () => setReady(true);
+    document.body.appendChild(s);
+    return () => {
+      // leave script in place; widget handles lifecycle
+    };
+  }, [siteKey]);
+
+  useEffect(() => {
+    if (!ready || !siteKey) return;
+    const el = document.getElementById("cf-turnstile");
+    if (!el) return;
+    const ts = window.turnstile;
+    if (!ts) return;
+    ts.render("#cf-turnstile", {
+      sitekey: siteKey,
+      callback: (token) => onVerify?.(token),
+      "error-callback": () => onVerify?.(""),
+      "expired-callback": () => onVerify?.(""),
+    });
+  }, [ready, siteKey, onVerify]);
+
+  if (!siteKey) return null;
+  return (
+    <div className="center">
+      <div id="cf-turnstile" style={{ display: "inline-block" }} />
     </div>
   );
 }

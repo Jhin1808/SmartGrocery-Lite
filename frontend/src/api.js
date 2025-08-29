@@ -141,8 +141,8 @@ export const apiChangePassword = ({ current_password, new_password }) =>
   });
 
 // ---- Password reset ----
-export const apiForgotPassword = (email) =>
-  request("/auth/forgot-password", { method: "POST", body: { email } });
+export const apiForgotPassword = (email, captcha_token) =>
+  request("/auth/forgot-password", { method: "POST", body: { email, captcha_token } });
 
 export const apiResetPassword = ({ token, new_password }) =>
   request("/auth/reset-password", { method: "POST", body: { token, new_password } });
