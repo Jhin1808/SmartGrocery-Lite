@@ -156,7 +156,7 @@ export default function AuthTabs() {
             <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <input type="checkbox" /> Remember me
             </label>
-            <a href="#!">Forgot password?</a>
+            <Link to="/reset">Forgot password?</Link>
           </div>
 
           {loginErr &&
