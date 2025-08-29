@@ -6,10 +6,10 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import User
-from app.schemas import RegisterRequest, UserRead
+from app.schemas import RegisterRequest, UserRead, TokenResponse
 from app.security import hash_password, verify_password, create_access_token
 from app.security_cookies import set_login_cookie, clear_login_cookie
-from app.deps import get_current_user_cookie as get_current_user
+from app.deps import get_current_user_any as get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -21,20 +21,21 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     db.add(u); db.commit(); db.refresh(u)
     return UserRead(id=u.id, email=u.email)
 
-@router.post("/token", status_code=204)
-def token(form: OAuth2PasswordRequestForm = Depends(),
-          db: Session = Depends(get_db), response: Response = None):
+@router.post("/token", response_model=TokenResponse)
+def token(
+    response: Response,
+    form: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
     # OAuth2 spec calls it "username" — we use email as username
     u = db.query(User).filter(User.email == form.username).first()
     if not u or not u.password_hash or not verify_password(form.password, u.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Incorrect email or password")
-
     jwt = create_access_token(u.id)
-    resp = Response(status_code=204)            # no body, just set cookie
-    set_login_cookie(resp, jwt)                 # HttpOnly cookie
-    response.status_code = 204
-    return resp
+    # Set HttpOnly cookie and also return token for Safari/iOS fallback
+    set_login_cookie(response, jwt)
+    return TokenResponse(access_token=jwt)
 
 @router.post("/logout", status_code=204)
 def logout():

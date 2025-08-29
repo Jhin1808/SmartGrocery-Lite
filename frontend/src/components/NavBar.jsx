@@ -2,10 +2,9 @@
 import { Navbar, Container, Nav, NavDropdown, Button } from "react-bootstrap";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../pages/AuthContext";
-import { apiLogout } from "../api";  // remove unused API_BASE
 
 export default function NavBar() {
-  const { user, loading, refresh } = useAuth();
+  const { user, loading, refresh, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -17,11 +16,9 @@ export default function NavBar() {
 
   const onLogout = async () => {
     try {
-      await apiLogout();   // clears cookie
-      await refresh();     // sets user = null in context
-      navigate("/login", { replace: true });
-    } catch {
-      // even if it fails, send them to login
+      await logout();
+      await refresh();
+    } finally {
       navigate("/login", { replace: true });
     }
   };

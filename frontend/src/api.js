@@ -16,6 +16,11 @@ async function request(path, { method = "GET", headers = {}, body } = {}) {
   const url = joinUrl(API_BASE, path);
 
   const h = { ...headers };
+  // Bearer fallback for Safari/iOS when cookies are blocked
+  try {
+    const tok = localStorage.getItem("token");
+    if (tok && !h["Authorization"]) h["Authorization"] = `Bearer ${tok}`;
+  } catch {}
   let payload = body;
   if (payload && !(payload instanceof FormData) && !h["Content-Type"]) {
     h["Content-Type"] = "application/json";
@@ -78,7 +83,12 @@ export async function apiLogin(email, password) {
     const j = await res.json().catch(() => ({}));
     throw new Error(j.detail || res.statusText);
   }
-  // cookie set by backend
+  // Cookie set by backend; also optionally return token JSON
+  const ct = res.headers.get("content-type") || "";
+  if (ct.includes("application/json")) {
+    const data = await res.json().catch(() => null);
+    return data;
+  }
 }
 
 export const apiLogout = () => request("/auth/logout", { method: "POST" });

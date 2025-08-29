@@ -54,7 +54,12 @@ export default function AuthTabs() {
     setLoginBusy(true);
     setLoginErr(null);
     try {
-      await apiLogin(loginEmail.trim(), loginPwd); // cookie set server-side
+      const tok = await apiLogin(loginEmail.trim(), loginPwd); // cookie set server-side
+      // Store token for Safari/iOS fallback (if backend returned it)
+      try {
+        const val = tok?.access_token || tok?.token || tok;
+        if (val) localStorage.setItem("token", val);
+      } catch {}
       await refresh();
       navigate("/lists", { replace: true });
     } catch (e) {
@@ -74,7 +79,11 @@ export default function AuthTabs() {
     setRegErr(null);
     try {
       await apiRegister({ email: regEmail.trim(), password: regPwd });
-      await apiLogin(regEmail.trim(), regPwd); // sign in after register
+      const tok = await apiLogin(regEmail.trim(), regPwd); // sign in after register
+      try {
+        const val = tok?.access_token || tok?.token || tok;
+        if (val) localStorage.setItem("token", val);
+      } catch {}
       await refresh();
       navigate("/lists", { replace: true });
     } catch (e) {
