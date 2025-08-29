@@ -29,7 +29,7 @@ function AppShell() {
       {user ? <NavBar /> : null}
       <div className="container py-4">
         <Routes>
-          <Route path="/" element={<Navigate to="/lists" replace />} />
+          <Route path="/" element={<Navigate to={user ? "/lists" : "/login"} replace />} />
 
           {/* Public */}
           <Route path="/login" element={<AuthTabs />} />
