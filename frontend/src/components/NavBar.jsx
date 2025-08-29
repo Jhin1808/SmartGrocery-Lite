@@ -2,6 +2,7 @@
 import { Navbar, Container, Nav, NavDropdown, Button } from "react-bootstrap";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../pages/AuthContext";
+import weblogo from "../Weblogo.png";
 
 export default function NavBar() {
   const { user, loading, refresh, logout } = useAuth();
@@ -26,7 +27,10 @@ export default function NavBar() {
   return (
     <Navbar bg="light" expand="md" className="shadow-sm">
       <Container>
-        <Navbar.Brand as={NavLink} to="/lists">SmartGrocery Lite</Navbar.Brand>
+        <Navbar.Brand as={NavLink} to="/lists">
+          <img src={weblogo} alt="" style={{ height: 24, width: 24, marginRight: 8 }} />
+          SmartGrocery Lite
+        </Navbar.Brand>
         <Navbar.Toggle aria-controls="main-nav" />
         <Navbar.Collapse id="main-nav">
           {!!user && (
