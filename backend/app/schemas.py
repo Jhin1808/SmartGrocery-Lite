@@ -68,6 +68,33 @@ class UserMeUpdate(BaseModel):
             return None
         return v
 
+    @field_validator("picture", mode="before")
+    @classmethod
+    def sanitize_picture(cls, v):
+        if v is None:
+            return None
+        if not isinstance(v, str):
+            return v
+        s = v.strip()
+        if not s or s.startswith("<"):
+            return None
+        # allow certain data URL image types only (no SVG)
+        if s.startswith("data:"):
+            head = s[5:45].lower()
+            allowed = ("image/png", "image/jpeg", "image/gif", "image/webp")
+            if any(head.startswith(t) for t in allowed):
+                return s
+            return None
+        # allow http/https URLs; reject others
+        try:
+            from urllib.parse import urlparse
+            p = urlparse(s)
+            if p.scheme in ("http", "https") and bool(p.netloc):
+                return s
+        except Exception:
+            pass
+        return None
+
 # ----- Sharing -----
 class ShareCreate(BaseModel):
     email: EmailStr
