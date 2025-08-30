@@ -10,7 +10,7 @@ export default function NavBar() {
   const navigate = useNavigate();
 
   // Hide the navbar on auth pages
-  const hideOnRoutes = ["/login", "/oauth/callback"];
+  const hideOnRoutes = ["/login", "/oauth/callback", "/reset", "/terms"];
   if (hideOnRoutes.some(p => location.pathname.startsWith(p))) {
     return null;
   }

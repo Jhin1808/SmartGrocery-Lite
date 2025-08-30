@@ -19,7 +19,15 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    // Avoid early /me on public routes; callback/login handle their own flow
+    try {
+      const path = window?.location?.pathname || "";
+      const skip = ["/login", "/oauth/callback", "/reset", "/terms"];
+      if (skip.some((p) => path.startsWith(p))) return;
+    } catch {}
+    refresh();
+  }, [refresh]);
 
   const logout = useCallback(async () => {
     try {
