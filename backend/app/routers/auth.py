@@ -1,14 +1,21 @@
 # app/routers/auth.py
-from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from pydantic import BaseModel, EmailStr
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import User
 from app.schemas import RegisterRequest, UserRead, TokenResponse
-from app.security import hash_password, verify_password, create_access_token
+from app.security import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    create_reset_token,
+    decode_reset_token,
+)
 from app.security_cookies import set_login_cookie, clear_login_cookie
+from app.rate_limit import allow as allow_rate
 from app.deps import get_current_user_any as get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -60,6 +67,154 @@ def change_password(payload: ChangePassword,
     current.password_hash = hash_password(payload.new_password)
     db.commit()
     return
+
+
+class ForgotPassword(BaseModel):
+    email: EmailStr
+    captcha_token: str | None = None
+
+
+class ResetPassword(BaseModel):
+    token: str
+    new_password: str
+
+
+def _frontend_url() -> str:
+    import os
+    return (os.getenv("FRONTEND_URL") or "http://localhost:3000").rstrip("/")
+
+
+@router.post("/forgot-password")
+def forgot_password(payload: ForgotPassword, request: Request, db: Session = Depends(get_db)):
+    # Always respond OK to avoid user enumeration; include reset_url for dev convenience if user exists.
+    import os
+    import httpx
+
+    # Rate limit by IP and by email (process-local; for multi-instance use a shared store like Redis)
+    ip = request.headers.get("x-forwarded-for") or request.client.host or "?"
+    ip = (ip.split(",")[0]).strip()
+    if not allow_rate(ip, "forgot-ip", max_requests=int(os.getenv("FORGOT_LIMIT_PER_IP", "5")), window_seconds=3600):
+        # 429 to indicate throttling without leaking whether email exists
+        raise HTTPException(status_code=429, detail="Too many requests, try again later")
+
+    # Optional CAPTCHA (Cloudflare Turnstile)
+    secret = os.getenv("TURNSTILE_SECRET")
+    if secret:
+        token = (payload.captcha_token or "").strip()
+        if not token:
+            raise HTTPException(status_code=400, detail="Captcha required")
+        try:
+            r = httpx.post(
+                "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+                data={"secret": secret, "response": token, "remoteip": ip},
+                timeout=10.0,
+            )
+            data = r.json()
+            if not data.get("success"):
+                raise HTTPException(status_code=400, detail="Captcha invalid")
+        except HTTPException:
+            raise
+        except Exception:
+            # Fail closed if verification endpoint is unreachable
+            raise HTTPException(status_code=400, detail="Captcha check failed")
+
+    user = db.query(User).filter(User.email == payload.email).first()
+    out = {"ok": True}
+    if user:
+        # per-email limit
+        if not allow_rate(user.email.lower(), "forgot-email", max_requests=int(os.getenv("FORGOT_LIMIT_PER_EMAIL", "3")), window_seconds=3600):
+            return out
+        tok = create_reset_token(user.id, expires_minutes=30)
+        out["reset_url"] = f"{_frontend_url()}/reset?token={tok}"
+        # Send email via provider if configured
+        try:
+            _send_reset_email(to=user.email, url=out["reset_url"])
+        except Exception:
+            # Don't leak errors
+            pass
+    return out
+
+
+@router.post("/reset-password", status_code=204)
+def reset_password(payload: ResetPassword, db: Session = Depends(get_db)):
+    try:
+        data = decode_reset_token(payload.token)
+        sub = int(data.get("sub"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+
+    user = db.get(User, sub)
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid token")
+    # Set/replace password without needing the old one
+    user.password_hash = hash_password(payload.new_password)
+    db.commit()
+    return Response(status_code=204)
+
+
+def _send_reset_email(to: str, url: str) -> None:
+    """Send a password reset email via configured provider.
+
+    Supported:
+    - Resend API (RESEND_API_KEY, EMAIL_FROM)
+    - SMTP (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, EMAIL_FROM)
+    If no provider configured, this is a no-op (dev fallback returns URL in API).
+    """
+    import os
+    from email.message import EmailMessage
+
+    frm = os.getenv("EMAIL_FROM") or "no-reply@example.com"
+
+    # Try Resend first
+    rk = os.getenv("RESEND_API_KEY")
+    if rk:
+        import httpx
+
+        html = f"""
+        <p>Hello,</p>
+        <p>We received a request to reset your SmartGrocery Lite password.</p>
+        <p><a href=\"{url}\">Click here to reset your password</a>. This link expires in 30 minutes.</p>
+        <p>If you did not request this, you can ignore this email.</p>
+        """
+        payload = {"from": frm, "to": [to], "subject": "Reset your password", "html": html}
+        r = httpx.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {rk}", "Content-Type": "application/json"},
+            json=payload,
+            timeout=10.0,
+        )
+        r.raise_for_status()
+        return
+
+    # Fallback to SMTP if configured
+    host = os.getenv("SMTP_HOST")
+    port = int(os.getenv("SMTP_PORT", "587"))
+    user = os.getenv("SMTP_USER")
+    pwd = os.getenv("SMTP_PASS")
+    if host and user and pwd:
+        import smtplib
+
+        msg = EmailMessage()
+        msg["Subject"] = "Reset your password"
+        msg["From"] = frm
+        msg["To"] = to
+        msg.set_content(f"Reset your password: {url}\nThis link expires in 30 minutes.")
+        msg.add_alternative(
+            f"""
+            <p>Hello,</p>
+            <p>We received a request to reset your SmartGrocery Lite password.</p>
+            <p><a href=\"{url}\">Click here to reset your password</a>. This link expires in 30 minutes.</p>
+            <p>If you did not request this, you can ignore this email.</p>
+            """,
+            subtype="html",
+        )
+
+        with smtplib.SMTP(host, port) as s:
+            s.starttls()
+            s.login(user, pwd)
+            s.send_message(msg)
+        return
+    # Otherwise, no provider configured → do nothing
 
 
 # # app/routers/auth.py

@@ -36,6 +36,23 @@ def decode_token(token: str) -> dict:
     return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
 
 
+def create_purpose_token(subject: str | int, purpose: str, expires_minutes: int) -> str:
+    exp = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
+    payload = {"sub": str(subject), "exp": exp, "purpose": purpose}
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def create_reset_token(subject: str | int, expires_minutes: int = 30) -> str:
+    return create_purpose_token(subject, "reset", expires_minutes)
+
+
+def decode_reset_token(token: str) -> dict:
+    data = decode_token(token)
+    if data.get("purpose") != "reset":
+        raise jwt.InvalidTokenError("Invalid token purpose")
+    return data
+
+
 # import os
 # import jwt
 # from datetime import datetime, timedelta, timezone
