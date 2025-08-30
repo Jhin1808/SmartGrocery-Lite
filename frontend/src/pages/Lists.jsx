@@ -86,7 +86,7 @@ export default function Lists() {
   const [creating, setCreating] = useState(false);
 
   // per-list add-item draft
-  const [drafts, setDrafts] = useState({}); // { [listId]: {name, quantity, expiry} }
+  const [drafts, setDrafts] = useState({}); // { [listId]: {name, quantity, expiry, description} }
 
   // per-list UI state
   const [filters, setFilters] = useState({}); // { [listId]: string }
@@ -183,6 +183,7 @@ export default function Lists() {
         name: "",
         quantity: 1,
         expiry: "",
+        description: "",
         ...(d[listId] || {}),
         ...patch,
       },
@@ -256,6 +257,7 @@ export default function Lists() {
         name: nm,
         quantity: Number(draft.quantity || 1),
         expiry: draft.expiry ? draft.expiry : null,
+        description: draft.description ? draft.description : undefined,
       };
       const item = await apiAddItem(selectedId, payload);
       setItemsByList((m) => ({
@@ -264,7 +266,7 @@ export default function Lists() {
       }));
       setDrafts((d) => ({
         ...d,
-        [selectedId]: { name: "", quantity: 1, expiry: "" },
+        [selectedId]: { name: "", quantity: 1, expiry: "", description: "" },
       }));
       setToast({ message: "Item added", variant: "success" });
     } catch (e) {
@@ -542,8 +544,11 @@ export default function Lists() {
               <div style={{ maxHeight: 420, overflowY: "auto" }}>
                 <ListGroup>
                   {visibleLists.length === 0 && (
-                    <ListGroup.Item className="text-muted">
-                      No lists
+                    <ListGroup.Item>
+                      <div className="empty">
+                        <div className="icon"><i className="bi bi-card-checklist" /></div>
+                        <div className="mt-1 text-muted">No lists yet — create your first list above.</div>
+                      </div>
                     </ListGroup.Item>
                   )}
 
@@ -718,6 +723,7 @@ export default function Lists() {
                                 name: "",
                                 quantity: 1,
                                 expiry: "",
+                                description: "",
                               })
                             }
                             disabled={!canEdit}
@@ -735,6 +741,20 @@ export default function Lists() {
                         >
                           Add
                         </Button>
+                      </Col>
+                    </Row>
+                    <Row className="g-2 mt-1">
+                      <Col md={12}>
+                        <Form.Control
+                          as="textarea"
+                          rows={2}
+                          placeholder="Description (optional)"
+                          value={drafts[selectedId]?.description ?? ""}
+                          onChange={(e) =>
+                            updateDraft(selectedId, { description: e.target.value })
+                          }
+                          disabled={!canEdit}
+                        />
                       </Col>
                     </Row>
                   </Form>
@@ -796,10 +816,15 @@ export default function Lists() {
                       <tbody>
                         {viewItems.length === 0 && (
                           <tr>
-                            <td colSpan={4} className="text-center text-muted">
-                              {filters[selectedId]?.trim()
-                                ? "No matching items"
-                                : "No items yet"}
+                            <td colSpan={4} className="text-center">
+                              <div className="empty">
+                                <div className="icon"><i className="bi bi-inbox" /></div>
+                                <div className="mt-1 text-muted">
+                                  {filters[selectedId]?.trim()
+                                    ? "No matching items"
+                                    : "No items yet — add one using the form above."}
+                                </div>
+                              </div>
                             </td>
                           </tr>
                         )}
@@ -834,8 +859,17 @@ export default function Lists() {
                                     style={{ minWidth: 240 }}
                                     />
                                   ) : (
-                                    <div className="truncate" title={it.name}>
-                                      {it.name}
+                                    <div className="d-flex align-items-center gap-2">
+                                      {(() => {
+                                        const n = daysUntil(it.expiry);
+                                        if (n === null) return null;
+                                        if (n < 0)
+                                          return <span className="dot dot-expired" title="Expired" />;
+                                        if (n <= 3)
+                                          return <span className="dot dot-soon" title="Expiring soon" />;
+                                        return null;
+                                      })()}
+                                      <div className="truncate" title={it.name}>{it.name}</div>
                                     </div>
                                   )}
                                 </td>
@@ -1022,8 +1056,11 @@ export default function Lists() {
               <tbody>
                 {shares.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="text-muted text-center">
-                      No shares yet
+                    <td colSpan={3} className="text-center">
+                      <div className="empty">
+                        <div className="icon"><i className="bi bi-people" /></div>
+                        <div className="mt-1 text-muted">No shares yet — invite someone via email.</div>
+                      </div>
                     </td>
                   </tr>
                 )}
