@@ -9,8 +9,10 @@ def _bool_env(name: str, default=False):
 
 def set_login_cookie(resp: Response, token: str):
     # cross-site cookie
-    secure   = _bool_env("COOKIE_SECURE", True)      # must be True on Koyeb (HTTPS)
-    samesite = os.getenv("COOKIE_SAMESITE", "none").lower()  # 'none' for cross-site
+    secure   = _bool_env("COOKIE_SECURE", True)
+    samesite = os.getenv("COOKIE_SAMESITE", "none").lower()
+    if samesite == "none" and not secure:
+        secure = True
     domain   = os.getenv("COOKIE_DOMAIN") or None    # usually omit for Koyeb
     resp.set_cookie(
         key=COOKIE_NAME,
@@ -27,6 +29,8 @@ def clear_login_cookie(resp: Response):
     domain   = os.getenv("COOKIE_DOMAIN") or None
     samesite = os.getenv("COOKIE_SAMESITE", "none").lower()
     secure   = _bool_env("COOKIE_SECURE", True)
+    if samesite == "none" and not secure:
+        secure = True
     resp.delete_cookie(
         key=COOKIE_NAME,
         path="/",
@@ -34,5 +38,4 @@ def clear_login_cookie(resp: Response):
         samesite=samesite,
         secure=secure,
     )
-
 

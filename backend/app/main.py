@@ -22,6 +22,11 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 ALLOWED_ORIGINS = [o.strip().rstrip("/") for o in FRONTEND_URL.split(",") if o.strip()]
 
 SESSION_SECRET = os.getenv("SESSION_SECRET", os.getenv("SECRET_KEY", "dev-insecure"))
+COOKIE_SAMESITE = (os.getenv("COOKIE_SAMESITE", "lax") or "lax").lower()
+COOKIE_SECURE = (os.getenv("COOKIE_SECURE", "false") or "false").lower() in ("1", "true", "yes")
+# Enforce Secure when SameSite=None to comply with browser rules
+if COOKIE_SAMESITE == "none" and not COOKIE_SECURE:
+    COOKIE_SECURE = True
 
 app = FastAPI(title="SmartGrocery Lite API", version="0.1.0")
 
@@ -39,8 +44,8 @@ app.add_middleware(
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
-    same_site=os.getenv("COOKIE_SAMESITE", "lax").lower(),  # use "none" for cross-site prod
-    https_only=os.getenv("COOKIE_SECURE", "false").lower() in ("1","true","yes"),
+    same_site=COOKIE_SAMESITE,
+    https_only=COOKIE_SECURE,
 )
 
 app.include_router(lists_router)

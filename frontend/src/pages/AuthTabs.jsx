@@ -1,7 +1,7 @@
 // src/pages/AuthTabs.jsx
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { apiLogin, apiRegister, API_BASE } from "../api";
+import { apiLogin, apiRegister, API_BASE, AUTH_FALLBACK_STORAGE_KEY } from "../api";
 import { useAuth } from "./AuthContext";
 import googleIcon from "../googleicon.png";
 
@@ -59,7 +59,7 @@ export default function AuthTabs() {
       // Store token for Safari/iOS fallback (if backend returned it)
       try {
         const val = tok?.access_token || tok?.token || tok;
-        if (val) localStorage.setItem("token", val);
+        if (val) localStorage.setItem(AUTH_FALLBACK_STORAGE_KEY, val);
       } catch {}
       await refresh();
       navigate("/lists", { replace: true });
@@ -83,7 +83,7 @@ export default function AuthTabs() {
       const tok = await apiLogin(regEmail.trim(), regPwd); // sign in after register
       try {
         const val = tok?.access_token || tok?.token || tok;
-        if (val) localStorage.setItem("token", val);
+        if (val) localStorage.setItem(AUTH_FALLBACK_STORAGE_KEY, val);
       } catch {}
       await refresh();
       navigate("/lists", { replace: true });
