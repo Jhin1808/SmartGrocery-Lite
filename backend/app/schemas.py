@@ -24,6 +24,8 @@ class ItemCreate(BaseModel):
     quantity: int = 1
     expiry: Optional[date] = None
     description: Optional[str] = None
+    remind_on: Optional[date] = None
+    purchased: Optional[bool] = None
 
 class ItemRead(BaseModel):
     id: int
@@ -32,6 +34,8 @@ class ItemRead(BaseModel):
     expiry: Optional[date]
     list_id: int
     description: Optional[str] = None
+    remind_on: Optional[date] = None
+    purchased: bool = False
     model_config = ConfigDict(from_attributes=True)
 
 class ItemUpdate(BaseModel):
@@ -39,6 +43,8 @@ class ItemUpdate(BaseModel):
     quantity: Optional[int] = None
     expiry: Optional[date] = None
     description: Optional[str] = None
+    remind_on: Optional[date] = None
+    purchased: Optional[bool] = None
 
 # ----- Auth / Profile -----
 class RegisterRequest(BaseModel):

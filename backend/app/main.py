@@ -16,6 +16,7 @@ except Exception:
     # Skip loading the Google router in that case.
     google_router = None
 from app.routers.me import router as me_router
+from app.routers.tasks import router as tasks_router
 
 # One env only; can be single origin or comma-separated list
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
@@ -53,6 +54,7 @@ app.include_router(auth_router)
 if google_router is not None:
     app.include_router(google_router)
 app.include_router(me_router)
+app.include_router(tasks_router)
 
 # Connectivity check
 with engine.connect() as conn:

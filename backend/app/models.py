@@ -98,6 +98,11 @@ class ListItem(Base):
     expiry = Column(Date, nullable=True)
     # Optional longer notes/description for the item
     description = Column(String, nullable=True)
+    # Reminders
+    remind_on = Column(Date, nullable=True)
+    reminded_at = Column(DateTime(timezone=True), nullable=True)
+    # Shopping state
+    purchased = Column(Boolean, nullable=False, server_default="false")
 
     list_id = Column(
         Integer,
