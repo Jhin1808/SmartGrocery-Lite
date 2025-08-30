@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
 from app.security import decode_token
+from app.security_cookies import COOKIE_NAME
 
 # OAuth2 "password" flow helper (if you still support Authorization: Bearer from localStorage)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
@@ -41,7 +42,7 @@ def get_current_user_bearer(
 
 def get_current_user_cookie(request: Request, db: Session = Depends(get_db)) -> User:
     """Cookie-based auth: read JWT from HttpOnly cookie."""
-    token = request.cookies.get("access_token")
+    token = request.cookies.get(COOKIE_NAME)
     return _user_from_token(token, db)
 
 def get_current_user_any(
@@ -63,7 +64,7 @@ def get_current_user_any(
             # Fall through to cookie
             pass
     # Cookie fallback
-    token = request.cookies.get("access_token")
+    token = request.cookies.get(COOKIE_NAME)
     return _user_from_token(token, db)
 
 

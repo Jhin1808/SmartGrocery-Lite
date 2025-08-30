@@ -1,9 +1,13 @@
 // src/api.js
-const rawBase =
-  process.env.REACT_APP_API_BASE ||
-  "";
+const rawBase = process.env.REACT_APP_API_BASE || "";
 const API_BASE = rawBase.replace(/\/+$/, ""); // strip trailing slash if any
 export { API_BASE };
+
+// Shared constants to avoid hardcoding names
+export const AUTH_FALLBACK_STORAGE_KEY =
+  process.env.REACT_APP_AUTH_FALLBACK_STORAGE_KEY || "token";
+export const TOKEN_FRAGMENT_PARAM =
+  process.env.REACT_APP_TOKEN_FRAGMENT_PARAM || "access_token";
 
 // Safely join base + path
 function joinUrl(base, path) {
@@ -18,7 +22,7 @@ async function request(path, { method = "GET", headers = {}, body } = {}) {
   const h = { ...headers };
   // Bearer fallback for Safari/iOS when cookies are blocked
   try {
-    const tok = localStorage.getItem("token");
+    const tok = localStorage.getItem(AUTH_FALLBACK_STORAGE_KEY);
     if (tok && !h["Authorization"]) h["Authorization"] = `Bearer ${tok}`;
   } catch {}
   let payload = body;

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
 from app.security import create_access_token
-from app.security_cookies import set_login_cookie
+from app.security_cookies import set_login_cookie, COOKIE_NAME
 
 router = APIRouter(prefix="/auth/google", tags=["auth:google"])
 
@@ -41,6 +41,10 @@ oauth.register(
     client_secret=GOOGLE_CLIENT_SECRET,
     client_kwargs={"scope": "openid email profile"},
 )
+
+# Optional: include token in fragment for Safari/ITP fallback
+TOKEN_IN_FRAGMENT = (os.getenv("OAUTH_TOKEN_IN_FRAGMENT", "1").lower() in ("1", "true", "yes"))
+FRAGMENT_TOKEN_PARAM = os.getenv("OAUTH_FRAGMENT_TOKEN_PARAM") or COOKIE_NAME
 
 @router.get("/login")
 async def google_login(request: Request):
@@ -82,7 +86,10 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
             db.commit(); db.refresh(user)
 
     jwt = create_access_token(user.id)
-    resp = RedirectResponse(f"{_frontend_url()}/oauth/callback")
+    url = f"{_frontend_url()}/oauth/callback"
+    if TOKEN_IN_FRAGMENT:
+        url = f"{url}#" + urlencode({FRAGMENT_TOKEN_PARAM: jwt})
+    resp = RedirectResponse(url)
     set_login_cookie(resp, jwt)
     return resp
 
