@@ -95,6 +95,7 @@ export default function Lists() {
   // inline edit state
   const [editing, setEditing] = useState(new Set()); // itemIds
   const [editDrafts, setEditDrafts] = useState({}); // { itemId: {name, quantity, expiry} }
+  const [expanded, setExpanded] = useState(new Set()); // itemIds expanded for description
 
   const [showHidden, setShowHidden] = useState(false);
 
@@ -300,12 +301,18 @@ export default function Lists() {
   // ---------- inline edit ----------
   const startEdit = (it) => {
     setEditing((s) => new Set(s).add(it.id));
+    setExpanded((s) => {
+      const n = new Set(s);
+      n.add(it.id);
+      return n;
+    });
     setEditDrafts((d) => ({
       ...d,
       [it.id]: {
         name: it.name,
         quantity: it.quantity,
         expiry: it.expiry || "",
+        description: it.description || "",
       },
     }));
   };
@@ -328,6 +335,7 @@ export default function Lists() {
       name: draft.name,
       quantity: Number(draft.quantity),
       expiry: draft.expiry ? draft.expiry : null,
+      description: typeof draft.description === "string" ? draft.description : undefined,
     };
     try {
       const updated = await apiUpdateItem(id, patch);
@@ -545,17 +553,17 @@ export default function Lists() {
                       action
                       active={selectedId === l.id}
                       onClick={() => setSelectedId(l.id)}
-                      className="d-flex align-items-center justify-content-between"
+                      className="d-flex align-items-center justify-content-between minw0"
                       title={l.shared ? "Shared with you" : "Owned by you"}
                     >
-                      <span className="d-flex align-items-center gap-2">
+                      <span className="d-flex align-items-center gap-2 minw0" style={{ minWidth: 0 }}>
                         {l.shared && (
                           <i
                             className="bi bi-people text-secondary"
                             aria-hidden="true"
                           />
                         )}
-                        <span className="text-truncate">{l.name}</span>
+                        <span className="text-truncate" title={l.name}>{l.name}</span>
 
                         {/* Hidden badge only when user opted to show hidden */}
                         {l.shared && l.hidden && showHidden && (
@@ -582,9 +590,9 @@ export default function Lists() {
           <Card className="shadow-sm">
             <Card.Header className="d-flex align-items-center flex-wrap gap-2">
               {/* Title + count */}
-              <div className="d-flex align-items-center me-auto gap-2">
+              <div className="d-flex align-items-center me-auto gap-2 minw0" style={{ minWidth: 0 }}>
                 <i className="bi bi-bag-check" aria-hidden="true" />
-                <strong>
+                <strong className="truncate" title={selectedId ? (lists.find((l) => l.id === selectedId)?.name || 'List') : undefined}>
                   {selectedId
                     ? lists.find((l) => l.id === selectedId)?.name || "List"
                     : "Select a list"}
@@ -799,23 +807,38 @@ export default function Lists() {
                         {viewItems.map((it) => {
                           const isEditing = editing.has(it.id);
                           const d = editDrafts[it.id] || {};
+                          const isOpen = expanded.has(it.id);
                           return (
-                            <tr key={it.id}>
-                              <td>
-                                {isEditing ? (
-                                  <Form.Control
-                                    value={d.name}
-                                    onChange={(e) =>
-                                      updateEditDraft(it.id, {
-                                        name: e.target.value,
-                                      })
-                                    }
+                            <>
+                              <tr key={it.id}>
+                                <td
+                                  onClick={() => {
+                                    if (isEditing) return;
+                                    setExpanded((s) => {
+                                      const n = new Set(s);
+                                      if (n.has(it.id)) n.delete(it.id);
+                                      else n.add(it.id);
+                                      return n;
+                                    });
+                                  }}
+                                  style={{ cursor: isEditing ? "default" : "pointer" }}
+                                >
+                                  {isEditing ? (
+                                    <Form.Control
+                                      value={d.name}
+                                      onChange={(e) =>
+                                        updateEditDraft(it.id, {
+                                          name: e.target.value,
+                                        })
+                                      }
                                     style={{ minWidth: 240 }}
-                                  />
-                                ) : (
-                                  it.name
-                                )}
-                              </td>
+                                    />
+                                  ) : (
+                                    <div className="truncate" title={it.name}>
+                                      {it.name}
+                                    </div>
+                                  )}
+                                </td>
 
                               <td className="text-center">
                                 {isEditing ? (
@@ -906,7 +929,35 @@ export default function Lists() {
                                   </>
                                 )}
                               </td>
-                            </tr>
+                              </tr>
+                              {isOpen && (it.description || canEdit) && (
+                                <tr>
+                                  <td colSpan={4}>
+                                    {isEditing ? (
+                                      <InputGroup>
+                                        <Form.Control
+                                          as="textarea"
+                                          rows={2}
+                                          placeholder="Add a description…"
+                                          value={d.description || ""}
+                                          onChange={(e) =>
+                                            updateEditDraft(it.id, {
+                                              description: e.target.value,
+                                            })
+                                          }
+                                        />
+                                      </InputGroup>
+                                    ) : it.description ? (
+                                      <div className="text-muted" style={{ whiteSpace: "pre-wrap" }}>
+                                        {it.description}
+                                      </div>
+                                    ) : canEdit ? (
+                                      <div className="text-muted">No description</div>
+                                    ) : null}
+                                  </td>
+                                </tr>
+                              )}
+                            </>
                           );
                         })}
                       </tbody>

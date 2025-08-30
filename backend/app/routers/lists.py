@@ -192,6 +192,7 @@ def add_item(
         name=payload.name,
         quantity=payload.quantity,
         expiry=payload.expiry,
+        description=payload.description,
         list_id=list_id,
     )
     db.add(item)
@@ -230,6 +231,9 @@ def update_item(
         item.quantity = payload.quantity
     if payload.expiry is not None:
         item.expiry = payload.expiry
+    if payload.description is not None:
+        # allow clearing description with empty string
+        item.description = payload.description or None
 
     db.commit()
     db.refresh(item)

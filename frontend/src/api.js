@@ -112,10 +112,13 @@ export const apiCreateList = (name) =>
 
 export const apiGetItems = (listId) => request(`/lists/${listId}/items`);
 
-export const apiAddItem = (listId, { name, quantity = 1, expiry = null }) =>
+export const apiAddItem = (
+  listId,
+  { name, quantity = 1, expiry = null, description = undefined }
+) =>
   request(`/lists/${listId}/items`, {
     method: "POST",
-    body: { name, quantity, expiry },
+    body: { name, quantity, expiry, description },
   });
 
 export const apiUpdateItem = (itemId, patch) =>

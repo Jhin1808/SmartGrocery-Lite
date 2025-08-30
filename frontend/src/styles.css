@@ -158,3 +158,13 @@ body {
     border-bottom: 2px solid #eee;
     font-weight: 600;
 }
+
+/* Utility: single-line truncate with ellipsis */
+.truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Utility: fade/ellipsis for potentially long inline text in flex containers */
+.minw0 { min-width: 0; }

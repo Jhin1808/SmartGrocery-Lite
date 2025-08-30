@@ -172,6 +172,9 @@ export default function Account() {
                           placeholder="https://example.com/photo.jpg"
                           value={picture}
                           onChange={(e) => setPicture(e.target.value)}
+                          type="url"
+                          title={picture || undefined}
+                          style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                         />
                         <Button
                           variant="outline-secondary"

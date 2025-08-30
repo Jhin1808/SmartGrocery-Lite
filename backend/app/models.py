@@ -96,6 +96,8 @@ class ListItem(Base):
     name = Column(String, nullable=False)
     quantity = Column(Integer, default=1, nullable=False)
     expiry = Column(Date, nullable=True)
+    # Optional longer notes/description for the item
+    description = Column(String, nullable=True)
 
     list_id = Column(
         Integer,
@@ -123,4 +125,3 @@ class ListShare(Base):
 
     user = relationship("User")
     list = relationship("GroceryList", back_populates="shares")
-
