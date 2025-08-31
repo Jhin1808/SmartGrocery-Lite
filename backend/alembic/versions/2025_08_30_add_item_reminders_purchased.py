@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'add_item_reminders_purchased_20250830'
+revision = 'add_item_flags_250830'
 down_revision = 'add_item_description_20250830'
 branch_labels = None
 depends_on = None
@@ -27,4 +27,3 @@ def downgrade() -> None:
     op.drop_column('list_item', 'purchased')
     op.drop_column('list_item', 'reminded_at')
     op.drop_column('list_item', 'remind_on')
-
