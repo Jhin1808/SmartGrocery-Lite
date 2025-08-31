@@ -1,7 +1,7 @@
 """
 Add remind_on, reminded_at, purchased to list_item
 
-Revision ID: add_item_reminders_purchased_20250830
+Revision ID: add_item_flags_250830
 Revises: add_item_description_20250830
 Create Date: 2025-08-30
 """

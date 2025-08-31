@@ -37,4 +37,3 @@ def downgrade() -> None:
     op.drop_index('ix_used_reset_token_jti', table_name='used_reset_token')
     op.drop_index('ix_used_reset_token_user_id', table_name='used_reset_token')
     op.drop_table('used_reset_token')
-
