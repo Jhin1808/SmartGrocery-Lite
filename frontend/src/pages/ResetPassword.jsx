@@ -6,6 +6,7 @@ export default function ResetPassword() {
   const { search } = useLocation();
   const navigate = useNavigate();
   const token = useMemo(() => new URLSearchParams(search).get("token") || "", [search]);
+  const [manualCode, setManualCode] = useState("");
 
   // Request state
   const [email, setEmail] = useState("");
@@ -81,6 +82,26 @@ export default function ResetPassword() {
               Dev link: <a href={devLink}>{devLink}</a>
             </div>
           )}
+
+          <div className="center" style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 14, color: "#666", marginBottom: 6 }}>Have a reset code?</div>
+            <div className="row" style={{ gap: 8, alignItems: "center" }}>
+              <input
+                className="input"
+                placeholder="Paste reset code here"
+                value={manualCode}
+                onChange={(e) => setManualCode(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn"
+                disabled={!manualCode.trim()}
+                onClick={() => navigate(`/reset?token=${encodeURIComponent(manualCode.trim())}`, { replace: true })}
+              >
+                Use code
+              </button>
+            </div>
+          </div>
         </form>
       )}
 
@@ -156,4 +177,3 @@ function Turnstile({ onVerify }) {
     </div>
   );
 }
-

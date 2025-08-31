@@ -131,7 +131,7 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
             out["reset_url"] = reset_url
         # Send email via provider if configured
         try:
-            _send_reset_email(to=user.email, url=reset_url)
+            _send_reset_email(to=user.email, url=reset_url, token=tok)
         except Exception:
             # Don't leak errors
             pass
@@ -155,7 +155,7 @@ def reset_password(payload: ResetPassword, db: Session = Depends(get_db)):
     return Response(status_code=204)
 
 
-def _send_reset_email(to: str, url: str) -> None:
+def _send_reset_email(to: str, url: str, token: str) -> None:
     """Send a password reset email via configured provider.
 
     Supported:
@@ -178,12 +178,17 @@ def _send_reset_email(to: str, url: str) -> None:
         <p>We received a request to reset your SmartGrocery password.</p>
         <p><a href=\"{url}\">Click here to reset your password</a>. This link expires in 30 minutes.</p>
         <p>If you did not request this, you can ignore this email.</p>
+        <hr />
+        <p>If the link above does not work, copy this reset code and use it in the app:</p>
+        <pre style=\"background:#f6f8fa;padding:12px;border-radius:6px;white-space:pre-wrap;word-break:break-all;\">{token}</pre>
         """
         text = (
             "Hello,\n\n"
             "We received a request to reset your SmartGrocery password.\n"
             f"Reset link: {url}\n"
-            "This link expires in 30 minutes. If you did not request this, you can ignore this email.\n"
+            "This link expires in 30 minutes. If you did not request this, you can ignore this email.\n\n"
+            "If the link doesn't work, copy this reset code and use it in the app:\n"
+            f"{token}\n"
         )
         payload = {"from": frm, "to": [to], "subject": "SmartGrocery: Reset your password", "html": html, "text": text}
         r = httpx.post(
@@ -211,7 +216,8 @@ def _send_reset_email(to: str, url: str) -> None:
             f"Hello,\n\n"
             f"We received a request to reset your SmartGrocery password.\n"
             f"Reset link: {url}\n"
-            f"This link expires in 30 minutes. If you did not request this, you can ignore this email.\n"
+            f"This link expires in 30 minutes. If you did not request this, you can ignore this email.\n\n"
+            f"If the link doesn't work, copy this reset code and use it in the app:\n{token}\n"
         )
         msg.add_alternative(
             f"""
@@ -219,6 +225,9 @@ def _send_reset_email(to: str, url: str) -> None:
             <p>We received a request to reset your SmartGrocery password.</p>
             <p><a href=\"{url}\">Click here to reset your password</a>. This link expires in 30 minutes.</p>
             <p>If you did not request this, you can ignore this email.</p>
+            <hr />
+            <p>If the link above does not work, copy this reset code and use it in the app:</p>
+            <pre style=\"background:#f6f8fa;padding:12px;border-radius:6px;white-space:pre-wrap;word-break:break-all;\">{token}</pre>
             """,
             subtype="html",
         )
