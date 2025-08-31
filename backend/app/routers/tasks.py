@@ -83,6 +83,7 @@ def run_reminders(
                         ListItem.remind_on.is_not(None),
                         ListItem.remind_on <= today,
                         ListItem.reminded_at.is_(None),
+                        ListItem.purchased.is_(False),
                     )
                 )
             )
@@ -130,4 +131,3 @@ def run_reminders(
         return {"ok": True, "sent": total_sent}
     finally:
         db.close()
-
