@@ -13,7 +13,7 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
 def _send_email(to: str, subject: str, html: str, text: str | None = None) -> None:
-    frm = os.getenv("EMAIL_FROM") or "no-reply@example.com"
+    frm = os.getenv("EMAIL_FROM") or "SmartGrocery <no-reply@smartgrocery.online>"
     rk = os.getenv("RESEND_API_KEY")
     if rk:
         import httpx
@@ -108,10 +108,12 @@ def run_reminders(
             owner = owners[owner_id]
             # Build digest HTML
             rows = []
+            text_rows = []
             for item, gl in pairs:
                 exp = item.expiry.isoformat() if item.expiry else "-"
                 rn = item.remind_on.isoformat() if item.remind_on else "-"
                 rows.append(f"<tr><td>{gl.name}</td><td>{item.name}</td><td>{exp}</td><td>{rn}</td></tr>")
+                text_rows.append(f"- {gl.name}: {item.name} | Expiry: {exp} | Remind On: {rn}")
             html = f"""
             <p>Hi {owner.name or owner.email},</p>
             <p>Here are your item reminders for today:</p>
@@ -121,7 +123,13 @@ def run_reminders(
             </table>
             <p>You can adjust or clear reminders in the app.</p>
             """
-            _send_email(owner.email, "SmartGrocery reminders", html, None)
+            text = (
+                f"Hi {owner.name or owner.email},\n\n"
+                "Here are your item reminders for today:\n"
+                + "\n".join(text_rows)
+                + "\n\nYou can adjust or clear reminders in the app.\n"
+            )
+            _send_email(owner.email, "SmartGrocery reminders", html, text)
             total_sent += 1
             # Mark items as reminded
             for item, _ in pairs:

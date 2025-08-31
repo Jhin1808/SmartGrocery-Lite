@@ -163,7 +163,7 @@ def _send_reset_email(to: str, url: str) -> None:
     import os
     from email.message import EmailMessage
 
-    frm = os.getenv("EMAIL_FROM") or "no-reply@example.com"
+    frm = os.getenv("EMAIL_FROM") or "SmartGrocery <no-reply@smartgrocery.online>"
 
     # Try Resend first
     rk = os.getenv("RESEND_API_KEY")
@@ -172,11 +172,17 @@ def _send_reset_email(to: str, url: str) -> None:
 
         html = f"""
         <p>Hello,</p>
-        <p>We received a request to reset your SmartGrocery Lite password.</p>
+        <p>We received a request to reset your SmartGrocery password.</p>
         <p><a href=\"{url}\">Click here to reset your password</a>. This link expires in 30 minutes.</p>
         <p>If you did not request this, you can ignore this email.</p>
         """
-        payload = {"from": frm, "to": [to], "subject": "Reset your password", "html": html}
+        text = (
+            "Hello,\n\n"
+            "We received a request to reset your SmartGrocery password.\n"
+            f"Reset link: {url}\n"
+            "This link expires in 30 minutes. If you did not request this, you can ignore this email.\n"
+        )
+        payload = {"from": frm, "to": [to], "subject": "SmartGrocery: Reset your password", "html": html, "text": text}
         r = httpx.post(
             "https://api.resend.com/emails",
             headers={"Authorization": f"Bearer {rk}", "Content-Type": "application/json"},
@@ -195,14 +201,19 @@ def _send_reset_email(to: str, url: str) -> None:
         import smtplib
 
         msg = EmailMessage()
-        msg["Subject"] = "Reset your password"
+        msg["Subject"] = "SmartGrocery: Reset your password"
         msg["From"] = frm
         msg["To"] = to
-        msg.set_content(f"Reset your password: {url}\nThis link expires in 30 minutes.")
+        msg.set_content(
+            f"Hello,\n\n"
+            f"We received a request to reset your SmartGrocery password.\n"
+            f"Reset link: {url}\n"
+            f"This link expires in 30 minutes. If you did not request this, you can ignore this email.\n"
+        )
         msg.add_alternative(
             f"""
             <p>Hello,</p>
-            <p>We received a request to reset your SmartGrocery Lite password.</p>
+            <p>We received a request to reset your SmartGrocery password.</p>
             <p><a href=\"{url}\">Click here to reset your password</a>. This link expires in 30 minutes.</p>
             <p>If you did not request this, you can ignore this email.</p>
             """,
