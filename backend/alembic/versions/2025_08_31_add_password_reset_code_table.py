@@ -2,7 +2,7 @@
 add password_reset_code table
 
 Revision ID: 2025_08_31_add_password_reset_code_table
-Revises: 2025_08_30_add_item_reminders_purchased
+Revises: add_item_flags_250830
 Create Date: 2025-08-31
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '2025_08_31_add_password_reset_code_table'
-down_revision = '2025_08_30_add_item_reminders_purchased'
+down_revision = 'add_item_flags_250830'
 branch_labels = None
 depends_on = None
 
@@ -38,4 +38,3 @@ def downgrade() -> None:
     op.drop_index('ix_prc_user_active', table_name='password_reset_code')
     op.drop_index('ix_password_reset_code_user_id', table_name='password_reset_code')
     op.drop_table('password_reset_code')
-
