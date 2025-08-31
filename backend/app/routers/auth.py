@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User
+from app.models import User, PasswordResetCode, UsedResetToken
 from app.schemas import RegisterRequest, UserRead, TokenResponse
 from app.security import (
     hash_password,
@@ -75,7 +75,10 @@ class ForgotPassword(BaseModel):
 
 
 class ResetPassword(BaseModel):
-    token: str
+    # Either provide a JWT token (legacy link flow) or code+email (one-time code flow)
+    token: str | None = None
+    code: str | None = None
+    email: EmailStr | None = None
     new_password: str
 
 
@@ -118,44 +121,138 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
             # Fail closed if verification endpoint is unreachable
             raise HTTPException(status_code=400, detail="Captcha check failed")
 
+    import secrets
+    from datetime import datetime, timedelta, timezone
+    from app.security import PH
+
     user = db.query(User).filter(User.email == payload.email).first()
     out = {"ok": True}
     if user:
         # per-email limit
         if not allow_rate(user.email.lower(), "forgot-email", max_requests=int(os.getenv("FORGOT_LIMIT_PER_EMAIL", "3")), window_seconds=3600):
             return out
-        tok = create_reset_token(user.id, expires_minutes=30)
-        reset_url = f"{_frontend_url()}/reset?token={tok}"
-        # Optionally include reset_url in API response for local/dev only when explicitly enabled
-        if (os.getenv("EXPOSE_RESET_URL", "").lower() in ("1", "true", "yes", "dev")):
-            out["reset_url"] = reset_url
-        # Send email via provider if configured
+        # Generate numeric reset code and store hashed
+        code_len = int(os.getenv("RESET_CODE_LENGTH", "6"))
+        code = "".join(secrets.choice("0123456789") for _ in range(code_len))
+        mins = int(os.getenv("RESET_CODE_EXPIRE_MINUTES", "15"))
+        rec = PasswordResetCode(
+            user_id=user.id,
+            code_hash=PH.hash(code),
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=mins),
+        )
+        db.add(rec)
+        db.commit()
+
+        # Expose code for dev only
+        if (os.getenv("EXPOSE_RESET_CODE", "").lower() in ("1", "true", "yes", "dev")):
+            out["dev_code"] = code
+
+        # Send code email
         try:
-            _send_reset_email(to=user.email, url=reset_url, token=tok)
+            _send_reset_code_email(to=user.email, code=code, minutes=mins)
         except Exception:
-            # Don't leak errors
+            # Don't leak provider errors
             pass
     return out
 
 
 @router.post("/reset-password", status_code=204)
-def reset_password(payload: ResetPassword, db: Session = Depends(get_db)):
+def reset_password(payload: ResetPassword, request: Request, db: Session = Depends(get_db)):
+    import os
+    from datetime import datetime, timezone
+    from app.security import PH
+
+    # Basic rate limiting to slow brute force
+    ip = request.headers.get("x-forwarded-for") or request.client.host or "?"
+    ip = (ip.split(",")[0]).strip()
+    if not allow_rate(ip, "reset-ip", max_requests=int(os.getenv("RESET_LIMIT_PER_IP", "20")), window_seconds=3600):
+        raise HTTPException(status_code=429, detail="Too many requests, try again later")
+
+    # A) Code + email flow
+    if (payload.code or "").strip():
+        if not payload.email:
+            raise HTTPException(status_code=400, detail="Email is required with code")
+        user = db.query(User).filter(User.email == payload.email).first()
+        # Avoid user enumeration
+        if not user:
+            raise HTTPException(status_code=400, detail="Invalid or expired code")
+        # Per-email rate limit on resets
+        if not allow_rate(user.email.lower(), "reset-email", max_requests=int(os.getenv("RESET_LIMIT_PER_EMAIL", "10")), window_seconds=3600):
+            raise HTTPException(status_code=429, detail="Too many requests, try again later")
+
+        now = datetime.now(timezone.utc)
+        recs = (
+            db.query(PasswordResetCode)
+            .filter(PasswordResetCode.user_id == user.id,
+                    PasswordResetCode.used_at.is_(None),
+                    PasswordResetCode.expires_at > now)
+            .order_by(PasswordResetCode.id.desc())
+            .all()
+        )
+        matched = None
+        for rec in recs:
+            try:
+                if PH.verify(rec.code_hash, payload.code):
+                    matched = rec
+                    break
+            except Exception:
+                pass
+        # attempt limiting on the newest active code
+        max_attempts = int(os.getenv("MAX_RESET_CODE_ATTEMPTS", "5"))
+        if not matched:
+            if recs:
+                latest = recs[0]
+                latest.attempts = (latest.attempts or 0) + 1
+                # retire after too many attempts
+                if latest.attempts >= max_attempts:
+                    latest.used_at = now
+                db.commit()
+            raise HTTPException(status_code=400, detail="Invalid or expired code")
+
+        # If already exceeded attempts, treat as invalid
+        if (matched.attempts or 0) >= max_attempts:
+            raise HTTPException(status_code=400, detail="Invalid or expired code")
+
+        matched.used_at = now
+        user.password_hash = hash_password(payload.new_password)
+        db.commit()
+        return Response(status_code=204)
+
+    # B) Legacy token (link) flow
+    if not payload.token:
+        raise HTTPException(status_code=400, detail="Token or code is required")
     try:
         data = decode_reset_token(payload.token)
         sub = int(data.get("sub"))
+        jti = str(data.get("jti") or "")
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
 
     user = db.get(User, sub)
     if not user:
         raise HTTPException(status_code=400, detail="Invalid token")
-    # Set/replace password without needing the old one
+    # Single-use: reject if jti already used
+    if jti:
+        existing = db.query(UsedResetToken).filter(UsedResetToken.jti == jti).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Invalid or expired token")
     user.password_hash = hash_password(payload.new_password)
+    # Record jti as used
+    if jti:
+        exp_ts = data.get("exp")
+        exp_dt = None
+        try:
+            if exp_ts:
+                exp_dt = datetime.fromtimestamp(exp_ts, tz=timezone.utc)
+        except Exception:
+            exp_dt = None
+        used = UsedResetToken(user_id=user.id, jti=jti, expires_at=exp_dt)
+        db.add(used)
     db.commit()
     return Response(status_code=204)
 
 
-def _send_reset_email(to: str, url: str, token: str) -> None:
+def _send_reset_code_email(to: str, code: str, minutes: int) -> None:
     """Send a password reset email via configured provider.
 
     Supported:
@@ -176,21 +273,19 @@ def _send_reset_email(to: str, url: str, token: str) -> None:
         html = f"""
         <p>Hello,</p>
         <p>We received a request to reset your SmartGrocery password.</p>
-        <p><a href=\"{url}\">Click here to reset your password</a>. This link expires in 30 minutes.</p>
+        <p>Use this reset code in the app:</p>
+        <pre style=\"background:#f6f8fa;padding:12px;border-radius:6px;white-space:pre-wrap;word-break:break-all;\">{code}</pre>
+        <p>This code expires in {minutes} minutes.</p>
         <p>If you did not request this, you can ignore this email.</p>
-        <hr />
-        <p>If the link above does not work, copy this reset code and use it in the app:</p>
-        <pre style=\"background:#f6f8fa;padding:12px;border-radius:6px;white-space:pre-wrap;word-break:break-all;\">{token}</pre>
         """
         text = (
             "Hello,\n\n"
             "We received a request to reset your SmartGrocery password.\n"
-            f"Reset link: {url}\n"
-            "This link expires in 30 minutes. If you did not request this, you can ignore this email.\n\n"
-            "If the link doesn't work, copy this reset code and use it in the app:\n"
-            f"{token}\n"
+            f"Reset code: {code}\n"
+            f"This code expires in {minutes} minutes.\n"
+            "If you did not request this, you can ignore this email.\n"
         )
-        payload = {"from": frm, "to": [to], "subject": "SmartGrocery: Reset your password", "html": html, "text": text}
+        payload = {"from": frm, "to": [to], "subject": "SmartGrocery: Your reset code", "html": html, "text": text}
         r = httpx.post(
             "https://api.resend.com/emails",
             headers={"Authorization": f"Bearer {rk}", "Content-Type": "application/json"},
@@ -209,25 +304,24 @@ def _send_reset_email(to: str, url: str, token: str) -> None:
         import smtplib
 
         msg = EmailMessage()
-        msg["Subject"] = "SmartGrocery: Reset your password"
+        msg["Subject"] = "SmartGrocery: Your reset code"
         msg["From"] = frm
         msg["To"] = to
         msg.set_content(
             f"Hello,\n\n"
             f"We received a request to reset your SmartGrocery password.\n"
-            f"Reset link: {url}\n"
-            f"This link expires in 30 minutes. If you did not request this, you can ignore this email.\n\n"
-            f"If the link doesn't work, copy this reset code and use it in the app:\n{token}\n"
+            f"Reset code: {code}\n"
+            f"This code expires in {minutes} minutes.\n"
+            f"If you did not request this, you can ignore this email.\n"
         )
         msg.add_alternative(
             f"""
             <p>Hello,</p>
             <p>We received a request to reset your SmartGrocery password.</p>
-            <p><a href=\"{url}\">Click here to reset your password</a>. This link expires in 30 minutes.</p>
+            <p>Use this reset code in the app:</p>
+            <pre style=\"background:#f6f8fa;padding:12px;border-radius:6px;white-space:pre-wrap;word-break:break-all;\">{code}</pre>
+            <p>This code expires in {minutes} minutes.</p>
             <p>If you did not request this, you can ignore this email.</p>
-            <hr />
-            <p>If the link above does not work, copy this reset code and use it in the app:</p>
-            <pre style=\"background:#f6f8fa;padding:12px;border-radius:6px;white-space:pre-wrap;word-break:break-all;\">{token}</pre>
             """,
             subtype="html",
         )

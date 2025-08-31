@@ -1,7 +1,7 @@
 # backend/app/models.py
-from datetime import date
+from datetime import date, datetime
 from sqlalchemy import (
-    Column, String, Integer, Date, DateTime, Boolean, ForeignKey, func
+    Column, String, Integer, Date, DateTime, Boolean, ForeignKey, func, Index
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
 import enum
@@ -130,3 +130,30 @@ class ListShare(Base):
 
     user = relationship("User")
     list = relationship("GroceryList", back_populates="shares")
+
+
+class PasswordResetCode(Base):
+    __tablename__ = "password_reset_code"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    code_hash = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    used_at = Column(DateTime(timezone=True), nullable=True)
+    attempts = Column(Integer, nullable=False, server_default="0")
+
+    # Helpful index for cleanup/queries
+    __table_args__ = (
+        Index("ix_prc_user_active", "user_id", "expires_at"),
+    )
+
+
+class UsedResetToken(Base):
+    __tablename__ = "used_reset_token"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    jti = Column(String, nullable=False, unique=True, index=True)
+    used_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=True)
