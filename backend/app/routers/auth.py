@@ -27,6 +27,12 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
     u = User(email=payload.email, password_hash=hash_password(payload.password))
     db.add(u); db.commit(); db.refresh(u)
+    # Best-effort: upsert into Resend Audience so mailing list stays in sync
+    try:
+        from app.email_resend import ensure_contact as _ensure
+        _ensure(u.email, getattr(u, "name", None))
+    except Exception:
+        pass
     return UserRead(id=u.id, email=u.email)
 
 @router.post("/token", response_model=TokenResponse)
