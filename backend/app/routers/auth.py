@@ -91,7 +91,12 @@ class ResetPassword(BaseModel):
 
 def _frontend_url() -> str:
     import os
-    return (os.getenv("FRONTEND_URL") or "http://localhost:3000").rstrip("/")
+    v = (os.getenv("FRONTEND_URL") or "http://localhost:3000").strip().strip('"').strip("'")
+    v = v.rstrip("/")
+    # If schema is missing, assume https for non-localhost
+    if v and not v.startswith("http://") and not v.startswith("https://"):
+        v = ("http://" if "localhost" in v else "https://") + v
+    return v
 
 
 @router.post("/forgot-password")
