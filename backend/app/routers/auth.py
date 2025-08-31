@@ -278,6 +278,30 @@ def _send_reset_code_email(to: str, code: str, minutes: int) -> dict:
 
     frm = os.getenv("EMAIL_FROM") or "SmartGrocery <no-reply@smartgrocery.online>"
 
+    # Prefer Vercel function if configured (keeps Resend key in Vercel)
+    vercel_url = os.getenv("VERCEL_SEND_RESET_URL")
+    if vercel_url:
+        import httpx
+        headers = {"x-api-key": (os.getenv("EMAIL_TEST_SECRET") or os.getenv("CRON_SECRET") or "")}
+        payload = {"to": to, "code": code, "minutes": minutes, "from": frm}
+        r = httpx.post(vercel_url, json=payload, headers=headers, timeout=10.0)
+        try:
+            r.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            body = None
+            try:
+                body = e.response.json()
+            except Exception:
+                body = e.response.text
+            logging.getLogger("app.email").error("Vercel send failed %s body=%s", e.response.status_code, body)
+            raise
+        try:
+            data = r.json()
+        except Exception:
+            data = {"text": r.text}
+        logging.getLogger("app.email").info("Vercel relay sent reset code to %s", to)
+        return {"provider": "vercel", "status": r.status_code, "response": data}
+
     # Try Resend first
     rk = os.getenv("RESEND_API_KEY")
     if rk:

@@ -22,6 +22,28 @@ def ensure_contact(email: str, name: str | None = None) -> bool:
         logging.getLogger("app.email").debug("No RESEND_AUDIENCE_ID set; skipping contact upsert for %s", email)
         return False
 
+    # Prefer Vercel function relay if configured
+    vercel_upsert = os.getenv("VERCEL_RESEND_UPSERT_URL")
+    if vercel_upsert:
+        import httpx
+        headers = {"x-api-key": (os.getenv("EMAIL_TEST_SECRET") or os.getenv("CRON_SECRET") or "")}
+        payload = {"email": email, "name": name}
+        r = httpx.post(vercel_upsert, json=payload, headers=headers, timeout=10.0)
+        if r.status_code in (200, 201):
+            logging.getLogger("app.email").info("Vercel ensured contact: %s", email)
+            return True
+        if r.status_code == 409:
+            logging.getLogger("app.email").info("Vercel contact already exists: %s", email)
+            return True
+        body = None
+        try:
+            body = r.json()
+        except Exception:
+            body = r.text
+        logging.getLogger("app.email").error("Vercel upsert failed %s body=%s", r.status_code, body)
+        r.raise_for_status()
+        return False
+
     payload = {
         "email": email,
         "audience_id": audience_id,
@@ -76,4 +98,3 @@ def sync_all_users(users: list[tuple[int, str, str | None]]) -> dict:
         except Exception:
             fail += 1
     return {"ok": ok, "fail": fail}
-
