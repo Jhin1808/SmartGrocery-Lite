@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_, or_, func
 
-from app.database import get_db
+from app.database import SessionLocal
 from app.models import ListItem, GroceryList, User
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -58,7 +58,6 @@ def _send_email(to: str, subject: str, html: str, text: str | None = None) -> No
 def run_reminders(
     x_api_key: str | None = Header(default=None, alias="x-api-key"),
     authorization: str | None = Header(default=None),
-    db: Session = Depends(get_db),
 ):
     secret = os.getenv("CRON_SECRET")
     token_ok = False
@@ -70,6 +69,9 @@ def run_reminders(
         if not token_ok:
             raise HTTPException(status_code=401, detail="Unauthorized")
 
+    # Only open DB session after passing authorization (saves a connection on unauthorized calls).
+    db = SessionLocal()
+    try:
     today = date.today()
     # Items to remind: remind_on <= today and (reminded_at is null or reminded_at < remind_on)
     q = (
@@ -127,3 +129,5 @@ def run_reminders(
         db.commit()
 
     return {"ok": True, "sent": total_sent}
+    finally:
+        db.close()

@@ -9,7 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 RUN chmod +x /app/start.sh
-ENV PORT=8000 WORKERS=2
+ENV PORT=8000 WORKERS=1
 EXPOSE 8000
 
 CMD ["/app/start.sh"]

@@ -56,9 +56,7 @@ if google_router is not None:
 app.include_router(me_router)
 app.include_router(tasks_router)
 
-# Connectivity check
-with engine.connect() as conn:
-    conn.execute(sqlalchemy.text("SELECT 1"))
+# Removed startup connectivity check to avoid opening a DB connection at import time.
 
 @app.get("/")
 def root():

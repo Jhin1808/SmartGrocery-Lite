@@ -28,10 +28,18 @@ def build_db_url() -> str:
 
 DATABASE_URL = build_db_url()
 
-# Prefer letting PgBouncer handle pooling in production. You can override via env:
-# - DB_DISABLE_POOL=1  -> use NullPool (open/close per use; best with PgBouncer)
-# - DB_POOL_SIZE / DB_MAX_OVERFLOW to tune QueuePool if pooling is enabled
-_disable_pool = (os.getenv("DB_DISABLE_POOL", "").lower() in ("1", "true", "yes"))
+# Prefer letting PgBouncer/Supabase pooler handle pooling in production.
+# Defaults:
+# - If DATABASE_URL contains "supabase", default to NullPool (open/close per request)
+# - Otherwise, allow a very small QueuePool unless explicitly overridden
+
+_env_disable_pool = os.getenv("DB_DISABLE_POOL")
+_default_disable_pool = ("supabase" in DATABASE_URL.lower())
+_disable_pool = (
+    _default_disable_pool if _env_disable_pool is None
+    else (_env_disable_pool.lower() in ("1", "true", "yes"))
+)
+
 if _disable_pool:
     engine = create_engine(
         DATABASE_URL,
@@ -42,7 +50,7 @@ else:
     engine = create_engine(
         DATABASE_URL,
         pool_pre_ping=True,
-        pool_size=int(os.getenv("DB_POOL_SIZE", "5")),
+        pool_size=int(os.getenv("DB_POOL_SIZE", "1")),
         max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "0")),
     )
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
