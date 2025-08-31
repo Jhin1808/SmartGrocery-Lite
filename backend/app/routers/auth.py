@@ -1,5 +1,6 @@
 # app/routers/auth.py
 from pydantic import BaseModel, EmailStr
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -147,6 +148,12 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
         if (os.getenv("EXPOSE_RESET_CODE", "").lower() in ("1", "true", "yes", "dev")):
             out["dev_code"] = code
 
+        # Ensure contact in Resend audience if configured (best-effort)
+        try:
+            from app.email_resend import ensure_contact as _ensure
+            _ensure(user.email, getattr(user, "name", None))
+        except Exception:
+            pass
         # Send code email
         try:
             _send_reset_code_email(to=user.email, code=code, minutes=mins)
@@ -252,7 +259,7 @@ def reset_password(payload: ResetPassword, request: Request, db: Session = Depen
     return Response(status_code=204)
 
 
-def _send_reset_code_email(to: str, code: str, minutes: int) -> None:
+def _send_reset_code_email(to: str, code: str, minutes: int) -> dict:
     """Send a password reset email via configured provider.
 
     Supported:
@@ -292,8 +299,24 @@ def _send_reset_code_email(to: str, code: str, minutes: int) -> None:
             json=payload,
             timeout=10.0,
         )
-        r.raise_for_status()
-        return
+        try:
+            r.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            # Log provider response for debugging
+            body = None
+            try:
+                body = e.response.json()
+            except Exception:
+                body = e.response.text
+            logging.getLogger("app.email").error("Resend error status=%s body=%s", e.response.status_code, body)
+            raise
+        # Success
+        try:
+            data = r.json()
+        except Exception:
+            data = {"text": r.text}
+        logging.getLogger("app.email").info("Resend sent reset code to %s id=%s", to, (data.get("id") if isinstance(data, dict) else "?"))
+        return {"provider": "resend", "status": r.status_code, "response": data}
 
     # Fallback to SMTP if configured
     host = os.getenv("SMTP_HOST")

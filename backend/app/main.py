@@ -17,6 +17,10 @@ except Exception:
     google_router = None
 from app.routers.me import router as me_router
 from app.routers.tasks import router as tasks_router
+try:
+    from app.routers.email_test import router as email_test_router
+except Exception:
+    email_test_router = None
 
 # One env only; can be single origin or comma-separated list
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
@@ -55,6 +59,8 @@ if google_router is not None:
     app.include_router(google_router)
 app.include_router(me_router)
 app.include_router(tasks_router)
+if email_test_router is not None:
+    app.include_router(email_test_router)
 
 # Removed startup connectivity check to avoid opening a DB connection at import time.
 

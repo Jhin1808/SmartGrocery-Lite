@@ -8,6 +8,7 @@ from sqlalchemy import select, and_
 
 from app.database import SessionLocal
 from app.models import ListItem, GroceryList, User
+from app.email_resend import ensure_contact
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -129,6 +130,11 @@ def run_reminders(
                 + "\n".join(text_rows)
                 + "\n\nYou can adjust or clear reminders in the app.\n"
             )
+            try:
+                if (os.getenv("RESEND_ENFORCE_AUDIENCE", "").lower() in ("1", "true", "yes")):
+                    ensure_contact(owner.email, owner.name)
+            except Exception:
+                pass
             _send_email(owner.email, "SmartGrocery reminders", html, text)
             total_sent += 1
             # Mark items as reminded
