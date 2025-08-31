@@ -3,9 +3,8 @@ import os
 from datetime import datetime, date
 from typing import Dict, List
 
-from fastapi import APIRouter, Depends, Header, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy import select, and_, or_, func
+from fastapi import APIRouter, Header, HTTPException
+from sqlalchemy import select, and_
 
 from app.database import SessionLocal
 from app.models import ListItem, GroceryList, User
@@ -51,7 +50,7 @@ def _send_email(to: str, subject: str, html: str, text: str | None = None) -> No
             s.login(user, pwd)
             s.send_message(msg)
         return
-    # No provider configured → noop
+    # No provider configured - noop
 
 
 @router.post("/run-reminders")
@@ -72,62 +71,63 @@ def run_reminders(
     # Only open DB session after passing authorization (saves a connection on unauthorized calls).
     db = SessionLocal()
     try:
-    today = date.today()
-    # Items to remind: remind_on <= today and (reminded_at is null or reminded_at < remind_on)
-    q = (
-        db.execute(
-            select(ListItem, GroceryList, User)
-            .join(GroceryList, ListItem.list_id == GroceryList.id)
-            .join(User, GroceryList.owner_id == User.id)
-            .where(
-                and_(
-                    ListItem.remind_on.is_not(None),
-                    ListItem.remind_on <= today,
-                    ListItem.reminded_at.is_(None),
+        today = date.today()
+        # Items to remind: remind_on <= today and (reminded_at is null or reminded_at < remind_on)
+        q = (
+            db.execute(
+                select(ListItem, GroceryList, User)
+                .join(GroceryList, ListItem.list_id == GroceryList.id)
+                .join(User, GroceryList.owner_id == User.id)
+                .where(
+                    and_(
+                        ListItem.remind_on.is_not(None),
+                        ListItem.remind_on <= today,
+                        ListItem.reminded_at.is_(None),
+                    )
                 )
             )
+            .all()
         )
-        .all()
-    )
 
-    if not q:
-        return {"ok": True, "sent": 0}
+        if not q:
+            return {"ok": True, "sent": 0}
 
-    # Group by owner
-    grouped: Dict[int, List[ListItem]] = {}
-    owners: Dict[int, User] = {}
-    lists_map: Dict[int, GroceryList] = {}
-    for item, gl, owner in q:
-        owners[owner.id] = owner
-        lists_map[gl.id] = gl
-        grouped.setdefault(owner.id, []).append((item, gl))
+        # Group by owner
+        grouped: Dict[int, List[ListItem]] = {}
+        owners: Dict[int, User] = {}
+        lists_map: Dict[int, GroceryList] = {}
+        for item, gl, owner in q:
+            owners[owner.id] = owner
+            lists_map[gl.id] = gl
+            grouped.setdefault(owner.id, []).append((item, gl))
 
-    total_sent = 0
-    now = datetime.utcnow()
-    for owner_id, pairs in grouped.items():
-        owner = owners[owner_id]
-        # Build digest HTML
-        rows = []
-        for item, gl in pairs:
-            exp = item.expiry.isoformat() if item.expiry else "—"
-            rn = item.remind_on.isoformat() if item.remind_on else "—"
-            rows.append(f"<tr><td>{gl.name}</td><td>{item.name}</td><td>{exp}</td><td>{rn}</td></tr>")
-        html = f"""
-        <p>Hi {owner.name or owner.email},</p>
-        <p>Here are your item reminders for today:</p>
-        <table border=1 cellpadding=6 cellspacing=0>
-          <thead><tr><th>List</th><th>Item</th><th>Expiry</th><th>Remind On</th></tr></thead>
-          <tbody>{''.join(rows)}</tbody>
-        </table>
-        <p>You can adjust or clear reminders in the app.</p>
-        """
-        _send_email(owner.email, "SmartGrocery reminders", html, None)
-        total_sent += 1
-        # Mark items as reminded
-        for item, _ in pairs:
-            item.reminded_at = now
-        db.commit()
+        total_sent = 0
+        now = datetime.utcnow()
+        for owner_id, pairs in grouped.items():
+            owner = owners[owner_id]
+            # Build digest HTML
+            rows = []
+            for item, gl in pairs:
+                exp = item.expiry.isoformat() if item.expiry else "-"
+                rn = item.remind_on.isoformat() if item.remind_on else "-"
+                rows.append(f"<tr><td>{gl.name}</td><td>{item.name}</td><td>{exp}</td><td>{rn}</td></tr>")
+            html = f"""
+            <p>Hi {owner.name or owner.email},</p>
+            <p>Here are your item reminders for today:</p>
+            <table border=1 cellpadding=6 cellspacing=0>
+              <thead><tr><th>List</th><th>Item</th><th>Expiry</th><th>Remind On</th></tr></thead>
+              <tbody>{''.join(rows)}</tbody>
+            </table>
+            <p>You can adjust or clear reminders in the app.</p>
+            """
+            _send_email(owner.email, "SmartGrocery reminders", html, None)
+            total_sent += 1
+            # Mark items as reminded
+            for item, _ in pairs:
+                item.reminded_at = now
+            db.commit()
 
-    return {"ok": True, "sent": total_sent}
+        return {"ok": True, "sent": total_sent}
     finally:
         db.close()
+
