@@ -125,10 +125,13 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
         if not allow_rate(user.email.lower(), "forgot-email", max_requests=int(os.getenv("FORGOT_LIMIT_PER_EMAIL", "3")), window_seconds=3600):
             return out
         tok = create_reset_token(user.id, expires_minutes=30)
-        out["reset_url"] = f"{_frontend_url()}/reset?token={tok}"
+        reset_url = f"{_frontend_url()}/reset?token={tok}"
+        # Optionally include reset_url in API response for local/dev only when explicitly enabled
+        if (os.getenv("EXPOSE_RESET_URL", "").lower() in ("1", "true", "yes", "dev")):
+            out["reset_url"] = reset_url
         # Send email via provider if configured
         try:
-            _send_reset_email(to=user.email, url=out["reset_url"])
+            _send_reset_email(to=user.email, url=reset_url)
         except Exception:
             # Don't leak errors
             pass
