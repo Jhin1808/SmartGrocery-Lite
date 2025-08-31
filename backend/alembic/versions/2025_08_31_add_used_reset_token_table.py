@@ -1,8 +1,8 @@
 """
 add used_reset_token table for single-use link tokens
 
-Revision ID: 2025_08_31_add_used_reset_token_table
-Revises: 2025_08_31_add_password_reset_code_table
+Revision ID: add_urt_250831
+Revises: add_prc_250831
 Create Date: 2025-08-31
 """
 
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '2025_08_31_add_used_reset_token_table'
-down_revision = '2025_08_31_add_password_reset_code_table'
+revision = 'add_urt_250831'
+down_revision = 'add_prc_250831'
 branch_labels = None
 depends_on = None
 
