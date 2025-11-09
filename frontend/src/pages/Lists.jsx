@@ -1408,7 +1408,7 @@ export default function Lists() {
   );
 }
 
-function UseItUpShelf({
+export function UseItUpShelf({
   items = [],
   plannedIds,
   onTogglePlan,

@@ -1,70 +1,53 @@
-# Getting Started with Create React App
+# SmartGrocery Lite – Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Modern React 19 UI powered by Vite. This folder only contains the PWA shell (lists, pantry automation, authentication UI). APIs and background jobs are handled by the backend workspace.
 
-## Available Scripts
+## Prerequisites
 
-In the project directory, you can run:
+- **Node.js ≥ 20.19.0** (aligns with Vite 6 minimums)
+- **npm ≥ 10**
+- Copy `.env.example` to `.env.local` (or reuse `.env.development.local`) and fill in the values that make sense for your environment.
 
-### `npm start`
+```bash
+cd frontend
+cp .env.example .env.local  # or set the vars in Vercel/Netlify/Supabase dashboards
+npm install
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Runtime configuration (Vite)
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+| key                         | purpose                                                                                       |
+|-----------------------------|------------------------------------------------------------------------------------------------|
+| `VITE_API_BASE`             | Optional absolute base URL for API calls. Leave empty to talk to the same origin.             |
+| `VITE_TURNSTILE_SITE_KEY`   | Cloudflare Turnstile site key used on the reset-password page.                                |
+| `VITE_AUTH_FALLBACK_STORAGE_KEY` | LocalStorage key for Safari’s cookie fallback (defaults to `token`).                         |
+| `VITE_TOKEN_FRAGMENT_PARAM` | Query parameter to read tokens from OAuth fragments (defaults to `access_token`).             |
 
-### `npm test`
+> The older `REACT_APP_*` keys are still recognised but will be removed after all deployments are migrated.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Available scripts
 
-### `npm run build`
+| command            | description                                               |
+|--------------------|-----------------------------------------------------------|
+| `npm run dev`      | Start Vite in dev mode (defaults to http://127.0.0.1:5173) |
+| `npm run test`     | Run Vitest once (uses jsdom + Testing Library)            |
+| `npm run test:watch` | Watch-mode tests                                         |
+| `npm run build`    | Production build written to `dist/`                       |
+| `npm run preview`  | Serve the built bundle locally                            |
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Deployment cheatsheet
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+1. Set the working directory to `frontend/`.
+2. Install & build: `npm install && npm run build`.
+3. Serve the `frontend/dist` folder (Vercel/Netlify static hosting, GitHub Pages, Cloudflare Pages, etc.).
+4. Configure the following environment variables in your hosting dashboard: `VITE_API_BASE`, `VITE_TURNSTILE_SITE_KEY`, `VITE_AUTH_FALLBACK_STORAGE_KEY`, `VITE_TOKEN_FRAGMENT_PARAM`.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Examples:
 
-### `npm run eject`
+- **Vercel** – `installCommand: "cd frontend && npm install"`, `buildCommand: "cd frontend && npm run build"`, `outputDirectory: "frontend/dist"`. Keep `/api` serverless functions alongside the static output.
+- **Supabase/Koyeb backend + Netlify/Vercel frontend** – Deploy this folder as a static site, point `VITE_API_BASE` to the hosted API (e.g., `https://koyeb-instance.koyeb.app`).
+- **GitHub Pages** – Use the provided GitHub Actions workflow or GitHub Pages build job to run `npm run build` and push `frontend/dist` to the `gh-pages` branch.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Continuous integration
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+`.github/workflows/frontend.yml` runs `npm run test` and `npm run build` on every push/PR that touches the frontend. Keep this green before deploying.
