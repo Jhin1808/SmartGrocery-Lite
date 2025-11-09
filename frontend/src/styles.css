@@ -273,7 +273,6 @@ body {
 .dot-soon { background: #f59e0b; }
 
 /* Shopping mode */
-.shopping {}
 .shopping-list { display: flex; flex-direction: column; gap: 8px; }
 .shop-item {
   display: grid;

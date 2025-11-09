@@ -106,14 +106,14 @@ export default function AuthTabs() {
     <>
       {/* Lightweight landing hero above the form */}
       <section className="landing-hero">
-        <img src={brand} width={64} height={64} alt="SmartGrocery logo" />
+        <img src={brand} width={64} height={64} alt="SmartGrocery logo" loading="eager" decoding="async" fetchpriority="high" />
         <h1>SmartGrocery</h1>
         <p className="tagline">Plan and share grocery lists so shopping is faster and simpler.</p>
         <ul className="features" aria-label="Highlights">
-          <li><i className="bi bi-people" aria-hidden="true" /> Share with family</li>
-          <li><i className="bi bi-cloud-arrow-up" aria-hidden="true" /> Sync across devices</li>
-          <li><i className="bi bi-cart-check" aria-hidden="true" /> Shop mode checklist</li>
-          <li><i className="bi bi-shield-check" aria-hidden="true" /> Secure sign-in</li>
+          <li><span aria-hidden="true">👨‍👩‍👧‍👦</span> Share with family</li>
+          <li><span aria-hidden="true">☁️</span> Sync across devices</li>
+          <li><span aria-hidden="true">🛒</span> Shop mode checklist</li>
+          <li><span aria-hidden="true">🔒</span> Secure sign-in</li>
         </ul>
       </section>
 
