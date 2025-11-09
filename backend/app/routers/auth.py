@@ -105,12 +105,25 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
     import os
     import httpx
 
+    def _flag_true(val: str | None) -> bool:
+        return (val or "").strip().lower() in {"1", "true", "yes", "on", "disable"}
+
+    skip_rate_limits = _flag_true(os.getenv("FORGOT_LIMIT_DISABLE")) or _flag_true(
+        os.getenv("DISABLE_FORGOT_RATE_LIMITS")
+    ) or _flag_true(os.getenv("DISABLE_RATE_LIMITS"))
+
     # Rate limit by IP and by email (process-local; for multi-instance use a shared store like Redis)
     ip = request.headers.get("x-forwarded-for") or request.client.host or "?"
     ip = (ip.split(",")[0]).strip()
-    if not allow_rate(ip, "forgot-ip", max_requests=int(os.getenv("FORGOT_LIMIT_PER_IP", "5")), window_seconds=3600):
-        # 429 to indicate throttling without leaking whether email exists
-        raise HTTPException(status_code=429, detail="Too many requests, try again later")
+    if not skip_rate_limits:
+        if not allow_rate(
+            ip,
+            "forgot-ip",
+            max_requests=int(os.getenv("FORGOT_LIMIT_PER_IP", "5")),
+            window_seconds=3600,
+        ):
+            # 429 to indicate throttling without leaking whether email exists
+            raise HTTPException(status_code=429, detail="Too many requests, try again later")
 
     # Optional CAPTCHA (Cloudflare Turnstile)
     secret = os.getenv("TURNSTILE_SECRET")
@@ -141,8 +154,14 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
     out = {"ok": True}
     if user:
         # per-email limit
-        if not allow_rate(user.email.lower(), "forgot-email", max_requests=int(os.getenv("FORGOT_LIMIT_PER_EMAIL", "3")), window_seconds=3600):
-            return out
+        if not skip_rate_limits:
+            if not allow_rate(
+                user.email.lower(),
+                "forgot-email",
+                max_requests=int(os.getenv("FORGOT_LIMIT_PER_EMAIL", "3")),
+                window_seconds=3600,
+            ):
+                return out
         # Generate numeric reset code and store hashed
         code_len = int(os.getenv("RESET_CODE_LENGTH", "6"))
         code = "".join(secrets.choice("0123456789") for _ in range(code_len))
@@ -312,20 +331,56 @@ def _send_reset_code_email(to: str, code: str, minutes: int) -> dict:
     if rk:
         import httpx
 
+        from urllib.parse import quote_plus
+
+        reset_link = f"{_frontend_url()}/reset?code={quote_plus(code)}&email={quote_plus(to)}"
+
         html = f"""
-        <p>Hello,</p>
-        <p>We received a request to reset your SmartGrocery password.</p>
-        <p>Use this reset code in the app:</p>
-        <pre style=\"background:#f6f8fa;padding:12px;border-radius:6px;white-space:pre-wrap;word-break:break-all;\">{code}</pre>
-        <p>This code expires in {minutes} minutes.</p>
-        <p>If you did not request this, you can ignore this email.</p>
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#eff4ff;padding:24px 12px;">
+          <tr>
+            <td align="center">
+              <table width="520" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;border-radius:14px;box-shadow:0 12px 30px rgba(15,23,42,0.08);font-family:Segoe UI,Roboto,sans-serif;color:#0f172a;">
+                <tr>
+                  <td style="padding:26px 30px;border-radius:14px 14px 0 0;background:#1d4ed8;color:#fff;">
+                    <div style="font-size:20px;font-weight:600;">SmartGrocery</div>
+                    <div style="font-size:14px;opacity:0.9;margin-top:4px;">Password reset request</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:26px 30px;">
+                    <p style="margin:0 0 14px;font-size:16px;">Hi there,</p>
+                    <p style="margin:0 0 18px;font-size:15px;line-height:1.5;">
+                      We received a request to reset your SmartGrocery password. Enter the one-time code below within {minutes} minutes.
+                    </p>
+                    <div style="font-size:30px;letter-spacing:10px;font-weight:600;background:#f4f7ff;border:2px dashed #c7d7ff;padding:18px 12px;text-align:center;border-radius:12px;color:#1d4ed8;">
+                      {code}
+                    </div>
+                    <p style="margin:22px 0 10px;font-size:14px;color:#475569;text-align:center;">You can also use the button:</p>
+                    <a href="{reset_link}"
+                       style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 30px;border-radius:999px;font-weight:600;font-size:14px;">
+                      Enter code in SmartGrocery
+                    </a>
+                    <p style="margin:24px 0 0;font-size:13px;color:#64748b;line-height:1.5;">
+                      If you did not request this reset, you can safely ignore this email and your password will stay the same.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:18px 30px;background:#f8fafc;border-radius:0 0 14px 14px;border-top:1px solid #e2e8f0;text-align:center;font-size:12px;color:#94a3b8;">
+                    SmartGrocery &middot; Shared lists • Pantry reminders • Recipe mode
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
         """
         text = (
-            "Hello,\n\n"
+            "SmartGrocery password reset\n\n"
             "We received a request to reset your SmartGrocery password.\n"
             f"Reset code: {code}\n"
             f"This code expires in {minutes} minutes.\n"
-            "If you did not request this, you can ignore this email.\n"
+            "Enter the code in the SmartGrocery app or ignore this email to keep your password unchanged.\n"
         )
         payload = {"from": frm, "to": [to], "subject": "SmartGrocery: Your reset code", "html": html, "text": text}
         r = httpx.post(
