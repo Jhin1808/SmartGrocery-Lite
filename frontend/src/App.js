@@ -1,5 +1,6 @@
 import React, { Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { AuthProvider, useAuth } from "./pages/AuthContext";
 
 // Code-split pages to reduce initial JS for login route
 const AuthTabs = React.lazy(() => import("./pages/AuthTabs"));
@@ -12,8 +13,6 @@ const Terms = React.lazy(() => import("./pages/Terms"));
 const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
 
 const NavBar = React.lazy(() => import("./components/NavBar"));
-
-import { AuthProvider, useAuth } from "./pages/AuthContext";
 
 // Guard
 function RequireAuth({ children }) {
@@ -97,4 +96,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-
