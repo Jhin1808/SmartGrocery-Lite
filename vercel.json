@@ -1,4 +1,15 @@
 {
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    },
+    {
+      "src": "api/**/*.{js,ts}",
+      "use": "@vercel/node"
+    }
+  ],
   "functions": {
     "api/**/*.{js,ts}": {
       "runtime": "nodejs20.x"
@@ -6,8 +17,5 @@
   },
   "crons": [
     { "path": "/api/cron-run-reminders", "schedule": "0 14 * * *" }
-  ],
-  "installCommand": "cd frontend && npm install",
-  "buildCommand": "cd frontend && npm run build",
-  "outputDirectory": "frontend/dist"
+  ]
 }
