@@ -63,6 +63,65 @@ const ExpiryBadge = ({ expiry }) => {
   return <Badge bg="success">in {n}d</Badge>;
 };
 
+const USE_IT_UP_WINDOW_DAYS = 5;
+const recipeBlueprints = [
+  {
+    keywords: ["spinach", "kale", "greens"],
+    title: "Sauté greens tonight",
+    description: "Quickly wilt with garlic and finish with a squeeze of lemon.",
+    addOns: ["garlic", "olive oil", "lemon"],
+  },
+  {
+    keywords: ["chicken", "turkey"],
+    title: "Sheet-pan herb chicken",
+    description: "Roast with potatoes and carrots for a zero-waste dinner.",
+    addOns: ["potatoes", "carrots", "rosemary"],
+  },
+  {
+    keywords: ["berry", "berries", "strawberry", "blueberry"],
+    title: "Parfait or smoothie",
+    description: "Layer with yogurt or blend for breakfast prep.",
+    addOns: ["yogurt", "granola", "honey"],
+  },
+  {
+    keywords: ["tomato", "tomatoes"],
+    title: "One-pan pasta sauce",
+    description: "Simmer with garlic and basil for a fast pasta night.",
+    addOns: ["pasta", "garlic", "basil"],
+  },
+  {
+    keywords: ["avocado"],
+    title: "Guac + toast bar",
+    description: "Mash with lime and cilantro; serve with toast or chips.",
+    addOns: ["lime", "cilantro", "tortilla chips"],
+  },
+  {
+    keywords: ["egg", "eggs"],
+    title: "Frittata night",
+    description: "Bake with leftover veggies and cheese for lunches.",
+    addOns: ["cheese", "spinach", "onion"],
+  },
+  {
+    keywords: ["milk", "cream"],
+    title: "Creamy soup base",
+    description: "Use as base for chowder or potato soup.",
+    addOns: ["stock", "potatoes", "celery"],
+  },
+];
+const fallbackBlueprint = {
+  title: "Stir-fry tonight",
+  description: "Toss into a fast stir-fry with aromatics and a grain.",
+  addOns: ["ginger", "soy sauce", "rice"],
+};
+const getPrepBlueprint = (name = "") => {
+  const lower = name.toLowerCase();
+  return (
+    recipeBlueprints.find((bp) =>
+      bp.keywords.some((k) => lower.includes(k))
+    ) || fallbackBlueprint
+  );
+};
+
 export default function Lists() {
   const { user: me } = useAuth(); // { id, email, name, ... }
 
@@ -100,6 +159,7 @@ export default function Lists() {
   const [showHidden, setShowHidden] = useState(false);
   const [shoppingMode, setShoppingMode] = useState(false);
   const [hidePurchased, setHidePurchased] = useState(true);
+  const [plannedUseItUp, setPlannedUseItUp] = useState(new Set()); // Track items the user planned meals for
 
   // UX
   const [err, setErr] = useState(null);
@@ -160,6 +220,50 @@ export default function Lists() {
   const loading = selectedId && loadingItems.has(selectedId);
   const totalItems = (id) => itemsByList[id]?.length ?? 0;
 
+  const listNameById = useMemo(() => {
+    const map = {};
+    lists.forEach((l) => {
+      map[l.id] = l.name;
+      map[String(l.id)] = l.name;
+    });
+    return map;
+  }, [lists]);
+
+  const useItUpItems = useMemo(() => {
+    const soon = [];
+    Object.entries(itemsByList).forEach(([listIdKey, items]) => {
+      if (!Array.isArray(items)) return;
+      items.forEach((it) => {
+        if (!it?.expiry || it.purchased) return;
+        const days = daysUntil(it.expiry);
+        if (days === null || days > USE_IT_UP_WINDOW_DAYS) return;
+        const numericListId = Number(listIdKey);
+        const suggestion = getPrepBlueprint(it.name);
+        soon.push({
+          id: it.id,
+          name: it.name,
+          expiry: it.expiry,
+          quantity: it.quantity,
+          description: it.description,
+          listId: Number.isNaN(numericListId) ? listIdKey : numericListId,
+          listName:
+            listNameById[listIdKey] ||
+            listNameById[numericListId] ||
+            "List",
+          daysUntil: days,
+          suggestion,
+        });
+      });
+    });
+    return soon
+      .sort((a, b) => {
+        const da = a.daysUntil ?? Number.POSITIVE_INFINITY;
+        const db = b.daysUntil ?? Number.POSITIVE_INFINITY;
+        return da - db;
+      })
+      .slice(0, 6);
+  }, [itemsByList, listNameById]);
+
   // ---------- helpers ----------
   const setFilter = (listId, v) => setFilters((f) => ({ ...f, [listId]: v }));
 
@@ -189,6 +293,25 @@ export default function Lists() {
         ...patch,
       },
     }));
+
+  const toggleUseItUpPlan = (itemId) =>
+    setPlannedUseItUp((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+
+  const focusList = (listId) => {
+    if (listId === null || typeof listId === "undefined") return;
+    const normalized = Number(listId);
+    setSelectedId(Number.isNaN(normalized) ? listId : normalized);
+  };
+
+  const startShoppingForList = (listId) => {
+    focusList(listId);
+    setShoppingMode(true);
+  };
 
   // ---------- load lists ----------
   const loadLists = async () => {
@@ -467,6 +590,13 @@ export default function Lists() {
   // ---------- UI ----------
   return (
     <Container fluid="md" style={{ marginTop: 24 }}>
+      <UseItUpShelf
+        items={useItUpItems}
+        plannedIds={plannedUseItUp}
+        onTogglePlan={toggleUseItUpPlan}
+        onFocusList={focusList}
+        onStartShopping={startShoppingForList}
+      />
       <Row className="g-4">
         {/* LEFT: Lists */}
         <Col xs={12} md={4}>
@@ -1275,5 +1405,110 @@ export default function Lists() {
         )}
       </ToastContainer>
     </Container>
+  );
+}
+
+function UseItUpShelf({
+  items = [],
+  plannedIds,
+  onTogglePlan,
+  onFocusList,
+  onStartShopping,
+}) {
+  const planned = plannedIds || new Set();
+  const hasItems = items.length > 0;
+
+  return (
+    <Card className="shadow-sm mb-4">
+      <Card.Header className="d-flex align-items-center gap-2">
+        <i className="bi bi-lightning-charge" aria-hidden="true" />
+        <span className="fw-semibold">Use-it-up shelf</span>
+        {hasItems && (
+          <Badge bg="secondary" className="ms-auto">
+            {items.length}
+          </Badge>
+        )}
+      </Card.Header>
+      <Card.Body>
+        {hasItems ? (
+          <Row className="g-3">
+            {items.map((item) => {
+              const isPlanned = planned.has(item.id);
+              return (
+                <Col xs={12} md={6} key={item.id}>
+                  <div className="useitup-tile p-3 border rounded h-100 d-flex flex-column gap-2">
+                    <div className="d-flex align-items-start gap-2">
+                      <div className="flex-grow-1">
+                        <div className="fw-semibold text-truncate" title={item.name}>
+                          {item.name}
+                        </div>
+                        <div className="text-muted small text-truncate">
+                          {item.listName} · Qty {item.quantity}
+                        </div>
+                      </div>
+                      <ExpiryBadge expiry={item.expiry} />
+                    </div>
+                    <div className="small">
+                      <strong>{item.suggestion.title}.</strong>{" "}
+                      {item.suggestion.description}
+                    </div>
+                    {item.suggestion.addOns?.length ? (
+                      <div className="d-flex flex-wrap gap-1">
+                        {item.suggestion.addOns.map((addon) => (
+                          <Badge
+                            key={`${item.id}-${addon}`}
+                            bg="light"
+                            text="dark"
+                          >
+                            {addon}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : null}
+                    <div className="mt-auto pt-2 d-flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant={isPlanned ? "success" : "outline-success"}
+                        onClick={() => onTogglePlan?.(item.id)}
+                      >
+                        {isPlanned ? "Planned" : "Plan meal"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline-primary"
+                        onClick={() => onFocusList?.(item.listId)}
+                      >
+                        View list
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline-secondary"
+                        onClick={() => onStartShopping?.(item.listId)}
+                      >
+                        Shop now
+                      </Button>
+                    </div>
+                  </div>
+                </Col>
+              );
+            })}
+          </Row>
+        ) : (
+          <div className="d-flex align-items-center gap-3 flex-wrap">
+            <div>
+              <div className="fw-semibold">Nothing expiring soon</div>
+              <div className="text-muted small">
+                Log expiry dates to unlock automated meal ideas and anti-waste
+                nudges.
+              </div>
+            </div>
+            <i
+              className="bi bi-emoji-smile text-success fs-3"
+              aria-hidden="true"
+            />
+          </div>
+        )}
+      </Card.Body>
+    </Card>
   );
 }

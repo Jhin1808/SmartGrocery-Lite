@@ -1,13 +1,27 @@
 // src/api.js
-const rawBase = process.env.REACT_APP_API_BASE || "";
+export const readEnv = (viteKey, craKey) => {
+  if (typeof import.meta !== "undefined" && import.meta.env) {
+    const v = import.meta.env[viteKey];
+    if (typeof v !== "undefined") return v;
+  }
+  if (typeof process !== "undefined" && process?.env) {
+    const p = process.env[craKey];
+    if (typeof p !== "undefined") return p;
+  }
+  return undefined;
+};
+
+const rawBase = readEnv("VITE_API_BASE", "REACT_APP_API_BASE") || "";
 const API_BASE = rawBase.replace(/\/+$/, ""); // strip trailing slash if any
 export { API_BASE };
 
 // Shared constants to avoid hardcoding names
 export const AUTH_FALLBACK_STORAGE_KEY =
-  process.env.REACT_APP_AUTH_FALLBACK_STORAGE_KEY || "token";
+  readEnv("VITE_AUTH_FALLBACK_STORAGE_KEY", "REACT_APP_AUTH_FALLBACK_STORAGE_KEY") ||
+  "token";
 export const TOKEN_FRAGMENT_PARAM =
-  process.env.REACT_APP_TOKEN_FRAGMENT_PARAM || "access_token";
+  readEnv("VITE_TOKEN_FRAGMENT_PARAM", "REACT_APP_TOKEN_FRAGMENT_PARAM") ||
+  "access_token";
 
 // Safely join base + path
 function joinUrl(base, path) {

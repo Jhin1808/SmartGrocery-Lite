@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { apiForgotPassword, apiResetPassword } from "../api";
+import { apiForgotPassword, apiResetPassword, readEnv } from "../api";
 
 export default function ResetPassword() {
   const { search } = useLocation();
@@ -168,7 +168,8 @@ export default function ResetPassword() {
 
 function Turnstile({ onVerify }) {
   const [ready, setReady] = useState(false);
-  const siteKey = process.env.REACT_APP_TURNSTILE_SITE_KEY || "";
+  const siteKey =
+    readEnv("VITE_TURNSTILE_SITE_KEY", "REACT_APP_TURNSTILE_SITE_KEY") || "";
 
   useEffect(() => {
     if (!siteKey) return; // no widget if no site key configured
