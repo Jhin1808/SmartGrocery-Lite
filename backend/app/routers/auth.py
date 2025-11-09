@@ -105,12 +105,25 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
     import os
     import httpx
 
+    def _flag_true(val: str | None) -> bool:
+        return (val or "").strip().lower() in {"1", "true", "yes", "on", "disable"}
+
+    skip_rate_limits = _flag_true(os.getenv("FORGOT_LIMIT_DISABLE")) or _flag_true(
+        os.getenv("DISABLE_FORGOT_RATE_LIMITS")
+    ) or _flag_true(os.getenv("DISABLE_RATE_LIMITS"))
+
     # Rate limit by IP and by email (process-local; for multi-instance use a shared store like Redis)
     ip = request.headers.get("x-forwarded-for") or request.client.host or "?"
     ip = (ip.split(",")[0]).strip()
-    if not allow_rate(ip, "forgot-ip", max_requests=int(os.getenv("FORGOT_LIMIT_PER_IP", "5")), window_seconds=3600):
-        # 429 to indicate throttling without leaking whether email exists
-        raise HTTPException(status_code=429, detail="Too many requests, try again later")
+    if not skip_rate_limits:
+        if not allow_rate(
+            ip,
+            "forgot-ip",
+            max_requests=int(os.getenv("FORGOT_LIMIT_PER_IP", "5")),
+            window_seconds=3600,
+        ):
+            # 429 to indicate throttling without leaking whether email exists
+            raise HTTPException(status_code=429, detail="Too many requests, try again later")
 
     # Optional CAPTCHA (Cloudflare Turnstile)
     secret = os.getenv("TURNSTILE_SECRET")
@@ -141,8 +154,14 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
     out = {"ok": True}
     if user:
         # per-email limit
-        if not allow_rate(user.email.lower(), "forgot-email", max_requests=int(os.getenv("FORGOT_LIMIT_PER_EMAIL", "3")), window_seconds=3600):
-            return out
+        if not skip_rate_limits:
+            if not allow_rate(
+                user.email.lower(),
+                "forgot-email",
+                max_requests=int(os.getenv("FORGOT_LIMIT_PER_EMAIL", "3")),
+                window_seconds=3600,
+            ):
+                return out
         # Generate numeric reset code and store hashed
         code_len = int(os.getenv("RESET_CODE_LENGTH", "6"))
         code = "".join(secrets.choice("0123456789") for _ in range(code_len))
