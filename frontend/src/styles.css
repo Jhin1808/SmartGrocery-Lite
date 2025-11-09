@@ -50,6 +50,38 @@ body {
     background: var(--bg);
 }
 
+/* Landing hero above auth */
+.landing-hero {
+    max-width: 900px;
+    margin: 28px auto 8px;
+    padding: 0 16px;
+    text-align: center;
+}
+.landing-hero img { width: 64px; height: 64px; display: inline-block; }
+.landing-hero h1 { margin: 8px 0 6px; font-size: 28px; }
+.landing-hero .tagline { margin: 0; color: var(--muted); }
+.landing-hero .features {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 0 0;
+    margin: 8px 0 0;
+}
+.landing-hero .features li {
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 999px;
+    padding: 6px 10px;
+}
+.landing-hero .features .bi { color: var(--p); }
+
 .auth-wrap {
     max-width: 520px;
     margin: 48px auto;

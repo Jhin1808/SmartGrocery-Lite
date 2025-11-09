@@ -4,6 +4,7 @@ import { useLocation, useNavigate, Link } from "react-router-dom";
 import { apiLogin, apiRegister, API_BASE, AUTH_FALLBACK_STORAGE_KEY } from "../api";
 import { useAuth } from "./AuthContext";
 import googleIcon from "../googleicon.png";
+import brand from "../Weblogo.png";
 
 export default function AuthTabs() {
   const navigate = useNavigate();
@@ -36,6 +37,13 @@ export default function AuthTabs() {
       window.history.replaceState({}, "", "/login");
     }
   }, [search]);
+
+  // Set a friendly page title on login/register
+  useEffect(() => {
+    const prev = document.title;
+    document.title = "SmartGrocery Lite - Sign in or Register";
+    return () => { document.title = prev; };
+  }, []);
 
   const canLogin =
     loginEmail.trim().includes("@") && loginPwd.trim().length >= 8;
@@ -95,12 +103,26 @@ export default function AuthTabs() {
   };
 
   return (
-    <div className="auth-wrap">
-      <div className="tabs">
-        <button
-          className={`tab ${tab === "login" ? "active" : ""}`}
-          onClick={() => setTab("login")}
-        >
+    <>
+      {/* Lightweight landing hero above the form */}
+      <section className="landing-hero">
+        <img src={brand} width={64} height={64} alt="SmartGrocery logo" />
+        <h1>SmartGrocery</h1>
+        <p className="tagline">Plan and share grocery lists so shopping is faster and simpler.</p>
+        <ul className="features" aria-label="Highlights">
+          <li><i className="bi bi-people" aria-hidden="true" /> Share with family</li>
+          <li><i className="bi bi-cloud-arrow-up" aria-hidden="true" /> Sync across devices</li>
+          <li><i className="bi bi-cart-check" aria-hidden="true" /> Shop mode checklist</li>
+          <li><i className="bi bi-shield-check" aria-hidden="true" /> Secure sign-in</li>
+        </ul>
+      </section>
+
+      <div className="auth-wrap">
+        <div className="tabs">
+          <button
+            className={`tab ${tab === "login" ? "active" : ""}`}
+            onClick={() => setTab("login")}
+          >
           Login
         </button>
         <button
@@ -241,6 +263,7 @@ export default function AuthTabs() {
           </p>
         </form>
       )}
-    </div>
+      </div>
+    </>
   );
 }
