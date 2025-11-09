@@ -5,11 +5,13 @@ import { apiForgotPassword, apiResetPassword } from "../api";
 export default function ResetPassword() {
   const { search } = useLocation();
   const navigate = useNavigate();
-  const token = useMemo(() => new URLSearchParams(search).get("token") || "", [search]);
+  const params = useMemo(() => new URLSearchParams(search), [search]);
+  const token = useMemo(() => params.get("token") || params.get("code") || "", [params]);
+  const initialEmail = useMemo(() => params.get("email") || "", [params]);
   const [manualCode, setManualCode] = useState("");
 
   // Request state
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [reqBusy, setReqBusy] = useState(false);
   const [reqMsg, setReqMsg] = useState("");
   const [devCode, setDevCode] = useState("");
@@ -21,6 +23,10 @@ export default function ResetPassword() {
   const [resetBusy, setResetBusy] = useState(false);
   const [resetErr, setResetErr] = useState("");
   const [resetOk, setResetOk] = useState(false);
+
+  useEffect(() => {
+    if (initialEmail) setEmail(initialEmail);
+  }, [initialEmail]);
 
   const looksLikeJwt = token.includes(".");
   const canReset = pw1.length >= 8 && pw1 === pw2 && (looksLikeJwt || email.trim().includes("@"));
@@ -102,7 +108,12 @@ export default function ResetPassword() {
                 type="button"
                 className="btn"
                 disabled={!manualCode.trim()}
-                onClick={() => navigate(`/reset?token=${encodeURIComponent(manualCode.trim())}`, { replace: true })}
+                onClick={() => {
+                  const qs = new URLSearchParams();
+                  qs.set("code", manualCode.trim());
+                  if (email.trim()) qs.set("email", email.trim());
+                  navigate(`/reset?${qs.toString()}`, { replace: true });
+                }}
               >
                 Use code
               </button>

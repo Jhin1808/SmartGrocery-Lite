@@ -331,6 +331,10 @@ def _send_reset_code_email(to: str, code: str, minutes: int) -> dict:
     if rk:
         import httpx
 
+        from urllib.parse import quote_plus
+
+        reset_link = f"{_frontend_url()}/reset?code={quote_plus(code)}&email={quote_plus(to)}"
+
         html = f"""
         <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#eff4ff;padding:24px 12px;">
           <tr>
@@ -352,7 +356,7 @@ def _send_reset_code_email(to: str, code: str, minutes: int) -> dict:
                       {code}
                     </div>
                     <p style="margin:22px 0 10px;font-size:14px;color:#475569;text-align:center;">You can also use the button:</p>
-                    <a href="{_frontend_url()}/reset?token={code}"
+                    <a href="{reset_link}"
                        style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 30px;border-radius:999px;font-weight:600;font-size:14px;">
                       Enter code in SmartGrocery
                     </a>
