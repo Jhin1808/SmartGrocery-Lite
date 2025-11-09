@@ -151,8 +151,15 @@ export const apiChangePassword = ({ current_password, new_password }) =>
 export const apiForgotPassword = (email, captcha_token) =>
   request("/auth/forgot-password", { method: "POST", body: { email, captcha_token } });
 
-export const apiResetPassword = ({ token, new_password }) =>
-  request("/auth/reset-password", { method: "POST", body: { token, new_password } });
+export const apiResetPassword = ({ token, code, email, new_password }) => {
+  const body = { new_password };
+  if (token) body.token = token;
+  if (code) {
+    body.code = code;
+    if (email) body.email = email;
+  }
+  return request("/auth/reset-password", { method: "POST", body });
+};
 
 // ---- List rename ----
 export const apiRenameList = (listId, name) =>
