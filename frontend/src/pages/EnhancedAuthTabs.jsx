@@ -192,9 +192,9 @@ export default function EnhancedAuthTabs() {
             <Card className="shadow-lg border-0">
               <Card.Body className="p-0">
                 {/* Tab Navigation */}
-                <div className="d-flex border-bottom bg-light">
+                <div className="d-flex border-bottom bg-light gap-3 px-2">
                   <button
-                    className={`flex-1 py-4 border-0 bg-transparent font-semibold text-lg transition-colors ${
+                    className={`flex-1 py-4 px-4 border-0 bg-transparent font-semibold text-lg transition-colors ${
                       activeTab === "login"
                         ? "text-forest-dark border-b-2 border-leaf-green"
                         : "text-text-secondary hover:text-forest-medium"
@@ -205,7 +205,7 @@ export default function EnhancedAuthTabs() {
                     Sign In
                   </button>
                   <button
-                    className={`flex-1 py-4 border-0 bg-transparent font-semibold text-lg transition-colors ${
+                    className={`flex-1 py-4 px-4 border-0 bg-transparent font-semibold text-lg transition-colors ${
                       activeTab === "register"
                         ? "text-forest-dark border-b-2 border-leaf-green"
                         : "text-text-secondary hover:text-forest-medium"
@@ -254,7 +254,7 @@ export default function EnhancedAuthTabs() {
                           onChange={(e) => setLoginEmail(e.target.value)}
                           required
                           disabled={loginLoading}
-                          className="border-0 bg-light"
+                          className=""
                         />
                       </Form.Group>
 
@@ -268,7 +268,7 @@ export default function EnhancedAuthTabs() {
                             onChange={(e) => setLoginPassword(e.target.value)}
                             required
                             disabled={loginLoading}
-                            className="border-0 bg-light"
+                            className=""
                           />
                           <Button
                             variant="outline-secondary"
@@ -302,6 +302,7 @@ export default function EnhancedAuthTabs() {
 
                       <Button
                         type="submit"
+                        variant="success"
                         className="w-100 py-3"
                         disabled={loginLoading || !loginEmail || !loginPassword}
                       >
@@ -386,7 +387,7 @@ export default function EnhancedAuthTabs() {
                           onChange={(e) => setRegisterEmail(e.target.value)}
                           required
                           disabled={registerLoading}
-                          className="border-0 bg-light"
+                          className=""
                         />
                       </Form.Group>
 
@@ -400,7 +401,7 @@ export default function EnhancedAuthTabs() {
                             onChange={(e) => setRegisterPassword(e.target.value)}
                             required
                             disabled={registerLoading}
-                            className="border-0 bg-light"
+                            className=""
                           />
                           <Button
                             variant="outline-secondary"
@@ -448,7 +449,7 @@ export default function EnhancedAuthTabs() {
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             required
                             disabled={registerLoading}
-                            className="border-0 bg-light"
+                            className=""
                             isInvalid={confirmPassword && !passwordsMatch}
                           />
                           <Button
@@ -474,8 +475,10 @@ export default function EnhancedAuthTabs() {
                           disabled={registerLoading}
                           label={
                             <small className="text-muted">
-                              I agree to the <a href="/terms" className="text-forest-medium hover:text-leaf-green">Terms of Service</a> 
-                              and <a href="/terms" className="text-forest-medium hover:text-leaf-green">Privacy Policy</a>
+                              I agree to the{" "}
+                              <a href="/terms" className="text-forest-medium hover:text-leaf-green">Terms of Service</a>{" "}
+                              and{" "}
+                              <a href="/terms" className="text-forest-medium hover:text-leaf-green">Privacy Policy</a>
                             </small>
                           }
                         />
@@ -502,6 +505,7 @@ export default function EnhancedAuthTabs() {
 
                       <Button
                         type="submit"
+                        variant="success"
                         className="w-100 py-3"
                         disabled={
                           registerLoading || 

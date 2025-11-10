@@ -41,7 +41,9 @@ export default function NavBar() {
           <Nav className="ms-auto align-items-center" style={{ gap: 8 }}>
             <ThemeToggle />
             {loading ? (
-              <Navbar.Text className="text-muted">Loading…</Navbar.Text>
+              !onLoginRoute ? (
+                <Navbar.Text className="text-muted">Loading…</Navbar.Text>
+              ) : null
             ) : user ? (
               <>
                 <NavDropdown
