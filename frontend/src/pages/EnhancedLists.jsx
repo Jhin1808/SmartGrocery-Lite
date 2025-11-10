@@ -30,8 +30,15 @@ import {
   apiRevokeShare,
   apiDeleteList,
   apiHideList,
+  apiUnhideList,
+  apiLeaveSharedList,
 } from "../api";
 import "../enhanced-styles.css"; // Import the enhanced CSS
+
+// In-memory caches to avoid visible reloads when navigating back to Lists
+let __listsCache = { data: null, hidden: false, time: 0 };
+let __listsCacheHidden = { data: null, hidden: true, time: 0 };
+let __itemsCache = {};
 
 // Enhanced expiry display helpers
 const parseDate = (s) => (s ? new Date(`${s}T00:00:00`) : null);
@@ -128,6 +135,22 @@ export default function EnhancedLists() {
   const [shoppingProgress, setShoppingProgress] = useState(0);
   // Theme is controlled globally via NavBar ThemeToggle
   const [lastToggle, setLastToggle] = useState(null); // { listId, itemId, prev }
+  // Locally removed (hidden even when Show hidden is ON)
+  const [removedIds, setRemovedIds] = useState(() => {
+    try {
+      const raw = localStorage.getItem('sg-removed-lists');
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw);
+      return new Set(Array.isArray(arr) ? arr : []);
+    } catch {
+      return new Set();
+    }
+  });
+
+  const saveRemoved = (nextSet) => {
+    setRemovedIds(nextSet);
+    try { localStorage.setItem('sg-removed-lists', JSON.stringify(Array.from(nextSet))); } catch {}
+  };
   const [confirmRemoveShared, setConfirmRemoveShared] = useState(false);
 
   // owner/permission
@@ -141,9 +164,8 @@ export default function EnhancedLists() {
   // computed lists for left pane
   const listFilter = listQuery.toLowerCase();
   const visibleLists = useMemo(() => {
-    // Never show hidden shared lists for viewers (treat as removed for that user)
-    const excludeHiddenShared = (l) => !(l.shared && l.hidden);
-    const base = (showHidden ? lists : lists.filter((l) => !l.hidden)).filter(excludeHiddenShared);
+    // Respect Show hidden toggle, and also exclude locally removed ids regardless
+    const base = (showHidden ? lists : lists.filter((l) => !l.hidden)).filter((l) => !removedIds.has(l.id));
     const filtered = base.filter((l) => l.name.toLowerCase().includes(listFilter));
     const dir = listSort.dir === "asc" ? 1 : -1;
     const tItems = (id) => itemsByList[id]?.length ?? 0;
@@ -226,32 +248,43 @@ export default function EnhancedLists() {
 
   // Using real API functions from ../api
 
-  // Load lists on component mount
+  // Load lists on component mount (with cache hydration)
   useEffect(() => {
+    const cacheObj = showHidden ? __listsCacheHidden : __listsCache;
+    if (cacheObj?.data) {
+      setLists(cacheObj.data);
+      setSelectedId((prev) => (prev ?? (cacheObj.data[0]?.id || null)));
+      setIsLoading(false);
+    }
     const loadInitialData = async () => {
       try {
         const data = await apiGetLists(showHidden);
         setLists(data);
         setSelectedId((prev) => (prev ?? (data[0]?.id || null)));
         setIsLoading(false);
+        if (showHidden) __listsCacheHidden = { data, hidden: true, time: Date.now() };
+        else __listsCache = { data, hidden: false, time: Date.now() };
       } catch (e) {
         setErr(e.message || "Failed to load lists");
         setIsLoading(false);
       }
     };
-    
     loadInitialData();
   }, [showHidden]);
 
-  // Load items when list is selected
+  // Load items when list is selected (with cache hydration)
   useEffect(() => {
     const loadItems = async () => {
       if (!selectedId || itemsByList[selectedId]) return;
-      
+      // hydrate immediately from cache
+      if (__itemsCache[selectedId]) {
+        setItemsByList((m) => ({ ...m, [selectedId]: __itemsCache[selectedId] }));
+      }
       try {
         setLoadingItems((s) => new Set(s).add(selectedId));
         const items = await apiGetItems(selectedId);
         setItemsByList((m) => ({ ...m, [selectedId]: items }));
+        __itemsCache[selectedId] = items;
       } catch (e) {
         setErr(e.message || "Failed to load items");
       } finally {
@@ -262,7 +295,6 @@ export default function EnhancedLists() {
         });
       }
     };
-    
     loadItems();
   }, [selectedId, itemsByList]);
 
@@ -308,6 +340,7 @@ export default function EnhancedLists() {
         ...m,
         [selectedId]: [item, ...(m[selectedId] || [])],
       }));
+      __itemsCache[selectedId] = [item, ...(__itemsCache[selectedId] || [])];
       
       setDrafts((d) => ({
         ...d,
@@ -331,6 +364,7 @@ export default function EnhancedLists() {
         ...m,
         [listId]: (m[listId] || []).filter((i) => i.id !== item.id),
       }));
+      __itemsCache[listId] = (__itemsCache[listId] || []).filter((i) => i.id !== item.id);
       setEditing((s) => {
         const n = new Set(s);
         n.delete(item.id);
@@ -391,6 +425,7 @@ export default function EnhancedLists() {
           x.id === id ? updated : x
         ),
       }));
+      __itemsCache[selectedId] = (__itemsCache[selectedId] || []).map((x) => (x.id === id ? updated : x));
       cancelEdit(id);
       setToast({ message: "Item updated", variant: "success" });
     } catch (e) {
@@ -431,19 +466,40 @@ export default function EnhancedLists() {
     }
   };
 
-  const hideSelected = async () => {
+  const toggleHiddenSelected = async () => {
     if (!selectedId || isOwner) return;
     try {
-      await apiHideList(selectedId);
-      setToast({ message: "Hidden", variant: "success" });
-      setSelectedId(null);
-      // Treat hidden shared lists as permanently removed for this user
-      if (showHidden) setShowHidden(false);
-      const data = await apiGetLists(false);
+      const sel = lists.find((l) => l.id === selectedId);
+      if (!sel) return;
+      if (sel.hidden) {
+        await apiUnhideList(selectedId);
+        setToast({ message: "Unhidden", variant: "success" });
+      } else {
+        await apiHideList(selectedId);
+        setToast({ message: "Hidden", variant: "success" });
+      }
+      const data = await apiGetLists(showHidden);
       setLists(data);
     } catch (e) {
-      setToast({ message: e.message || "Hide failed", variant: "danger" });
+      setToast({ message: e.message || "Action failed", variant: "danger" });
     }
+  };
+
+  const removeFromMyLists = async () => {
+    if (!selectedId || isOwner) return;
+    // Try to leave on server, then remove locally regardless
+    try {
+      await apiLeaveSharedList(selectedId);
+    } catch (e) {
+      // If backend doesn't support leave, fall back to hide silently
+      try { await apiHideList(selectedId); } catch {}
+    }
+    const next = new Set(removedIds);
+    next.add(selectedId);
+    saveRemoved(next);
+    setLists((arr) => arr.filter((l) => l.id !== selectedId));
+    setToast({ message: 'Removed from your lists', variant: 'success' });
+    setSelectedId(null);
   };
 
   // Toggle purchased with undo support
@@ -772,15 +828,25 @@ export default function EnhancedLists() {
                         </Button>
                       </>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="outline-danger"
-                        onClick={() => setConfirmRemoveShared(true)}
-                        title="Remove this shared list from your lists"
-                        className="d-flex align-items-center gap-1"
-                      >
-                        <i className="bi bi-trash" /> Remove
-                      </Button>
+                      <div className="d-flex align-items-center gap-2">
+                        <Form.Check
+                          type="switch"
+                          id="toggle-hidden-shared"
+                          label="Hidden"
+                          checked={!!selectedList?.hidden}
+                          onChange={toggleHiddenSelected}
+                          title={selectedList?.hidden ? "Unhide this shared list" : "Hide this shared list"}
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline-danger"
+                          onClick={removeFromMyLists}
+                          title="Remove this shared list from your lists (local)"
+                          className="d-flex align-items-center gap-1"
+                        >
+                          <i className="bi bi-x-circle" /> Remove
+                        </Button>
+                      </div>
                     )}
                     {/* Dark mode toggle is available in the global NavBar */}
                   </div>

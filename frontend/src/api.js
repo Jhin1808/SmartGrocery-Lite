@@ -137,6 +137,11 @@ export const apiHideList = (listId) =>
 export const apiUnhideList = (listId) =>
   request(`/lists/${listId}/unhide`, { method: "POST" });
 
+// ---- Leave a shared list (non-owner) ----
+// Best-effort endpoint; if backend doesn't support, caller should gracefully fallback.
+export const apiLeaveSharedList = (listId) =>
+  request(`/lists/${listId}/share/leave`, { method: "POST" });
+
 // ---- Profile ----
 export const apiUpdateMe = (patch) =>
   request("/me", { method: "PATCH", body: patch });
