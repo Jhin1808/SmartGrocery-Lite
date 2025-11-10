@@ -135,23 +135,6 @@ export default function EnhancedLists() {
   const [shoppingProgress, setShoppingProgress] = useState(0);
   // Theme is controlled globally via NavBar ThemeToggle
   const [lastToggle, setLastToggle] = useState(null); // { listId, itemId, prev }
-  // Locally removed (hidden even when Show hidden is ON)
-  const [removedIds, setRemovedIds] = useState(() => {
-    try {
-      const raw = localStorage.getItem('sg-removed-lists');
-      if (!raw) return new Set();
-      const arr = JSON.parse(raw);
-      return new Set(Array.isArray(arr) ? arr : []);
-    } catch {
-      return new Set();
-    }
-  });
-
-  const saveRemoved = (nextSet) => {
-    setRemovedIds(nextSet);
-    try { localStorage.setItem('sg-removed-lists', JSON.stringify(Array.from(nextSet))); } catch {}
-  };
-  const [confirmRemoveShared, setConfirmRemoveShared] = useState(false);
 
   // owner/permission
   const selectedList = lists.find((l) => l.id === selectedId) || null;
@@ -164,8 +147,8 @@ export default function EnhancedLists() {
   // computed lists for left pane
   const listFilter = listQuery.toLowerCase();
   const visibleLists = useMemo(() => {
-    // Respect Show hidden toggle, and also exclude locally removed ids regardless
-    const base = (showHidden ? lists : lists.filter((l) => !l.hidden)).filter((l) => !removedIds.has(l.id));
+    // Respect Show hidden toggle only
+    const base = showHidden ? lists : lists.filter((l) => !l.hidden);
     const filtered = base.filter((l) => l.name.toLowerCase().includes(listFilter));
     const dir = listSort.dir === "asc" ? 1 : -1;
     const tItems = (id) => itemsByList[id]?.length ?? 0;
@@ -487,17 +470,16 @@ export default function EnhancedLists() {
 
   const removeFromMyLists = async () => {
     if (!selectedId || isOwner) return;
-    // Try to leave on server, then remove locally regardless
+    // Try to leave on server, fallback to hide
     try {
       await apiLeaveSharedList(selectedId);
-    } catch (e) {
-      // If backend doesn't support leave, fall back to hide silently
+    } catch {
       try { await apiHideList(selectedId); } catch {}
     }
-    const next = new Set(removedIds);
-    next.add(selectedId);
-    saveRemoved(next);
-    setLists((arr) => arr.filter((l) => l.id !== selectedId));
+    try {
+      const data = await apiGetLists(showHidden);
+      setLists(data);
+    } catch {}
     setToast({ message: 'Removed from your lists', variant: 'success' });
     setSelectedId(null);
   };
@@ -1423,43 +1405,7 @@ export default function EnhancedLists() {
         </Modal.Footer>
       </Modal>
 
-      {/* Confirm Remove Shared List (non-owner) */}
-      <Modal
-        show={!!confirmRemoveShared}
-        onHide={() => setConfirmRemoveShared(false)}
-        centered
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Remove Shared List</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {selectedId ? (
-            <>
-              You are not the owner of "<strong>
-                {lists.find((l) => l.id === selectedId)?.name || 'this list'}
-              </strong>".
-              <br />
-              Removing will only affect your account. You can add it back later if it is shared to you again.
-            </>
-          ) : (
-            "Remove this shared list from your account?"
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setConfirmRemoveShared(false)}>
-            Cancel
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() => {
-              setConfirmRemoveShared(false);
-              removeFromMyLists();
-            }}
-          >
-            Remove
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      {/* Confirm remove shared modal removed; immediate action handled on button */}
 
       {/* Toast Notifications */}
       <ToastContainer position="top-end" className="p-3">
