@@ -6,7 +6,7 @@ import weblogo from "../Weblogo.png";
 import ThemeToggle from "./ThemeToggle";
 
 export default function NavBar() {
-  const { user, loading, refresh, logout } = useAuth();
+  const { user, refresh, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
