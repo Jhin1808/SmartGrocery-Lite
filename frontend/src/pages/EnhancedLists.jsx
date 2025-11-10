@@ -135,6 +135,20 @@ export default function EnhancedLists() {
   const [shoppingProgress, setShoppingProgress] = useState(0);
   // Theme is controlled globally via NavBar ThemeToggle
   const [lastToggle, setLastToggle] = useState(null); // { listId, itemId, prev }
+  // Locally removed lists (never shown, even when "Show hidden" is on)
+  const [removedIds, setRemovedIds] = useState(() => {
+    try {
+      const raw = localStorage.getItem('sg-removed-lists');
+      const arr = raw ? JSON.parse(raw) : [];
+      return new Set(Array.isArray(arr) ? arr : []);
+    } catch {
+      return new Set();
+    }
+  });
+  const saveRemoved = (nextSet) => {
+    setRemovedIds(nextSet);
+    try { localStorage.setItem('sg-removed-lists', JSON.stringify(Array.from(nextSet))); } catch {}
+  };
 
   // owner/permission
   const selectedList = lists.find((l) => l.id === selectedId) || null;
@@ -147,8 +161,8 @@ export default function EnhancedLists() {
   // computed lists for left pane
   const listFilter = listQuery.toLowerCase();
   const visibleLists = useMemo(() => {
-    // Respect Show hidden toggle only
-    const base = showHidden ? lists : lists.filter((l) => !l.hidden);
+    // Respect Show hidden toggle, and also exclude locally removed lists regardless
+    const base = (showHidden ? lists : lists.filter((l) => !l.hidden)).filter((l) => !removedIds.has(l.id));
     const filtered = base.filter((l) => l.name.toLowerCase().includes(listFilter));
     const dir = listSort.dir === "asc" ? 1 : -1;
     const tItems = (id) => itemsByList[id]?.length ?? 0;
@@ -160,7 +174,7 @@ export default function EnhancedLists() {
       if (listSort.key === "pending") return (pItems(a.id) - pItems(b.id)) * dir;
       return 0;
     });
-  }, [lists, listFilter, listSort, showHidden, itemsByList]);
+  }, [lists, listFilter, listSort, showHidden, itemsByList, removedIds]);
 
   // items view (filter + sort per list)
   const viewItems = useMemo(() => {
@@ -476,10 +490,12 @@ export default function EnhancedLists() {
     } catch {
       try { await apiHideList(selectedId); } catch {}
     }
-    try {
-      const data = await apiGetLists(showHidden);
-      setLists(data);
-    } catch {}
+    // Also mark locally removed so it never shows even when "Show hidden" is on
+    const next = new Set(removedIds);
+    next.add(selectedId);
+    saveRemoved(next);
+    // Update sidebar immediately
+    setLists((arr) => arr.filter((l) => l.id !== selectedId));
     setToast({ message: 'Removed from your lists', variant: 'success' });
     setSelectedId(null);
   };
