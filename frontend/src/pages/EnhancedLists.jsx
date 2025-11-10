@@ -127,6 +127,7 @@ export default function EnhancedLists() {
   const [isLoading, setIsLoading] = useState(true);
   const [shoppingProgress, setShoppingProgress] = useState(0);
   // Theme is controlled globally via NavBar ThemeToggle
+  const [lastToggle, setLastToggle] = useState(null); // { listId, itemId, prev }
   const [confirmRemoveShared, setConfirmRemoveShared] = useState(false);
 
   // owner/permission
@@ -140,7 +141,9 @@ export default function EnhancedLists() {
   // computed lists for left pane
   const listFilter = listQuery.toLowerCase();
   const visibleLists = useMemo(() => {
-    const base = showHidden ? lists : lists.filter((l) => !l.hidden);
+    // Never show hidden shared lists for viewers (treat as removed for that user)
+    const excludeHiddenShared = (l) => !(l.shared && l.hidden);
+    const base = (showHidden ? lists : lists.filter((l) => !l.hidden)).filter(excludeHiddenShared);
     const filtered = base.filter((l) => l.name.toLowerCase().includes(listFilter));
     const dir = listSort.dir === "asc" ? 1 : -1;
     const tItems = (id) => itemsByList[id]?.length ?? 0;
@@ -430,17 +433,44 @@ export default function EnhancedLists() {
 
   const hideSelected = async () => {
     if (!selectedId || isOwner) return;
-    if (!window.confirm("Hide this shared list from your view?")) return;
     try {
       await apiHideList(selectedId);
       setToast({ message: "Hidden", variant: "success" });
       setSelectedId(null);
-      // If user is viewing hidden lists, turn off to remove immediately
+      // Treat hidden shared lists as permanently removed for this user
       if (showHidden) setShowHidden(false);
       const data = await apiGetLists(false);
       setLists(data);
     } catch (e) {
       setToast({ message: e.message || "Hide failed", variant: "danger" });
+    }
+  };
+
+  // Toggle purchased with undo support
+  const togglePurchased = async (item) => {
+    const prev = !!item.purchased;
+    // Optimistic update for instant feedback
+    setItemsByList((m) => ({
+      ...m,
+      [selectedId]: (m[selectedId] || []).map((x) => (x.id === item.id ? { ...x, purchased: !prev } : x)),
+    }));
+    setLastToggle({ listId: selectedId, itemId: item.id, prev });
+    setToast({ message: prev ? "Marked unpurchased" : "Marked purchased", variant: "success", undo: true });
+    try {
+      const updated = await apiUpdateItem(item.id, { purchased: !prev });
+      // Reconcile with server response
+      setItemsByList((m) => ({
+        ...m,
+        [selectedId]: (m[selectedId] || []).map((x) => (x.id === item.id ? updated : x)),
+      }));
+    } catch (err) {
+      // Revert on error
+      setItemsByList((m) => ({
+        ...m,
+        [selectedId]: (m[selectedId] || []).map((x) => (x.id === item.id ? { ...x, purchased: prev } : x)),
+      }));
+      setLastToggle(null);
+      setToast({ message: err.message || 'Failed to update', variant: 'danger' });
     }
   };
 
@@ -496,19 +526,8 @@ export default function EnhancedLists() {
     }
   };
 
-  // UI Rendering
-  if (isLoading) {
-    return (
-      <Container fluid="md" style={{ marginTop: 24 }}>
-        <Row className="g-4">
-          <Col xs={12} className="text-center">
-            <Spinner animation="border" variant="success" size="lg" />
-            <p className="mt-3 text-muted">Loading your lists...</p>
-          </Col>
-        </Row>
-      </Container>
-    );
-  }
+  // UI Rendering (no loading animations)
+  if (isLoading) return null;
 
   return (
     <>
@@ -536,7 +555,7 @@ export default function EnhancedLists() {
                       placeholder="New list name..."
                       value={newListName}
                       onChange={(e) => setNewListName(e.target.value)}
-                      className="border-0 bg-light"
+                      className=""
                     />
                     <Button
                       type="submit"
@@ -560,9 +579,9 @@ export default function EnhancedLists() {
                     placeholder="Search lists..."
                     value={listQuery}
                     onChange={(e) => setListQuery(e.target.value)}
-                    className="border-0 bg-light"
+                    className=""
                   />
-                  <InputGroup.Text className="bg-light border-0">
+                  <InputGroup.Text className="">
                     <i className="bi bi-search text-muted" />
                   </InputGroup.Text>
                 </InputGroup>
@@ -574,7 +593,7 @@ export default function EnhancedLists() {
                     value={listSort.key}
                     onChange={(e) => setSortKey(e.target.value)}
                     aria-label="Sort lists by"
-                    className="border-0 bg-light py-2"
+                    className=" py-2"
                     size="sm"
                   >
                     <option value="name">Name</option>
@@ -587,7 +606,7 @@ export default function EnhancedLists() {
                     size="sm"
                     onClick={toggleSortDir}
                     title="Toggle sort direction"
-                    className="border-0 bg-light"
+                    className=""
                   >
                     {listSort.dir === "asc" ? "▲" : "▼"}
                   </Button>
@@ -705,10 +724,7 @@ export default function EnhancedLists() {
                   )}
                 </div>
 
-                {/* Loading spinner */}
-                {selectedId && loading && (
-                  <Spinner size="sm" animation="border" variant="success" />
-                )}
+              {/* No loading spinner to keep transitions smooth */}
 
                 {/* Shopping Mode Toggle */}
                 <Button
@@ -827,7 +843,7 @@ export default function EnhancedLists() {
                             value={drafts[selectedId]?.name ?? ""}
                             onChange={(e) => updateDraft(selectedId, { name: e.target.value })}
                             disabled={!canEdit}
-                            className="border-0 bg-light"
+                            className=""
                           />
                         </Col>
                         <Col md={2}>
@@ -839,7 +855,7 @@ export default function EnhancedLists() {
                             value={drafts[selectedId]?.quantity ?? 1}
                             onChange={(e) => updateDraft(selectedId, { quantity: e.target.value })}
                             disabled={!canEdit}
-                            className="border-0 bg-light"
+                            className=""
                           />
                         </Col>
                         <Col md={3}>
@@ -849,18 +865,18 @@ export default function EnhancedLists() {
                               value={drafts[selectedId]?.expiry ?? ""}
                               onChange={(e) => updateDraft(selectedId, { expiry: e.target.value })}
                               disabled={!canEdit}
-                              className="border-0 bg-light"
+                              className=""
                             />
-                            <Button
-                              variant="outline-secondary"
-                              type="button"
-                              onClick={() => updateDraft(selectedId, { name: "", quantity: 1, expiry: "", description: "" })}
-                              disabled={!canEdit}
-                              title="Clear fields"
-                              className="border-0 bg-light"
-                            >
-                              <i className="bi bi-x-lg"></i>
-                            </Button>
+                          <Button
+                            variant="outline-secondary"
+                            type="button"
+                            onClick={() => updateDraft(selectedId, { name: "", quantity: 1, expiry: "", description: "" })}
+                            disabled={!canEdit}
+                            title="Clear fields"
+                            className=""
+                          >
+                            <i className="bi bi-x-lg"></i>
+                          </Button>
                           </InputGroup>
                         </Col>
                         <Col md={1}>
@@ -882,7 +898,7 @@ export default function EnhancedLists() {
                             value={drafts[selectedId]?.description ?? ""}
                             onChange={(e) => updateDraft(selectedId, { description: e.target.value })}
                             disabled={!canEdit}
-                            className="border-0 bg-light"
+                            className=""
                           />
                         </Col>
                       </Row>
@@ -896,11 +912,11 @@ export default function EnhancedLists() {
                             placeholder="Search items..."
                             value={filters[selectedId] || ""}
                             onChange={(e) => setFilter(selectedId, e.target.value)}
-                            className="border-0 bg-light"
+                            className=""
                           />
-                          <InputGroup.Text className="bg-light border-0">
-                            <i className="bi bi-search text-muted" />
-                          </InputGroup.Text>
+                  <InputGroup.Text className="">
+                    <i className="bi bi-search text-muted" />
+                  </InputGroup.Text>
                         </InputGroup>
                       </Col>
                       <Col md={5} className="d-flex justify-content-end">
@@ -927,6 +943,9 @@ export default function EnhancedLists() {
                                 className="border-0"
                               >
                                 Item {sortIndicator(selectedId, "name")}
+                              </th>
+                              <th style={{ width: 120, textAlign: "center" }} className="border-0">
+                                Purchased
                               </th>
                               <th
                                 style={{ width: 110, cursor: "pointer", textAlign: "center" }}
@@ -986,16 +1005,16 @@ export default function EnhancedLists() {
                                       <i className={`bi ${isExpanded ? 'bi-chevron-up' : 'bi-chevron-down'}`} />
                                     </Button>
                                     {isEditing ? (
-                                      <Form.Control
-                                        value={draft.name}
-                                        onChange={(e) =>
-                                          updateEditDraft(item.id, {
-                                            name: e.target.value,
-                                          })
-                                        }
-                                        style={{ minWidth: 240 }}
-                                        className="border-0 bg-light"
-                                      />
+                          <Form.Control
+                            value={draft.name}
+                            onChange={(e) =>
+                              updateEditDraft(item.id, {
+                                name: e.target.value,
+                              })
+                            }
+                            style={{ minWidth: 240 }}
+                            className=""
+                          />
                                     ) : (
                                       <div className="d-flex align-items-center gap-2">
                                         <ExpiryDot expiry={item.expiry} />
@@ -1006,25 +1025,33 @@ export default function EnhancedLists() {
                                     )}
                                   </td>
 
-                                  <td className="text-center">
-                                    {isEditing ? (
-                                      <Form.Control
-                                        type="number"
-                                        min="1"
-                                        step="1"
-                                        value={draft.quantity}
-                                        onChange={(e) =>
-                                          updateEditDraft(item.id, {
-                                            quantity: e.target.value,
-                                          })
-                                        }
-                                        style={{ minWidth: 90, maxWidth: 120 }}
-                                        className="border-0 bg-light text-center"
-                                      />
-                                    ) : (
-                                      <span className="fw-semibold">{item.quantity}</span>
-                                    )}
-                                  </td>
+                                <td className="text-center">
+                                  <Form.Check
+                                    type="checkbox"
+                                    checked={!!item.purchased}
+                                    onChange={() => togglePurchased(item)}
+                                    disabled={!canEdit}
+                                  />
+                                </td>
+                                <td className="text-center">
+                                  {isEditing ? (
+                                    <Form.Control
+                                      type="number"
+                                      min="1"
+                                      step="1"
+                                      value={draft.quantity}
+                                      onChange={(e) =>
+                                        updateEditDraft(item.id, {
+                                          quantity: e.target.value,
+                                        })
+                                      }
+                                      style={{ minWidth: 90, maxWidth: 120 }}
+                                      className=" text-center"
+                                    />
+                                  ) : (
+                                    <span className="fw-semibold">{item.quantity}</span>
+                                  )}
+                                </td>
 
                                   <td className="text-center">
                                     {isEditing ? (
@@ -1037,7 +1064,7 @@ export default function EnhancedLists() {
                                               expiry: e.target.value,
                                             })
                                           }
-                                          className="border-0 bg-light"
+                                          className=""
                                         />
                                         <Button
                                           variant="outline-secondary"
@@ -1046,7 +1073,7 @@ export default function EnhancedLists() {
                                             updateEditDraft(item.id, { expiry: "" })
                                           }
                                           title="Clear date"
-                                          className="border-0 bg-light"
+                                          className=""
                                         >
                                           <i className="bi bi-x-lg"></i>
                                         </Button>
@@ -1140,26 +1167,14 @@ export default function EnhancedLists() {
                                   onClick={async () => {
                                     if (!canEdit) return;
                                     try {
-                                      const updated = await apiUpdateItem(item.id, { purchased: !item.purchased });
-                                      setItemsByList((m) => ({
-                                        ...m,
-                                        [selectedId]: (m[selectedId] || []).map((x) =>
-                                          x.id === item.id ? updated : x
-                                        ),
-                                      }));
+                                      await togglePurchased(item);
                                     } catch (err) {
                                       setToast({ message: err.message || 'Failed to update', variant: 'danger' });
                                     }
                                   }}
                                 >
                                   <div className="d-flex align-items-center gap-3">
-                                    <Form.Check
-                                      type="checkbox"
-                                      checked={!!item.purchased}
-                                      onChange={() => {}}
-                                      className="m-0"
-                                      disabled={!canEdit}
-                                    />
+                                    <Form.Check type="checkbox" checked={!!item.purchased} readOnly className="m-0" disabled={!canEdit} />
                                     <div className="flex-grow-1">
                                       <div className="d-flex align-items-center gap-2 mb-1">
                                         <ExpiryDot expiry={item.expiry} />
@@ -1391,16 +1406,36 @@ export default function EnhancedLists() {
             autohide
             className="border-0 shadow-lg"
           >
-            <Toast.Body
-              className={toast.variant === "warning" ? "" : "text-white d-flex align-items-center gap-2"}
-            >
+            <Toast.Body className={toast.variant === "warning" ? "" : "text-white d-flex align-items-center gap-2"}>
               <i className={`bi ${
                 toast.variant === 'success' ? 'bi-check-circle-fill' :
                 toast.variant === 'danger' ? 'bi-exclamation-circle-fill' :
                 toast.variant === 'warning' ? 'bi-exclamation-triangle-fill' :
                 'bi-info-circle-fill'
               }`} />
-              {toast.message}
+              <span className="flex-grow-1">{toast.message}</span>
+              {toast.undo && lastToggle && (
+                <Button
+                  size="sm"
+                  variant="light"
+                  onClick={async () => {
+                    try {
+                      const { listId, itemId, prev } = lastToggle;
+                      const updated = await apiUpdateItem(itemId, { purchased: prev });
+                      setItemsByList((m) => ({
+                        ...m,
+                        [listId]: (m[listId] || []).map((x) => (x.id === itemId ? updated : x)),
+                      }));
+                      setToast({ message: 'Reverted', variant: 'success' });
+                      setLastToggle(null);
+                    } catch (e) {
+                      setToast({ message: e.message || 'Failed to revert', variant: 'danger' });
+                    }
+                  }}
+                >
+                  Undo
+                </Button>
+              )}
             </Toast.Body>
           </Toast>
         )}

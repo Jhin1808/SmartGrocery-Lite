@@ -40,11 +40,7 @@ export default function NavBar() {
 
           <Nav className="ms-auto align-items-center" style={{ gap: 8 }}>
             <ThemeToggle />
-            {loading ? (
-              !onLoginRoute ? (
-                <Navbar.Text className="text-muted">Loading…</Navbar.Text>
-              ) : null
-            ) : user ? (
+            {user ? (
               <>
                 <NavDropdown
                   align="end"
@@ -66,7 +62,7 @@ export default function NavBar() {
             ) : (
               // If not logged in, show sign in except on login
               !onLoginRoute && (
-                <Button variant="outline-success" onClick={() => navigate("/login")}>
+                <Button variant="outline-success" onClick={() => navigate("/login")}> 
                   Sign in
                 </Button>
               )
