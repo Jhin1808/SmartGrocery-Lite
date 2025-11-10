@@ -6,14 +6,14 @@
 
 /* CSS Custom Properties for Organic Theme */
 :root {
-  /* Color Palette */
-  --forest-dark: #334155; /* slate-700 */
-  --forest-medium: #475569; /* slate-600 */
-  --leaf-green: #3b7a57; /* muted green accent */
-  --mint-light: #93b1a7; /* subtle desaturated */
-  --bg-fresh: #f6f7f8; /* neutral */
-  --text-primary: #111827; /* gray-900 */
-  --text-secondary: #4b5563; /* gray-600 */
+  /* Organic Green Theme (accessible) */
+  --forest-dark: #1f3a2d;
+  --forest-medium: #3b6a4a;
+  --leaf-green: #2e7d32; /* Material Green 800 */
+  --mint-light: #a5d6a7; /* light accent */
+  --bg-fresh: #f7faf7;
+  --text-primary: #0f1d14;
+  --text-secondary: #4a6753;
   
   /* Typography */
   --font-display: 'Playfair Display', serif;
@@ -56,39 +56,7 @@ body {
   --bs-body-color: var(--text-primary);
 }
 
-/* Prefer Dark Scheme */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --forest-dark: #a8b1bb;
-    --forest-medium: #94a3b8;
-    --leaf-green: #5db185;
-    --mint-light: #7ea99c;
-    --bg-fresh: #0f1114;
-    --text-primary: #e5e7eb;
-    --text-secondary: #a1a1aa;
-  }
-  body {
-    background: linear-gradient(135deg, #0f1114 0%, #12161b 100%);
-    color: var(--text-primary);
-  }
-  .card,
-  .modal-content,
-  .toast {
-    background: rgba(16, 20, 24, 0.9);
-    border-color: rgba(93, 177, 133, 0.25);
-  }
-  .card-header,
-  .modal-header,
-  .toast-header,
-  .table th {
-    color: var(--forest-dark);
-    border-color: rgba(93, 177, 133, 0.18);
-  }
-  .list-group-item {
-    background: rgba(30, 36, 40, 0.75);
-  }
-  .bg-light { background-color: rgba(255,255,255,0.08) !important; }
-}
+/* Remove auto-OS dark mode; use [data-theme="dark"] only */
 
 /* Manual dark theme toggle via [data-theme="dark"] on <html> */
 :root[data-theme="dark"] {

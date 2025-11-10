@@ -3,16 +3,11 @@ import { useEffect, useState } from "react";
 const STORAGE_KEY = "sg-theme"; // 'light' | 'dark'
 
 export default function ThemeToggle({ className = "" }) {
-  const prefersDark =
-    typeof window !== "undefined" &&
-    window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches;
-
   const [theme, setTheme] = useState(() => {
     try {
-      return localStorage.getItem(STORAGE_KEY) || (prefersDark ? "dark" : "light");
+      return localStorage.getItem(STORAGE_KEY) || "light";
     } catch {
-      return prefersDark ? "dark" : "light";
+      return "light";
     }
   });
 
@@ -41,4 +36,3 @@ export default function ThemeToggle({ className = "" }) {
     </button>
   );
 }
-

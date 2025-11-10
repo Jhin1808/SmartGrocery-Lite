@@ -34,7 +34,7 @@ function AppShell() {
 
   return (
     <>
-      <Suspense fallback={null}>{user ? <NavBar /> : null}</Suspense>
+      <Suspense fallback={null}><NavBar /></Suspense>
       <div className="container py-4">
         <Suspense fallback={null}>
           <Routes>

@@ -10,11 +10,7 @@ export default function NavBar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Hide the navbar on auth pages
-  const hideOnRoutes = ["/login", "/oauth/callback", "/reset", "/terms"];
-  if (hideOnRoutes.some(p => location.pathname.startsWith(p))) {
-    return null;
-  }
+  const onLoginRoute = location.pathname.startsWith('/login');
 
   const onLogout = async () => {
     try {
@@ -43,11 +39,11 @@ export default function NavBar() {
           )}
 
           <Nav className="ms-auto align-items-center" style={{ gap: 8 }}>
+            <ThemeToggle />
             {loading ? (
               <Navbar.Text className="text-muted">Loading…</Navbar.Text>
             ) : user ? (
               <>
-                <ThemeToggle />
                 <NavDropdown
                   align="end"
                   id="user-menu"
@@ -66,10 +62,12 @@ export default function NavBar() {
                 </NavDropdown>
               </>
             ) : (
-              // In case someone navigates directly to a non-auth page without being logged in
-              <Button variant="outline-success" onClick={() => navigate("/login")}> 
-                Sign in
-              </Button>
+              // If not logged in, show sign in except on login
+              !onLoginRoute && (
+                <Button variant="outline-success" onClick={() => navigate("/login")}>
+                  Sign in
+                </Button>
+              )
             )}
           </Nav>
         </Navbar.Collapse>

@@ -126,9 +126,7 @@ export default function EnhancedLists() {
   // Enhanced state for animations and theme
   const [isLoading, setIsLoading] = useState(true);
   const [shoppingProgress, setShoppingProgress] = useState(0);
-  const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem('sg-theme') || ''; } catch { return ''; }
-  });
+  // Theme is controlled globally via NavBar ThemeToggle
   const [confirmRemoveShared, setConfirmRemoveShared] = useState(false);
 
   // owner/permission
@@ -191,13 +189,7 @@ export default function EnhancedLists() {
     }
   }, [selectedId, itemsByList]);
 
-  // Apply theme attribute for dark mode toggle
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') root.setAttribute('data-theme', 'dark');
-    else root.removeAttribute('data-theme');
-    try { localStorage.setItem('sg-theme', theme); } catch {}
-  }, [theme]);
+  // Theme is applied by global ThemeToggle component
 
   // helpers
   const setFilter = (listId, v) => setFilters((f) => ({ ...f, [listId]: v }));
@@ -774,14 +766,7 @@ export default function EnhancedLists() {
                         <i className="bi bi-trash" /> Remove
                       </Button>
                     )}
-                    <Form.Check
-                      type="switch"
-                      id="dark-toggle"
-                      label="Dark"
-                      checked={theme === 'dark'}
-                      onChange={(e) => setTheme(e.target.checked ? 'dark' : '')}
-                      className="ms-2"
-                    />
+                    {/* Dark mode toggle is available in the global NavBar */}
                   </div>
                 )}
               </Card.Header>

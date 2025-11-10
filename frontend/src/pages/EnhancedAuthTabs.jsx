@@ -334,15 +334,7 @@ export default function EnhancedAuthTabs() {
                           Continue with Google
                         </Button>
                         
-                        <Button
-                          variant="outline-secondary"
-                          className="d-flex align-items-center justify-content-center gap-3 py-3"
-                          onClick={() => handleSocialLogin("apple")}
-                          disabled={registerLoading}
-                        >
-                          <span className="text-2xl">🍎</span>
-                          Continue with Apple
-                        </Button>
+                        
                       </div>
 
                       <div className="d-flex align-items-center gap-3 my-4">
