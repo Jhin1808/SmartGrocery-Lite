@@ -104,7 +104,6 @@ export default function EnhancedLists() {
   // inline edit state
   const [editing, setEditing] = useState(new Set());
   const [editDrafts, setEditDrafts] = useState({});
-  const [expanded, setExpanded] = useState(new Set());
 
   const [showHidden, setShowHidden] = useState(false);
   const [shoppingMode, setShoppingMode] = useState(false);
@@ -337,11 +336,6 @@ export default function EnhancedLists() {
 
   const startEdit = (it) => {
     setEditing((s) => new Set(s).add(it.id));
-    setExpanded((s) => {
-      const n = new Set(s);
-      n.add(it.id);
-      return n;
-    });
     setEditDrafts((d) => ({
       ...d,
       [it.id]: {
@@ -958,22 +952,11 @@ export default function EnhancedLists() {
                             {viewItems.map((item) => {
                               const isEditing = editing.has(item.id);
                               const draft = editDrafts[item.id] || {};
-                              // expanded.has(item.id) evaluated inline below; remove unused local var
+                              
                               
                               return (
                                 <tr key={item.id} className="slide-up">
-                                  <td
-                                    onClick={() => {
-                                      if (isEditing) return;
-                                      setExpanded((s) => {
-                                        const n = new Set(s);
-                                        if (n.has(item.id)) n.delete(item.id);
-                                        else n.add(item.id);
-                                        return n;
-                                      });
-                                    }}
-                                    style={{ cursor: isEditing ? "default" : "pointer" }}
-                                  >
+                                  <td>
                                     {isEditing ? (
                                       <Form.Control
                                         value={draft.name}
