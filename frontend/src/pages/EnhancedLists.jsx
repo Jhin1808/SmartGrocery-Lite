@@ -221,9 +221,7 @@ export default function EnhancedLists() {
       try {
         const data = await apiGetLists(showHidden);
         setLists(data);
-        if (!selectedId && data.length) {
-          setSelectedId(data[0].id);
-        }
+        setSelectedId((prev) => (prev ?? (data[0]?.id || null)));
         setIsLoading(false);
       } catch (e) {
         setErr(e.message || "Failed to load lists");
@@ -960,7 +958,7 @@ export default function EnhancedLists() {
                             {viewItems.map((item) => {
                               const isEditing = editing.has(item.id);
                               const draft = editDrafts[item.id] || {};
-                              const isOpen = expanded.has(item.id);
+                              // expanded.has(item.id) evaluated inline below; remove unused local var
                               
                               return (
                                 <tr key={item.id} className="slide-up">

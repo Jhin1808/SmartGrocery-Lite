@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Form, Button, Container, Row, Col, Card, Alert, Spinner } from "react-bootstrap";
+import 'bootstrap-icons/font/bootstrap-icons.css';
 import { useAuth } from "./AuthContext";
 import {
   apiLogin,
@@ -36,8 +37,7 @@ export default function EnhancedAuthTabs() {
   const [registerError, setRegisterError] = useState("");
   const [passwordStrength, setPasswordStrength] = useState(0);
 
-  // Animation states
-  const [isLoading, setIsLoading] = useState(false);
+  // Animation states (removed unused isLoading)
 
   // Show an error if OAuth callback sent ?error=...
   useEffect(() => {
@@ -462,8 +462,8 @@ export default function EnhancedAuthTabs() {
                           disabled={registerLoading}
                           label={
                             <small className="text-muted">
-                              I agree to the <a href="#" className="text-forest-medium hover:text-leaf-green">Terms of Service</a> 
-                              and <a href="#" className="text-forest-medium hover:text-leaf-green">Privacy Policy</a>
+                              I agree to the <a href="/terms" className="text-forest-medium hover:text-leaf-green">Terms of Service</a> 
+                              and <a href="/terms" className="text-forest-medium hover:text-leaf-green">Privacy Policy</a>
                             </small>
                           }
                         />
