@@ -1,10 +1,20 @@
 import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Form, Button, Container, Row, Col, Card, Alert, Spinner } from "react-bootstrap";
 import { useAuth } from "./AuthContext";
-import "./enhanced-styles.css"; // Import the enhanced CSS
+import {
+  apiLogin,
+  apiRegister,
+  API_BASE,
+  AUTH_FALLBACK_STORAGE_KEY,
+  googleLoginUrl,
+} from "../api";
+import "../enhanced-styles.css"; // Import the enhanced CSS
 
 export default function EnhancedAuthTabs() {
-  const { login, register, user } = useAuth();
+  const { refresh } = useAuth();
+  const navigate = useNavigate();
+  const { search } = useLocation();
   const [activeTab, setActiveTab] = useState("login");
   
   // Login form state
@@ -29,6 +39,28 @@ export default function EnhancedAuthTabs() {
   // Animation states
   const [isLoading, setIsLoading] = useState(false);
 
+  // Show an error if OAuth callback sent ?error=...
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(search);
+      const err = p.get("error");
+      const reason = p.get("reason");
+      if (err) {
+        setLoginError(reason || err);
+        window.history.replaceState({}, "", "/login");
+      }
+    } catch {}
+  }, [search]);
+
+  // Friendly page title
+  useEffect(() => {
+    const prev = document.title;
+    document.title = "SmartGrocery Lite - Sign in or Register";
+    return () => {
+      document.title = prev;
+    };
+  }, []);
+
   // Password strength checker
   useEffect(() => {
     if (registerPassword) {
@@ -51,26 +83,14 @@ export default function EnhancedAuthTabs() {
     e.preventDefault();
     setLoginLoading(true);
     setLoginError("");
-    
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Mock successful login
-      const mockUser = {
-        id: 1,
-        email: loginEmail,
-        name: "John Doe",
-        token: "mock-jwt-token"
-      };
-      
-      await login(mockUser);
-      
-      // Show success message and redirect
-      setTimeout(() => {
-        window.location.href = '/lists';
-      }, 1000);
-      
+      const tok = await apiLogin(loginEmail.trim(), loginPassword);
+      try {
+        const val = tok?.access_token || tok?.token || tok;
+        if (val) localStorage.setItem(AUTH_FALLBACK_STORAGE_KEY, val);
+      } catch {}
+      await refresh();
+      navigate("/lists", { replace: true });
     } catch (error) {
       setLoginError(error.message || "Login failed. Please check your credentials.");
     } finally {
@@ -104,32 +124,14 @@ export default function EnhancedAuthTabs() {
     }
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock successful registration
-      const mockUser = {
-        id: Date.now(),
-        email: registerEmail,
-        name: `${registerFirstName} ${registerLastName}`,
-        token: "mock-jwt-token"
-      };
-      
-      await register(mockUser);
-      
-      // Show success message and switch to login
-      setTimeout(() => {
-        setActiveTab("login");
-        // Clear form
-        setRegisterFirstName("");
-        setRegisterLastName("");
-        setRegisterEmail("");
-        setRegisterPassword("");
-        setConfirmPassword("");
-        setAgreeTerms(false);
-        setSubscribeNewsletter(false);
-      }, 2000);
-      
+      await apiRegister({ email: registerEmail.trim(), password: registerPassword });
+      const tok = await apiLogin(registerEmail.trim(), registerPassword);
+      try {
+        const val = tok?.access_token || tok?.token || tok;
+        if (val) localStorage.setItem(AUTH_FALLBACK_STORAGE_KEY, val);
+      } catch {}
+      await refresh();
+      navigate("/lists", { replace: true });
     } catch (error) {
       setRegisterError(error.message || "Registration failed. Please try again.");
     } finally {
@@ -139,9 +141,14 @@ export default function EnhancedAuthTabs() {
 
   // Social login handlers
   const handleSocialLogin = (provider) => {
-    // Mock social login
-    console.log(`Logging in with ${provider}`);
-    // In a real app, this would redirect to OAuth flow
+    if (provider === "google") {
+      try {
+        const url = googleLoginUrl ? googleLoginUrl() : `${API_BASE}/auth/google/login`;
+        window.location.href = url;
+      } catch {
+        window.location.href = `${API_BASE}/auth/google/login`;
+      }
+    }
   };
 
   // Password strength indicator
@@ -280,7 +287,7 @@ export default function EnhancedAuthTabs() {
                           onChange={(e) => setRememberMe(e.target.checked)}
                           disabled={loginLoading}
                         />
-                        <a href="#" className="text-forest-medium hover:text-leaf-green text-sm">
+                        <a href="/reset" className="text-forest-medium hover:text-leaf-green text-sm">
                           Forgot password?
                         </a>
                       </div>

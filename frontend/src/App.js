@@ -3,8 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { AuthProvider, useAuth } from "./pages/AuthContext";
 
 // Code-split pages to reduce initial JS for login route
-const AuthTabs = React.lazy(() => import("./pages/AuthTabs"));
-const Lists = React.lazy(() => import("./pages/Lists"));
+const AuthTabs = React.lazy(() => import("./pages/EnhancedAuthTabs"));
+const Lists = React.lazy(() => import("./pages/EnhancedLists"));
 const ListDetail = React.lazy(() => import("./pages/ListDetail"));
 const Account = React.lazy(() => import("./pages/Account"));
 const Help = React.lazy(() => import("./pages/Help"));

@@ -16,7 +16,22 @@ import {
   ToastContainer,
 } from "react-bootstrap";
 import { useAuth } from "../pages/AuthContext";
-import "./enhanced-styles.css"; // Import the enhanced CSS
+import {
+  apiGetLists,
+  apiCreateList,
+  apiGetItems,
+  apiAddItem,
+  apiDeleteItem,
+  apiUpdateItem,
+  apiRenameList,
+  apiListShares,
+  apiCreateShare,
+  apiUpdateShare,
+  apiRevokeShare,
+  apiDeleteList,
+  apiHideList,
+} from "../api";
+import "../enhanced-styles.css"; // Import the enhanced CSS
 
 // Enhanced expiry display helpers
 const parseDate = (s) => (s ? new Date(`${s}T00:00:00`) : null);
@@ -198,66 +213,7 @@ export default function EnhancedLists() {
       },
     }));
 
-  // Mock API functions (replace with your actual API calls)
-  const apiGetLists = async (showHidden) => {
-    // Mock data - replace with actual API call
-    return [
-      { id: 1, name: "Weekly Groceries", owner_id: 1, shared: false },
-      { id: 2, name: "Healthy Meal Prep", owner_id: 1, shared: false },
-      { id: 3, name: "Party Supplies", owner_id: 1, shared: true },
-      { id: 4, name: "Cleaning Supplies", owner_id: 1, shared: false },
-    ];
-  };
-
-  const apiGetItems = async (listId) => {
-    // Mock data - replace with actual API call
-    const mockItems = {
-      1: [
-        { id: 1, name: "Organic Spinach", quantity: 2, expiry: "2025-11-15", purchased: false },
-        { id: 2, name: "Organic Carrots", quantity: 1, expiry: "2025-11-17", purchased: true },
-        { id: 3, name: "Roma Tomatoes", quantity: 3, expiry: "2025-11-12", purchased: false },
-        { id: 4, name: "Almond Milk", quantity: 2, expiry: "2025-11-20", purchased: false },
-      ],
-      2: [
-        { id: 5, name: "Quinoa", quantity: 1, expiry: "2025-12-01", purchased: false },
-        { id: 6, name: "Avocado", quantity: 4, expiry: "2025-11-10", purchased: false },
-      ],
-    };
-    return mockItems[listId] || [];
-  };
-
-  const apiCreateList = async (name) => {
-    // Mock implementation
-    console.log("Creating list:", name);
-    return { id: Date.now(), name, owner_id: 1, shared: false };
-  };
-
-  const apiAddItem = async (listId, item) => {
-    // Mock implementation
-    console.log("Adding item:", item);
-    return { id: Date.now(), ...item };
-  };
-
-  const apiUpdateItem = async (itemId, updates) => {
-    // Mock implementation
-    console.log("Updating item:", itemId, updates);
-    return { id: itemId, ...updates };
-  };
-
-  const apiDeleteItem = async (itemId) => {
-    // Mock implementation
-    console.log("Deleting item:", itemId);
-  };
-
-  const apiRenameList = async (listId, newName) => {
-    // Mock implementation
-    console.log("Renaming list:", listId, newName);
-  };
-
-  const apiDeleteList = async (listId) => {
-    // Mock implementation
-    console.log("Deleting list:", listId);
-  };
+  // Using real API functions from ../api
 
   // Load lists on component mount
   useEffect(() => {
@@ -475,13 +431,65 @@ export default function EnhancedLists() {
     if (!selectedId || isOwner) return;
     if (!window.confirm("Hide this shared list from your view?")) return;
     try {
-      // Mock hide functionality
+      await apiHideList(selectedId);
       setToast({ message: "Hidden", variant: "success" });
       setSelectedId(null);
       const data = await apiGetLists(showHidden);
       setLists(data);
     } catch (e) {
       setToast({ message: e.message || "Hide failed", variant: "danger" });
+    }
+  };
+
+  // Load shares when modal opens (owner-only)
+  useEffect(() => {
+    if (shareOpen && isOwner && selectedId) {
+      (async () => {
+        try {
+          const data = await apiListShares(selectedId);
+          setShares(data);
+        } catch (e) {
+          setToast({ message: e.message || "Failed to load shares", variant: "danger" });
+        }
+      })();
+    }
+  }, [shareOpen, isOwner, selectedId]);
+
+  const addShare = async (e) => {
+    e.preventDefault();
+    if (!shareEmail.trim()) return;
+    setShareBusy(true);
+    try {
+      const added = await apiCreateShare(selectedId, {
+        email: shareEmail.trim(),
+        role: shareRole,
+      });
+      setShares((s) => [...s, added]);
+      setShareEmail("");
+      setShareRole("viewer");
+    } catch (e) {
+      setToast({ message: e.message || "Share failed", variant: "danger" });
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
+  const changeRole = async (share, role) => {
+    try {
+      const updated = await apiUpdateShare(selectedId, share.id, { role });
+      setShares((s) => s.map((x) => (x.id === share.id ? updated : x)));
+    } catch (e) {
+      setToast({ message: e.message || "Update role failed", variant: "danger" });
+    }
+  };
+
+  const revoke = async (share) => {
+    if (!window.confirm(`Stop sharing with ${share.email}?`)) return;
+    try {
+      await apiRevokeShare(selectedId, share.id);
+      setShares((s) => s.filter((x) => x.id !== share.id));
+    } catch (e) {
+      setToast({ message: e.message || "Revoke failed", variant: "danger" });
     }
   };
 
@@ -1168,7 +1176,7 @@ export default function EnhancedLists() {
           <Modal.Title>Share List</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form onSubmit={(e) => { e.preventDefault(); }} className="mb-3">
+          <Form onSubmit={addShare} className="mb-3">
             <Row className="g-2">
               <Col>
                 <Form.Control
@@ -1230,7 +1238,7 @@ export default function EnhancedLists() {
                     <td>
                       <Form.Select
                         value={share.role}
-                        onChange={(e) => {/* changeRole(share, e.target.value) */}}
+                        onChange={(e) => { changeRole(share, e.target.value); }}
                         disabled={!isOwner}
                         size="sm"
                       >
@@ -1242,7 +1250,7 @@ export default function EnhancedLists() {
                       <Button
                         variant="outline-danger"
                         size="sm"
-                        onClick={() => {/* revoke(share) */}}
+                        onClick={() => { revoke(share); }}
                         disabled={!isOwner}
                       >
                         Remove
