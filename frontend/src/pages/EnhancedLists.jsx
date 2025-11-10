@@ -1453,7 +1453,7 @@ export default function EnhancedLists() {
             variant="danger"
             onClick={() => {
               setConfirmRemoveShared(false);
-              hideSelected();
+              removeFromMyLists();
             }}
           >
             Remove
