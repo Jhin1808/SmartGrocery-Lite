@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Form, Button, Container, Row, Col, Card, Alert, Spinner } from "react-bootstrap";
+import { Form, Button, Container, Row, Col, Card, Alert, Spinner, InputGroup } from "react-bootstrap";
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { useAuth } from "./AuthContext";
 import {
@@ -11,12 +11,17 @@ import {
   googleLoginUrl,
 } from "../api";
 import "../enhanced-styles.css"; // Import the enhanced CSS
+import googleIcon from "../googleicon.png";
+import brand from "../Weblogo.png";
 
 export default function EnhancedAuthTabs() {
   const { refresh } = useAuth();
   const navigate = useNavigate();
   const { search } = useLocation();
   const [activeTab, setActiveTab] = useState("login");
+  const [showLoginPwd, setShowLoginPwd] = useState(false);
+  const [showRegPwd, setShowRegPwd] = useState(false);
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
   
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -172,13 +177,9 @@ export default function EnhancedAuthTabs() {
           <Col xs={12} lg={8} xl={6}>
             {/* Header */}
             <div className="text-center mb-5">
-              <div className="d-flex align-items-center justify-content-center gap-3 mb-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-leaf-green to-mint-light rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold text-2xl">🛒</span>
-                </div>
-                <h1 className="font-display text-4xl font-bold text-forest-dark mb-0">
-                  SmartGrocery
-                </h1>
+              <div className="d-flex align-items-center justify-content-center gap-3 mb-3">
+                <img src={brand} width={56} height={56} alt="SmartGrocery" />
+                <h1 className="font-display text-4xl font-bold text-forest-dark mb-0">SmartGrocery</h1>
               </div>
               <p className="text-xl text-text-secondary">
                 {activeTab === "login" 
@@ -228,25 +229,17 @@ export default function EnhancedAuthTabs() {
                           onClick={() => handleSocialLogin("google")}
                           disabled={loginLoading}
                         >
-                          <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+                          <img src={googleIcon} alt="Google" className="w-5 h-5" />
                           Continue with Google
                         </Button>
                         
-                        <Button
-                          variant="outline-secondary"
-                          className="d-flex align-items-center justify-content-center gap-3 py-3"
-                          onClick={() => handleSocialLogin("apple")}
-                          disabled={loginLoading}
-                        >
-                          <span className="text-2xl">🍎</span>
-                          Continue with Apple
-                        </Button>
+                        
                       </div>
 
                       <div className="d-flex align-items-center gap-3 my-4">
-                        <div className="flex-1 border-t border-gray-300"></div>
-                        <span className="text-sm text-text-secondary">or continue with email</span>
-                        <div className="flex-1 border-t border-gray-300"></div>
+                        <div className="flex-1 border-top"></div>
+                        <span className="text-sm text-text-secondary">or sign in with email</span>
+                        <div className="flex-1 border-top"></div>
                       </div>
                     </div>
 
@@ -267,15 +260,24 @@ export default function EnhancedAuthTabs() {
 
                       <Form.Group className="mb-4">
                         <Form.Label className="text-forest-dark font-medium">Password</Form.Label>
-                        <Form.Control
-                          type="password"
-                          placeholder="Enter your password"
-                          value={loginPassword}
-                          onChange={(e) => setLoginPassword(e.target.value)}
-                          required
-                          disabled={loginLoading}
-                          className="border-0 bg-light"
-                        />
+                        <InputGroup>
+                          <Form.Control
+                            type={showLoginPwd ? "text" : "password"}
+                            placeholder="Enter your password"
+                            value={loginPassword}
+                            onChange={(e) => setLoginPassword(e.target.value)}
+                            required
+                            disabled={loginLoading}
+                            className="border-0 bg-light"
+                          />
+                          <Button
+                            variant="outline-secondary"
+                            onClick={() => setShowLoginPwd((v) => !v)}
+                            title={showLoginPwd ? "Hide password" : "Show password"}
+                          >
+                            <i className={`bi ${showLoginPwd ? 'bi-eye-slash' : 'bi-eye'}`} />
+                          </Button>
+                        </InputGroup>
                       </Form.Group>
 
                       <div className="d-flex justify-content-between align-items-center mb-6">
@@ -328,7 +330,7 @@ export default function EnhancedAuthTabs() {
                           onClick={() => handleSocialLogin("google")}
                           disabled={registerLoading}
                         >
-                          <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+                          <img src={googleIcon} alt="Google" className="w-5 h-5" />
                           Continue with Google
                         </Button>
                         
@@ -344,9 +346,9 @@ export default function EnhancedAuthTabs() {
                       </div>
 
                       <div className="d-flex align-items-center gap-3 my-4">
-                        <div className="flex-1 border-t border-gray-300"></div>
+                        <div className="flex-1 border-top"></div>
                         <span className="text-sm text-text-secondary">or sign up with email</span>
-                        <div className="flex-1 border-t border-gray-300"></div>
+                        <div className="flex-1 border-top"></div>
                       </div>
                     </div>
 
@@ -398,15 +400,24 @@ export default function EnhancedAuthTabs() {
 
                       <Form.Group className="mb-3">
                         <Form.Label className="text-forest-dark font-medium">Password</Form.Label>
-                        <Form.Control
-                          type="password"
-                          placeholder="Create a strong password"
-                          value={registerPassword}
-                          onChange={(e) => setRegisterPassword(e.target.value)}
-                          required
-                          disabled={registerLoading}
-                          className="border-0 bg-light"
-                        />
+                        <InputGroup>
+                          <Form.Control
+                            type={showRegPwd ? "text" : "password"}
+                            placeholder="Create a strong password"
+                            value={registerPassword}
+                            onChange={(e) => setRegisterPassword(e.target.value)}
+                            required
+                            disabled={registerLoading}
+                            className="border-0 bg-light"
+                          />
+                          <Button
+                            variant="outline-secondary"
+                            onClick={() => setShowRegPwd((v) => !v)}
+                            title={showRegPwd ? "Hide password" : "Show password"}
+                          >
+                            <i className={`bi ${showRegPwd ? 'bi-eye-slash' : 'bi-eye'}`} />
+                          </Button>
+                        </InputGroup>
                         <Form.Text className="text-muted">
                           Must be at least 8 characters with uppercase, lowercase, and numbers
                         </Form.Text>
@@ -437,19 +448,28 @@ export default function EnhancedAuthTabs() {
 
                       <Form.Group className="mb-4">
                         <Form.Label className="text-forest-dark font-medium">Confirm Password</Form.Label>
-                        <Form.Control
-                          type="password"
-                          placeholder="Confirm your password"
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          required
-                          disabled={registerLoading}
-                          className="border-0 bg-light"
-                          isInvalid={confirmPassword && !passwordsMatch}
-                        />
-                        <Form.Control.Feedback type="invalid">
-                          Passwords do not match
-                        </Form.Control.Feedback>
+                        <InputGroup>
+                          <Form.Control
+                            type={showConfirmPwd ? "text" : "password"}
+                            placeholder="Confirm your password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            required
+                            disabled={registerLoading}
+                            className="border-0 bg-light"
+                            isInvalid={confirmPassword && !passwordsMatch}
+                          />
+                          <Button
+                            variant="outline-secondary"
+                            onClick={() => setShowConfirmPwd((v) => !v)}
+                            title={showConfirmPwd ? "Hide password" : "Show password"}
+                          >
+                            <i className={`bi ${showConfirmPwd ? 'bi-eye-slash' : 'bi-eye'}`} />
+                          </Button>
+                          <Form.Control.Feedback type="invalid">
+                            Passwords do not match
+                          </Form.Control.Feedback>
+                        </InputGroup>
                       </Form.Group>
 
                       <div className="space-y-3 mb-6">

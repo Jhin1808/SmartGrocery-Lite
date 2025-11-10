@@ -129,6 +129,7 @@ export default function EnhancedLists() {
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem('sg-theme') || ''; } catch { return ''; }
   });
+  const [confirmRemoveShared, setConfirmRemoveShared] = useState(false);
 
   // owner/permission
   const selectedList = lists.find((l) => l.id === selectedId) || null;
@@ -765,12 +766,12 @@ export default function EnhancedLists() {
                     ) : (
                       <Button
                         size="sm"
-                        variant="outline-secondary"
-                        onClick={hideSelected}
-                        title="Hide this shared list from your view"
+                        variant="outline-danger"
+                        onClick={() => setConfirmRemoveShared(true)}
+                        title="Remove this shared list from your lists"
                         className="d-flex align-items-center gap-1"
                       >
-                        <i className="bi bi-eye-slash" />
+                        <i className="bi bi-trash" /> Remove
                       </Button>
                     )}
                     <Form.Check
@@ -1352,6 +1353,44 @@ export default function EnhancedLists() {
           </Button>
           <Button variant="danger" onClick={onDeleteList}>
             Delete
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Confirm Remove Shared List (non-owner) */}
+      <Modal
+        show={!!confirmRemoveShared}
+        onHide={() => setConfirmRemoveShared(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Remove Shared List</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedId ? (
+            <>
+              You are not the owner of "<strong>
+                {lists.find((l) => l.id === selectedId)?.name || 'this list'}
+              </strong>".
+              <br />
+              Removing will only affect your account. You can add it back later if it is shared to you again.
+            </>
+          ) : (
+            "Remove this shared list from your account?"
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setConfirmRemoveShared(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => {
+              setConfirmRemoveShared(false);
+              hideSelected();
+            }}
+          >
+            Remove
           </Button>
         </Modal.Footer>
       </Modal>
