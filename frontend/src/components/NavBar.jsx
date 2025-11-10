@@ -67,7 +67,7 @@ export default function NavBar() {
               </>
             ) : (
               // In case someone navigates directly to a non-auth page without being logged in
-              <Button variant="outline-primary" onClick={() => navigate("/login")}>
+              <Button variant="outline-success" onClick={() => navigate("/login")}> 
                 Sign in
               </Button>
             )}

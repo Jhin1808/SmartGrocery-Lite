@@ -104,6 +104,7 @@ export default function EnhancedLists() {
   // inline edit state
   const [editing, setEditing] = useState(new Set());
   const [editDrafts, setEditDrafts] = useState({});
+  const [expandedIds, setExpandedIds] = useState(new Set());
 
   const [showHidden, setShowHidden] = useState(false);
   const [shoppingMode, setShoppingMode] = useState(false);
@@ -122,9 +123,12 @@ export default function EnhancedLists() {
   const [shareRole, setShareRole] = useState("viewer");
   const [shareBusy, setShareBusy] = useState(false);
 
-  // Enhanced state for animations
+  // Enhanced state for animations and theme
   const [isLoading, setIsLoading] = useState(true);
   const [shoppingProgress, setShoppingProgress] = useState(0);
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem('sg-theme') || ''; } catch { return ''; }
+  });
 
   // owner/permission
   const selectedList = lists.find((l) => l.id === selectedId) || null;
@@ -137,16 +141,19 @@ export default function EnhancedLists() {
   // computed lists for left pane
   const listFilter = listQuery.toLowerCase();
   const visibleLists = useMemo(() => {
-    const filtered = lists.filter((l) =>
-      l.name.toLowerCase().includes(listFilter)
-    );
+    const base = showHidden ? lists : lists.filter((l) => !l.hidden);
+    const filtered = base.filter((l) => l.name.toLowerCase().includes(listFilter));
     const dir = listSort.dir === "asc" ? 1 : -1;
+    const tItems = (id) => itemsByList[id]?.length ?? 0;
+    const pItems = (id) => (itemsByList[id]?.filter((i) => !i.purchased).length ?? 0);
     return [...filtered].sort((a, b) => {
       if (listSort.key === "name") return a.name.localeCompare(b.name) * dir;
       if (listSort.key === "created") return (a.id - b.id) * dir;
+      if (listSort.key === "items") return (tItems(a.id) - tItems(b.id)) * dir;
+      if (listSort.key === "pending") return (pItems(a.id) - pItems(b.id)) * dir;
       return 0;
     });
-  }, [lists, listFilter, listSort]);
+  }, [lists, listFilter, listSort, showHidden, itemsByList]);
 
   // items view (filter + sort per list)
   const viewItems = useMemo(() => {
@@ -171,6 +178,7 @@ export default function EnhancedLists() {
 
   const loading = selectedId && loadingItems.has(selectedId);
   const totalItems = (id) => itemsByList[id]?.length ?? 0;
+  const pendingItems = (id) => (itemsByList[id]?.filter((i) => !i.purchased).length ?? 0);
 
   // Calculate shopping progress
   useEffect(() => {
@@ -181,6 +189,14 @@ export default function EnhancedLists() {
       setShoppingProgress(progress);
     }
   }, [selectedId, itemsByList]);
+
+  // Apply theme attribute for dark mode toggle
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') root.setAttribute('data-theme', 'dark');
+    else root.removeAttribute('data-theme');
+    try { localStorage.setItem('sg-theme', theme); } catch {}
+  }, [theme]);
 
   // helpers
   const setFilter = (listId, v) => setFilters((f) => ({ ...f, [listId]: v }));
@@ -426,7 +442,9 @@ export default function EnhancedLists() {
       await apiHideList(selectedId);
       setToast({ message: "Hidden", variant: "success" });
       setSelectedId(null);
-      const data = await apiGetLists(showHidden);
+      // If user is viewing hidden lists, turn off to remove immediately
+      if (showHidden) setShowHidden(false);
+      const data = await apiGetLists(false);
       setLists(data);
     } catch (e) {
       setToast({ message: e.message || "Hide failed", variant: "danger" });
@@ -568,6 +586,8 @@ export default function EnhancedLists() {
                   >
                     <option value="name">Name</option>
                     <option value="created">Created</option>
+                    <option value="items">Items (total)</option>
+                    <option value="pending">Items (pending)</option>
                   </Form.Select>
                   <Button
                     variant="outline-secondary"
@@ -626,8 +646,8 @@ export default function EnhancedLists() {
                           )}
                         </div>
 
-                        <Badge bg="light" text="dark" className="ms-2">
-                          {totalItems(list.id)}
+                        <Badge bg="light" text="dark" className="ms-2" title="Pending items">
+                          {pendingItems(list.id)}
                         </Badge>
                       </ListGroup.Item>
                     ))}
@@ -646,9 +666,9 @@ export default function EnhancedLists() {
                     <div className="col-6">
                       <div className="text-center p-2 bg-light rounded-3">
                         <div className="h5 mb-0 text-forest-dark">
-                          {Object.values(itemsByList).reduce((sum, items) => sum + (items?.length || 0), 0)}
+                          {Object.values(itemsByList).reduce((sum, items) => sum + (items?.filter(i => !i.purchased).length || 0), 0)}
                         </div>
-                        <small className="text-muted">Total Items</small>
+                        <small className="text-muted">Items Pending</small>
                       </div>
                     </div>
                   </div>
@@ -680,8 +700,8 @@ export default function EnhancedLists() {
                   </div>
 
                   {selectedId && (
-                    <Badge bg="secondary" className="ms-2">
-                      {totalItems(selectedId)}
+                    <Badge bg="secondary" className="ms-2" title="Pending / Total">
+                      {(itemsByList[selectedId]?.filter(i => !i.purchased).length || 0)} / {totalItems(selectedId)}
                     </Badge>
                   )}
 
@@ -725,7 +745,7 @@ export default function EnhancedLists() {
                         </Button>
                         <Button
                           size="sm"
-                          variant="outline-primary"
+                          variant="outline-success"
                           onClick={() => setShareOpen(true)}
                           title="Share list"
                           className="d-flex align-items-center gap-1"
@@ -753,6 +773,14 @@ export default function EnhancedLists() {
                         <i className="bi bi-eye-slash" />
                       </Button>
                     )}
+                    <Form.Check
+                      type="switch"
+                      id="dark-toggle"
+                      label="Dark"
+                      checked={theme === 'dark'}
+                      onChange={(e) => setTheme(e.target.checked ? 'dark' : '')}
+                      className="ms-2"
+                    />
                   </div>
                 )}
               </Card.Header>
@@ -952,11 +980,25 @@ export default function EnhancedLists() {
                             {viewItems.map((item) => {
                               const isEditing = editing.has(item.id);
                               const draft = editDrafts[item.id] || {};
-                              
+                              const isExpanded = expandedIds.has(item.id);
                               
                               return (
+                                <>
                                 <tr key={item.id} className="slide-up">
                                   <td>
+                                    <Button
+                                      size="sm"
+                                      variant="outline-secondary"
+                                      className="me-2"
+                                      onClick={() => setExpandedIds((s) => {
+                                        const n = new Set(s);
+                                        if (n.has(item.id)) n.delete(item.id); else n.add(item.id);
+                                        return n;
+                                      })}
+                                      title={isExpanded ? 'Hide details' : 'Show details'}
+                                    >
+                                      <i className={`bi ${isExpanded ? 'bi-chevron-up' : 'bi-chevron-down'}`} />
+                                    </Button>
                                     {isEditing ? (
                                       <Form.Control
                                         value={draft.name}
@@ -1079,6 +1121,17 @@ export default function EnhancedLists() {
                                     )}
                                   </td>
                                 </tr>
+                                {isExpanded && (
+                                  <tr key={`details-${item.id}`}>
+                                    <td colSpan={4} className="text-muted">
+                                      <div>
+                                        <strong>Description:</strong>{' '}
+                                        {item.description ? item.description : <em>None</em>}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                                </>
                               );
                             })}
                           </tbody>
@@ -1128,6 +1181,11 @@ export default function EnhancedLists() {
                                           {item.name}
                                         </span>
                                       </div>
+                                      {item.description && (
+                                        <div className="small text-muted mb-1">
+                                          {item.description}
+                                        </div>
+                                      )}
                                       <div className="small text-muted">
                                         Qty: {item.quantity}
                                       </div>
