@@ -4,6 +4,7 @@ import { useLocation, useNavigate, Link } from "react-router-dom";
 import { apiLogin, apiRegister, API_BASE, AUTH_FALLBACK_STORAGE_KEY } from "../api";
 import { useAuth } from "./AuthContext";
 import googleIcon from "../googleicon.png";
+import brand from "../Weblogo.png";
 
 export default function AuthTabs() {
   const navigate = useNavigate();
@@ -37,15 +38,19 @@ export default function AuthTabs() {
     }
   }, [search]);
 
-  const canLogin =
-    loginEmail.trim().includes("@") && loginPwd.trim().length >= 8;
-  const canRegister =
-    regEmail.trim().includes("@") && regPwd.trim().length >= 8 && agree;
+  // Set a friendly page title on login/register
+  useEffect(() => {
+    const prev = document.title;
+    document.title = "SmartGrocery Lite - Sign in or Register";
+    return () => {
+      document.title = prev;
+    };
+  }, []);
+
+  const canLogin = loginEmail.trim().includes("@") && loginPwd.trim().length >= 8;
+  const canRegister = regEmail.trim().includes("@") && regPwd.trim().length >= 8 && agree;
 
   const googleLogin = () => {
-    // Optional: add ?next=/lists if want to return to a specific page after SSO
-    // const next = encodeURIComponent("/lists");
-    // window.location.href = `${API_BASE}/auth/google/login?next=${next}`;
     window.location.href = `${API_BASE}/auth/google/login`;
   };
 
@@ -56,7 +61,6 @@ export default function AuthTabs() {
     setLoginErr(null);
     try {
       const tok = await apiLogin(loginEmail.trim(), loginPwd); // cookie set server-side
-      // Store token for Safari/iOS fallback (if backend returned it)
       try {
         const val = tok?.access_token || tok?.token || tok;
         if (val) localStorage.setItem(AUTH_FALLBACK_STORAGE_KEY, val);
@@ -95,152 +99,107 @@ export default function AuthTabs() {
   };
 
   return (
-    <div className="auth-wrap">
-      <div className="tabs">
-        <button
-          className={`tab ${tab === "login" ? "active" : ""}`}
-          onClick={() => setTab("login")}
-        >
-          Login
-        </button>
-        <button
-          className={`tab ${tab === "register" ? "active" : ""}`}
-          onClick={() => setTab("register")}
-        >
-          Register
-        </button>
-      </div>
+    <div className="landing">
+      <aside className="landing-aside" aria-label="About SmartGrocery">
+        <img src={brand} width={72} height={72} alt="SmartGrocery" loading="eager" decoding="async" fetchpriority="high" />
+        <h1>SmartGrocery</h1>
+        <p className="tagline">Plan and share grocery lists so shopping is faster and simpler.</p>
+        <ul className="features" aria-label="Highlights">
+          <li>Share with family</li>
+          <li>Sync across devices</li>
+          <li>Shop mode checklist</li>
+          <li>Secure sign-in</li>
+        </ul>
+      </aside>
 
-      {tab === "login" && (
-        <form onSubmit={doLogin} className="row" style={{ gap: 12 }}>
-          <div className="center">
-            <p>Sign in with:</p>
-            <div className="socials">
-              <button
-                type="button"
-                className="btn-google"
-                onClick={googleLogin}
-                aria-label="Continue with Google"
-              >
-                <img src={googleIcon} alt="" aria-hidden="true" />
-                <span>Continue with Google</span>
-              </button>
+      <div className="auth-wrap">
+        <div className="tabs">
+          <button className={`tab ${tab === "login" ? "active" : ""}`} onClick={() => setTab("login")}>
+            Login
+          </button>
+          <button className={`tab ${tab === "register" ? "active" : ""}`} onClick={() => setTab("register")}>
+            Register
+          </button>
+        </div>
+
+        {tab === "login" && (
+          <form onSubmit={doLogin} className="row" style={{ gap: 12 }}>
+            <div className="center">
+              <p>Sign in with:</p>
+              <div className="socials">
+                <button type="button" className="btn-google" onClick={googleLogin} aria-label="Continue with Google">
+                  <img src={googleIcon} alt="" aria-hidden="true" />
+                  <span>Continue with Google</span>
+                </button>
+              </div>
+              <p className="center" style={{ color: "#666" }}>
+                or
+              </p>
             </div>
-            <p className="center" style={{ color: "#666" }}>
-              or
+
+            <input className="input" type="email" placeholder="Email address" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} />
+            <input className="input" type="password" placeholder="Password" value={loginPwd} onChange={(e) => setLoginPwd(e.target.value)} />
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <input type="checkbox" /> Remember me
+              </label>
+              <Link to="/reset">Forgot password?</Link>
+            </div>
+
+            {loginErr &&
+              loginErr.split("\n").map((line, i) => (
+                <div key={i} className="error">
+                  {line}
+                </div>
+              ))}
+            <button className="btn" disabled={loginBusy || !canLogin}>
+              {loginBusy ? "Signing in..." : "Sign in"}
+            </button>
+            <p className="center">
+              Not a member? <a href="#!" onClick={() => setTab("register")}>Register</a>
             </p>
-          </div>
+          </form>
+        )}
 
-          <input
-            className="input"
-            type="email"
-            placeholder="Email address"
-            value={loginEmail}
-            onChange={(e) => setLoginEmail(e.target.value)}
-          />
-          <input
-            className="input"
-            type="password"
-            placeholder="Password"
-            value={loginPwd}
-            onChange={(e) => setLoginPwd(e.target.value)}
-          />
+        {tab === "register" && (
+          <form onSubmit={doRegister} className="row" style={{ gap: 12 }}>
+            <div className="center">
+              <p>Sign up with:</p>
+              <div className="socials">
+                <button type="button" className="btn-google" onClick={googleLogin} aria-label="Continue with Google">
+                  <img src={googleIcon} alt="" aria-hidden="true" />
+                  <span>Continue with Google</span>
+                </button>
+              </div>
+              <p className="center" style={{ color: "#666" }}>
+                or
+              </p>
+            </div>
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
+            <input className="input" type="email" placeholder="Email" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} />
+            <input className="input" type="password" placeholder="Password (min 8)" value={regPwd} onChange={(e) => setRegPwd(e.target.value)} />
+
             <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <input type="checkbox" /> Remember me
+              <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /> I agree to the
+              <Link to="/terms" target="_blank" rel="noreferrer"> Terms of Service</Link>
             </label>
-            <Link to="/reset">Forgot password?</Link>
-          </div>
 
-          {loginErr &&
-            loginErr.split("\n").map((line, i) => (
-              <div key={i} className="error">
-                {line}
-              </div>
-            ))}
-          <button className="btn" disabled={loginBusy || !canLogin}>
-            {loginBusy ? "Signing in…" : "Sign in"}
-          </button>
-          <p className="center">
-            Not a member?{" "}
-            <a href="#!" onClick={() => setTab("register")}>
-              Register
-            </a>
-          </p>
-        </form>
-      )}
-
-      {tab === "register" && (
-        <form onSubmit={doRegister} className="row" style={{ gap: 12 }}>
-          <div className="center">
-            <p>Sign up with:</p>
-            <div className="socials">
-              <button
-                type="button"
-                className="btn-google"
-                onClick={googleLogin}
-                aria-label="Continue with Google"
-              >
-                <img src={googleIcon} alt="" aria-hidden="true" />
-                <span>Continue with Google</span>
-              </button>
-            </div>
-            <p className="center" style={{ color: "#666" }}>
-              or
+            {regErr &&
+              regErr.split("\n").map((line, i) => (
+                <div key={i} className="error">
+                  {line}
+                </div>
+              ))}
+            <button className="btn" disabled={regBusy || !canRegister}>
+              {regBusy ? "Signing up..." : "Sign up"}
+            </button>
+            <p className="center">
+              Have an account? <a href="#!" onClick={() => setTab("login")}>Sign in</a>
             </p>
-          </div>
-
-          <input
-            className="input"
-            type="email"
-            placeholder="Email"
-            value={regEmail}
-            onChange={(e) => setRegEmail(e.target.value)}
-          />
-          <input
-            className="input"
-            type="password"
-            placeholder="Password (min 8)"
-            value={regPwd}
-            onChange={(e) => setRegPwd(e.target.value)}
-          />
-
-          <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <input
-              type="checkbox"
-              checked={agree}
-              onChange={(e) => setAgree(e.target.checked)}
-            />{" "}
-            I agree to the{" "}
-            <Link to="/terms" target="_blank" rel="noreferrer">
-              Terms of Service
-            </Link>
-          </label>
-
-          {regErr &&
-            regErr.split("\n").map((line, i) => (
-              <div key={i} className="error">
-                {line}
-              </div>
-            ))}
-          <button className="btn" disabled={regBusy || !canRegister}>
-            {regBusy ? "Signing up…" : "Sign up"}
-          </button>
-          <p className="center">
-            Have an account?{" "}
-            <a href="#!" onClick={() => setTab("login")}>
-              Sign in
-            </a>
-          </p>
-        </form>
-      )}
+          </form>
+        )}
+      </div>
     </div>
   );
 }

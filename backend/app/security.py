@@ -1,5 +1,6 @@
 # app/security.py
 import os
+import secrets
 import jwt
 from datetime import datetime, timedelta, timezone
 from argon2 import PasswordHasher, exceptions as argon2_exc
@@ -38,7 +39,8 @@ def decode_token(token: str) -> dict:
 
 def create_purpose_token(subject: str | int, purpose: str, expires_minutes: int) -> str:
     exp = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
-    payload = {"sub": str(subject), "exp": exp, "purpose": purpose}
+    jti = secrets.token_urlsafe(8)
+    payload = {"sub": str(subject), "exp": exp, "purpose": purpose, "jti": jti}
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 

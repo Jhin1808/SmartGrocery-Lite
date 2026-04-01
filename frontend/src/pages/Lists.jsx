@@ -86,7 +86,7 @@ export default function Lists() {
   const [creating, setCreating] = useState(false);
 
   // per-list add-item draft
-  const [drafts, setDrafts] = useState({}); // { [listId]: {name, quantity, expiry} }
+  const [drafts, setDrafts] = useState({}); // { [listId]: {name, quantity, expiry, description} }
 
   // per-list UI state
   const [filters, setFilters] = useState({}); // { [listId]: string }
@@ -95,8 +95,11 @@ export default function Lists() {
   // inline edit state
   const [editing, setEditing] = useState(new Set()); // itemIds
   const [editDrafts, setEditDrafts] = useState({}); // { itemId: {name, quantity, expiry} }
+  const [expanded, setExpanded] = useState(new Set()); // itemIds expanded for description
 
   const [showHidden, setShowHidden] = useState(false);
+  const [shoppingMode, setShoppingMode] = useState(false);
+  const [hidePurchased, setHidePurchased] = useState(true);
 
   // UX
   const [err, setErr] = useState(null);
@@ -139,9 +142,8 @@ export default function Lists() {
     const items = itemsByList[selectedId] || [];
     const filterText = (filters[selectedId] || "").toLowerCase();
     const s = sortBy[selectedId] || { key: "name", dir: "asc" };
-    const filtered = items.filter((it) =>
-      it.name.toLowerCase().includes(filterText)
-    );
+    let filtered = items.filter((it) => it.name.toLowerCase().includes(filterText));
+    if (shoppingMode && hidePurchased) filtered = filtered.filter((i) => !i.purchased);
     const dir = s.dir === "asc" ? 1 : -1;
     return [...filtered].sort((a, b) => {
       if (s.key === "name") return a.name.localeCompare(b.name) * dir;
@@ -153,7 +155,7 @@ export default function Lists() {
       }
       return 0;
     });
-  }, [selectedId, itemsByList, filters, sortBy]);
+  }, [selectedId, itemsByList, filters, sortBy, shoppingMode, hidePurchased]);
 
   const loading = selectedId && loadingItems.has(selectedId);
   const totalItems = (id) => itemsByList[id]?.length ?? 0;
@@ -182,6 +184,7 @@ export default function Lists() {
         name: "",
         quantity: 1,
         expiry: "",
+        description: "",
         ...(d[listId] || {}),
         ...patch,
       },
@@ -255,6 +258,7 @@ export default function Lists() {
         name: nm,
         quantity: Number(draft.quantity || 1),
         expiry: draft.expiry ? draft.expiry : null,
+        description: draft.description ? draft.description : undefined,
       };
       const item = await apiAddItem(selectedId, payload);
       setItemsByList((m) => ({
@@ -263,7 +267,7 @@ export default function Lists() {
       }));
       setDrafts((d) => ({
         ...d,
-        [selectedId]: { name: "", quantity: 1, expiry: "" },
+        [selectedId]: { name: "", quantity: 1, expiry: "", description: "" },
       }));
       setToast({ message: "Item added", variant: "success" });
     } catch (e) {
@@ -300,12 +304,19 @@ export default function Lists() {
   // ---------- inline edit ----------
   const startEdit = (it) => {
     setEditing((s) => new Set(s).add(it.id));
+    setExpanded((s) => {
+      const n = new Set(s);
+      n.add(it.id);
+      return n;
+    });
     setEditDrafts((d) => ({
       ...d,
       [it.id]: {
         name: it.name,
         quantity: it.quantity,
         expiry: it.expiry || "",
+        description: it.description || "",
+        remind_on: it.remind_on || "",
       },
     }));
   };
@@ -328,6 +339,11 @@ export default function Lists() {
       name: draft.name,
       quantity: Number(draft.quantity),
       expiry: draft.expiry ? draft.expiry : null,
+      description: typeof draft.description === "string" ? draft.description : undefined,
+      // If user touched remind_on, send even if empty string means clear
+      ...(draft.remind_on !== undefined
+        ? { remind_on: draft.remind_on || null }
+        : {}),
     };
     try {
       const updated = await apiUpdateItem(id, patch);
@@ -534,8 +550,11 @@ export default function Lists() {
               <div style={{ maxHeight: 420, overflowY: "auto" }}>
                 <ListGroup>
                   {visibleLists.length === 0 && (
-                    <ListGroup.Item className="text-muted">
-                      No lists
+                    <ListGroup.Item>
+                      <div className="empty">
+                        <div className="icon"><i className="bi bi-card-checklist" /></div>
+                        <div className="mt-1 text-muted">No lists yet — create your first list above.</div>
+                      </div>
                     </ListGroup.Item>
                   )}
 
@@ -545,17 +564,17 @@ export default function Lists() {
                       action
                       active={selectedId === l.id}
                       onClick={() => setSelectedId(l.id)}
-                      className="d-flex align-items-center justify-content-between"
+                      className="d-flex align-items-center justify-content-between minw0"
                       title={l.shared ? "Shared with you" : "Owned by you"}
                     >
-                      <span className="d-flex align-items-center gap-2">
+                      <span className="d-flex align-items-center gap-2 minw0" style={{ minWidth: 0 }}>
                         {l.shared && (
                           <i
                             className="bi bi-people text-secondary"
                             aria-hidden="true"
                           />
                         )}
-                        <span className="text-truncate">{l.name}</span>
+                        <span className="text-truncate" title={l.name}>{l.name}</span>
 
                         {/* Hidden badge only when user opted to show hidden */}
                         {l.shared && l.hidden && showHidden && (
@@ -582,9 +601,9 @@ export default function Lists() {
           <Card className="shadow-sm">
             <Card.Header className="d-flex align-items-center flex-wrap gap-2">
               {/* Title + count */}
-              <div className="d-flex align-items-center me-auto gap-2">
+              <div className="d-flex align-items-center me-auto gap-2 minw0" style={{ minWidth: 0 }}>
                 <i className="bi bi-bag-check" aria-hidden="true" />
-                <strong>
+                <strong className="truncate" title={selectedId ? (lists.find((l) => l.id === selectedId)?.name || 'List') : undefined}>
                   {selectedId
                     ? lists.find((l) => l.id === selectedId)?.name || "List"
                     : "Select a list"}
@@ -638,6 +657,14 @@ export default function Lists() {
                     >
                       <i className="bi bi-trash" /> Delete
                     </Button>
+                    <Button
+                      size="sm"
+                      variant={shoppingMode ? "primary" : "outline-primary"}
+                      onClick={() => setShoppingMode((v) => !v)}
+                      title="Toggle shopping mode"
+                    >
+                      <i className="bi bi-bag" /> {shoppingMode ? "Shopping" : "Shop"}
+                    </Button>
                   </div>
                 ) : (
                   <div className="d-flex align-items-center gap-2">
@@ -648,6 +675,14 @@ export default function Lists() {
                       title="Hide this shared list from your view"
                     >
                       <i className="bi bi-eye-slash" /> Hide
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={shoppingMode ? "primary" : "outline-primary"}
+                      onClick={() => setShoppingMode((v) => !v)}
+                      title="Toggle shopping mode"
+                    >
+                      <i className="bi bi-bag" /> {shoppingMode ? "Shopping" : "Shop"}
                     </Button>
                   </div>
                 ))}
@@ -710,6 +745,7 @@ export default function Lists() {
                                 name: "",
                                 quantity: 1,
                                 expiry: "",
+                                description: "",
                               })
                             }
                             disabled={!canEdit}
@@ -727,6 +763,20 @@ export default function Lists() {
                         >
                           Add
                         </Button>
+                      </Col>
+                    </Row>
+                    <Row className="g-2 mt-1">
+                      <Col md={12}>
+                        <Form.Control
+                          as="textarea"
+                          rows={2}
+                          placeholder="Description (optional)"
+                          value={drafts[selectedId]?.description ?? ""}
+                          onChange={(e) =>
+                            updateDraft(selectedId, { description: e.target.value })
+                          }
+                          disabled={!canEdit}
+                        />
                       </Col>
                     </Row>
                   </Form>
@@ -749,9 +799,10 @@ export default function Lists() {
                     </Col>
                   </Row>
 
-                  {/* Items table */}
-                  <div className="table-responsive">
-                    <Table hover size="sm" className="align-middle">
+                  {/* Items */}
+                  {!shoppingMode ? (
+                    <div className="table-responsive">
+                      <Table hover size="sm" className="align-middle">
                       <thead>
                         <tr>
                           <th
@@ -788,10 +839,15 @@ export default function Lists() {
                       <tbody>
                         {viewItems.length === 0 && (
                           <tr>
-                            <td colSpan={4} className="text-center text-muted">
-                              {filters[selectedId]?.trim()
-                                ? "No matching items"
-                                : "No items yet"}
+                            <td colSpan={4} className="text-center">
+                              <div className="empty">
+                                <div className="icon"><i className="bi bi-inbox" /></div>
+                                <div className="mt-1 text-muted">
+                                  {filters[selectedId]?.trim()
+                                    ? "No matching items"
+                                    : "No items yet — add one using the form above."}
+                                </div>
+                              </div>
                             </td>
                           </tr>
                         )}
@@ -799,23 +855,47 @@ export default function Lists() {
                         {viewItems.map((it) => {
                           const isEditing = editing.has(it.id);
                           const d = editDrafts[it.id] || {};
+                          const isOpen = expanded.has(it.id);
                           return (
-                            <tr key={it.id}>
-                              <td>
-                                {isEditing ? (
-                                  <Form.Control
-                                    value={d.name}
-                                    onChange={(e) =>
-                                      updateEditDraft(it.id, {
-                                        name: e.target.value,
-                                      })
-                                    }
+                            <>
+                              <tr key={it.id}>
+                                <td
+                                  onClick={() => {
+                                    if (isEditing) return;
+                                    setExpanded((s) => {
+                                      const n = new Set(s);
+                                      if (n.has(it.id)) n.delete(it.id);
+                                      else n.add(it.id);
+                                      return n;
+                                    });
+                                  }}
+                                  style={{ cursor: isEditing ? "default" : "pointer" }}
+                                >
+                                  {isEditing ? (
+                                    <Form.Control
+                                      value={d.name}
+                                      onChange={(e) =>
+                                        updateEditDraft(it.id, {
+                                          name: e.target.value,
+                                        })
+                                      }
                                     style={{ minWidth: 240 }}
-                                  />
-                                ) : (
-                                  it.name
-                                )}
-                              </td>
+                                    />
+                                  ) : (
+                                    <div className="d-flex align-items-center gap-2">
+                                      {(() => {
+                                        const n = daysUntil(it.expiry);
+                                        if (n === null) return null;
+                                        if (n < 0)
+                                          return <span className="dot dot-expired" title="Expired" />;
+                                        if (n <= 3)
+                                          return <span className="dot dot-soon" title="Expiring soon" />;
+                                        return null;
+                                      })()}
+                                      <div className="truncate" title={it.name}>{it.name}</div>
+                                    </div>
+                                  )}
+                                </td>
 
                               <td className="text-center">
                                 {isEditing ? (
@@ -906,12 +986,124 @@ export default function Lists() {
                                   </>
                                 )}
                               </td>
-                            </tr>
+                              </tr>
+                              {isOpen && (it.description || canEdit) && (
+                                <tr>
+                                  <td colSpan={4}>
+                                    {isEditing ? (
+                                      <>
+                                        <InputGroup>
+                                          <Form.Control
+                                            as="textarea"
+                                            rows={2}
+                                            placeholder="Add a description…"
+                                            value={d.description || ""}
+                                            onChange={(e) =>
+                                              updateEditDraft(it.id, {
+                                                description: e.target.value,
+                                              })
+                                            }
+                                          />
+                                        </InputGroup>
+                                        <div className="mt-2 d-flex align-items-center gap-2">
+                                          <span className="text-muted" style={{ width: 90 }}>Remind on</span>
+                                          <Form.Control
+                                            type="date"
+                                            value={d.remind_on || ""}
+                                            onChange={(e) =>
+                                              updateEditDraft(it.id, { remind_on: e.target.value })
+                                            }
+                                            style={{ maxWidth: 220 }}
+                                          />
+                                          <Button
+                                            variant="outline-secondary"
+                                            size="sm"
+                                            type="button"
+                                            onClick={() => updateEditDraft(it.id, { remind_on: "" })}
+                                          >
+                                            Clear
+                                          </Button>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        {it.description ? (
+                                          <div className="text-muted" style={{ whiteSpace: "pre-wrap" }}>
+                                            {it.description}
+                                          </div>
+                                        ) : (
+                                          canEdit ? <div className="text-muted">No description</div> : null
+                                        )}
+                                        {it.remind_on ? (
+                                          <div className="text-muted mt-1" style={{ fontSize: 12 }}>
+                                            <i className="bi bi-bell" aria-hidden="true" /> Remind on {it.remind_on}
+                                          </div>
+                                        ) : null}
+                                      </>
+                                    )}
+                                  </td>
+                                </tr>
+                              )}
+                            </>
                           );
                         })}
                       </tbody>
-                    </Table>
-                  </div>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="shopping">
+                      <div className="d-flex align-items-center gap-3 mb-2">
+                        <Form.Check
+                          type="checkbox"
+                          id="hide-purchased"
+                          label="Hide purchased"
+                          checked={hidePurchased}
+                          onChange={(e) => setHidePurchased(e.target.checked)}
+                        />
+                      </div>
+                      <div className="shopping-list">
+                        {viewItems.length === 0 ? (
+                          <div className="empty text-center">
+                            <div className="icon"><i className="bi bi-bag" /></div>
+                            <div className="mt-1 text-muted">No items to shop.</div>
+                          </div>
+                        ) : (
+                          viewItems.map((it) => (
+                            <label key={it.id} className={`shop-item ${it.purchased ? 'purchased' : ''}`}>
+                              <input
+                                type="checkbox"
+                                checked={!!it.purchased}
+                                onChange={async (e) => {
+                                  const val = e.target.checked;
+                                  try {
+                                    const updated = await apiUpdateItem(it.id, { purchased: val });
+                                    setItemsByList((m) => ({
+                                      ...m,
+                                      [selectedId]: (m[selectedId] || []).map((x) => x.id === it.id ? updated : x),
+                                    }));
+                                  } catch (err) {
+                                    setToast({ message: err.message || 'Failed to update', variant: 'danger' });
+                                  }
+                                }}
+                              />
+                              <span className="name">
+                                {(() => {
+                                  const n = daysUntil(it.expiry);
+                                  if (n === null) return null;
+                                  if (n < 0) return <span className="dot dot-expired" title="Expired" />;
+                                  if (n <= 3) return <span className="dot dot-soon" title="Expiring soon" />;
+                                  return null;
+                                })()}
+                                {it.name}
+                              </span>
+                              <span className="qty">{it.quantity}</span>
+                              <span className="exp">{it.expiry ?? '—'}</span>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </Card.Body>
@@ -971,8 +1163,11 @@ export default function Lists() {
               <tbody>
                 {shares.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="text-muted text-center">
-                      No shares yet
+                    <td colSpan={3} className="text-center">
+                      <div className="empty">
+                        <div className="icon"><i className="bi bi-people" /></div>
+                        <div className="mt-1 text-muted">No shares yet — invite someone via email.</div>
+                      </div>
                     </td>
                   </tr>
                 )}

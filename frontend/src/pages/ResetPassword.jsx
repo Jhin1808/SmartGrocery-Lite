@@ -5,13 +5,16 @@ import { apiForgotPassword, apiResetPassword } from "../api";
 export default function ResetPassword() {
   const { search } = useLocation();
   const navigate = useNavigate();
-  const token = useMemo(() => new URLSearchParams(search).get("token") || "", [search]);
+  const params = useMemo(() => new URLSearchParams(search), [search]);
+  const token = useMemo(() => params.get("token") || params.get("code") || "", [params]);
+  const initialEmail = useMemo(() => params.get("email") || "", [params]);
+  const [manualCode, setManualCode] = useState("");
 
   // Request state
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [reqBusy, setReqBusy] = useState(false);
   const [reqMsg, setReqMsg] = useState("");
-  const [devLink, setDevLink] = useState("");
+  const [devCode, setDevCode] = useState("");
   const [captchaToken, setCaptchaToken] = useState("");
 
   // Reset state
@@ -21,20 +24,25 @@ export default function ResetPassword() {
   const [resetErr, setResetErr] = useState("");
   const [resetOk, setResetOk] = useState(false);
 
-  const canReset = pw1.length >= 8 && pw1 === pw2;
+  useEffect(() => {
+    if (initialEmail) setEmail(initialEmail);
+  }, [initialEmail]);
+
+  const looksLikeJwt = token.includes(".");
+  const canReset = pw1.length >= 8 && pw1 === pw2 && (looksLikeJwt || email.trim().includes("@"));
 
   const submitRequest = async (e) => {
     e.preventDefault();
     if (!email.trim().includes("@")) return;
     setReqBusy(true);
     setReqMsg("");
-    setDevLink("");
+    setDevCode("");
     try {
       const res = await apiForgotPassword(email.trim(), captchaToken || undefined);
-      setReqMsg("If that email exists, we sent a reset link.");
-      if (res?.reset_url) setDevLink(res.reset_url);
+      setReqMsg("If that email exists, we sent a reset code.");
+      if (res?.dev_code) setDevCode(res.dev_code);
     } catch (e) {
-      setReqMsg("If that email exists, we sent a reset link.");
+      setReqMsg("If that email exists, we sent a reset code.");
     } finally {
       setReqBusy(false);
     }
@@ -46,7 +54,12 @@ export default function ResetPassword() {
     setResetBusy(true);
     setResetErr("");
     try {
-      await apiResetPassword({ token, new_password: pw1 });
+      if (looksLikeJwt) {
+        await apiResetPassword({ token, new_password: pw1 });
+      } else {
+        const code = token.trim();
+        await apiResetPassword({ code, email: email.trim(), new_password: pw1 });
+      }
       setResetOk(true);
       setTimeout(() => navigate("/login", { replace: true }), 1200);
     } catch (e) {
@@ -62,7 +75,7 @@ export default function ResetPassword() {
         <form onSubmit={submitRequest} className="row" style={{ gap: 12 }}>
           <h3 className="center">Forgot your password?</h3>
           <p className="center" style={{ color: "#666" }}>
-            Enter your email and we'll send you a reset link.
+            Enter your email and we'll send you a reset code.
           </p>
           <input
             className="input"
@@ -73,20 +86,59 @@ export default function ResetPassword() {
           />
           <Turnstile onVerify={setCaptchaToken} />
           <button className="btn" disabled={reqBusy || !email.trim().includes("@")}> 
-            {reqBusy ? "Sending…" : "Send reset link"}
+            {reqBusy ? "Sending..." : "Send reset code"}
           </button>
           {reqMsg && <div className="center" style={{ color: "#666" }}>{reqMsg}</div>}
-          {devLink && (
+          {devCode && (
             <div className="center" style={{ fontSize: 12 }}>
-              Dev link: <a href={devLink}>{devLink}</a>
+              Dev code: <code>{devCode}</code>
             </div>
           )}
+
+          <div className="center" style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 14, color: "#666", marginBottom: 6 }}>Have a reset code?</div>
+            <div className="row" style={{ gap: 8, alignItems: "center" }}>
+              <input
+                className="input"
+                placeholder="Paste reset code here"
+                value={manualCode}
+                onChange={(e) => setManualCode(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn"
+                disabled={!manualCode.trim()}
+                onClick={() => {
+                  const qs = new URLSearchParams();
+                  qs.set("code", manualCode.trim());
+                  if (email.trim()) qs.set("email", email.trim());
+                  navigate(`/reset?${qs.toString()}`, { replace: true });
+                }}
+              >
+                Use code
+              </button>
+            </div>
+          </div>
         </form>
       )}
 
       {!!token && (
         <form onSubmit={submitReset} className="row" style={{ gap: 12 }}>
           <h3 className="center">Set a new password</h3>
+          {!looksLikeJwt && (
+            <>
+              <input
+                className="input"
+                type="email"
+                placeholder="Your account email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <div className="center" style={{ color: "#666", fontSize: 12 }}>
+                Using reset code method
+              </div>
+            </>
+          )}
           <input
             className="input"
             type="password"
@@ -103,7 +155,7 @@ export default function ResetPassword() {
           />
           {resetErr && <div className="error">{resetErr}</div>}
           <button className="btn" disabled={resetBusy || !canReset}>
-            {resetBusy ? "Updating…" : resetOk ? "Updated" : "Update password"}
+            {resetBusy ? "Updating..." : resetOk ? "Updated" : "Update password"}
           </button>
           <p className="center" style={{ color: "#666" }}>
             You'll be redirected to login after success.
@@ -156,4 +208,3 @@ function Turnstile({ onVerify }) {
     </div>
   );
 }
-

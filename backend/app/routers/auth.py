@@ -1,11 +1,12 @@
 # app/routers/auth.py
 from pydantic import BaseModel, EmailStr
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User
+from app.models import User, PasswordResetCode, UsedResetToken
 from app.schemas import RegisterRequest, UserRead, TokenResponse
 from app.security import (
     hash_password,
@@ -26,6 +27,12 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
     u = User(email=payload.email, password_hash=hash_password(payload.password))
     db.add(u); db.commit(); db.refresh(u)
+    # Best-effort: upsert into Resend Audience so mailing list stays in sync
+    try:
+        from app.email_resend import ensure_contact as _ensure
+        _ensure(u.email, getattr(u, "name", None))
+    except Exception:
+        pass
     return UserRead(id=u.id, email=u.email)
 
 @router.post("/token", response_model=TokenResponse)
@@ -75,13 +82,21 @@ class ForgotPassword(BaseModel):
 
 
 class ResetPassword(BaseModel):
-    token: str
+    # Either provide a JWT token (legacy link flow) or code+email (one-time code flow)
+    token: str | None = None
+    code: str | None = None
+    email: EmailStr | None = None
     new_password: str
 
 
 def _frontend_url() -> str:
     import os
-    return (os.getenv("FRONTEND_URL") or "http://localhost:3000").rstrip("/")
+    v = (os.getenv("FRONTEND_URL") or "http://localhost:3000").strip().strip('"').strip("'")
+    v = v.rstrip("/")
+    # If schema is missing, assume https for non-localhost
+    if v and not v.startswith("http://") and not v.startswith("https://"):
+        v = ("http://" if "localhost" in v else "https://") + v
+    return v
 
 
 @router.post("/forgot-password")
@@ -90,12 +105,25 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
     import os
     import httpx
 
+    def _flag_true(val: str | None) -> bool:
+        return (val or "").strip().lower() in {"1", "true", "yes", "on", "disable"}
+
+    skip_rate_limits = _flag_true(os.getenv("FORGOT_LIMIT_DISABLE")) or _flag_true(
+        os.getenv("DISABLE_FORGOT_RATE_LIMITS")
+    ) or _flag_true(os.getenv("DISABLE_RATE_LIMITS"))
+
     # Rate limit by IP and by email (process-local; for multi-instance use a shared store like Redis)
     ip = request.headers.get("x-forwarded-for") or request.client.host or "?"
     ip = (ip.split(",")[0]).strip()
-    if not allow_rate(ip, "forgot-ip", max_requests=int(os.getenv("FORGOT_LIMIT_PER_IP", "5")), window_seconds=3600):
-        # 429 to indicate throttling without leaking whether email exists
-        raise HTTPException(status_code=429, detail="Too many requests, try again later")
+    if not skip_rate_limits:
+        if not allow_rate(
+            ip,
+            "forgot-ip",
+            max_requests=int(os.getenv("FORGOT_LIMIT_PER_IP", "5")),
+            window_seconds=3600,
+        ):
+            # 429 to indicate throttling without leaking whether email exists
+            raise HTTPException(status_code=429, detail="Too many requests, try again later")
 
     # Optional CAPTCHA (Cloudflare Turnstile)
     secret = os.getenv("TURNSTILE_SECRET")
@@ -118,41 +146,150 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
             # Fail closed if verification endpoint is unreachable
             raise HTTPException(status_code=400, detail="Captcha check failed")
 
+    import secrets
+    from datetime import datetime, timedelta, timezone
+    from app.security import PH
+
     user = db.query(User).filter(User.email == payload.email).first()
     out = {"ok": True}
     if user:
         # per-email limit
-        if not allow_rate(user.email.lower(), "forgot-email", max_requests=int(os.getenv("FORGOT_LIMIT_PER_EMAIL", "3")), window_seconds=3600):
-            return out
-        tok = create_reset_token(user.id, expires_minutes=30)
-        out["reset_url"] = f"{_frontend_url()}/reset?token={tok}"
-        # Send email via provider if configured
+        if not skip_rate_limits:
+            if not allow_rate(
+                user.email.lower(),
+                "forgot-email",
+                max_requests=int(os.getenv("FORGOT_LIMIT_PER_EMAIL", "3")),
+                window_seconds=3600,
+            ):
+                return out
+        # Generate numeric reset code and store hashed
+        code_len = int(os.getenv("RESET_CODE_LENGTH", "6"))
+        code = "".join(secrets.choice("0123456789") for _ in range(code_len))
+        mins = int(os.getenv("RESET_CODE_EXPIRE_MINUTES", "15"))
+        rec = PasswordResetCode(
+            user_id=user.id,
+            code_hash=PH.hash(code),
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=mins),
+        )
+        db.add(rec)
+        db.commit()
+
+        # Expose code for dev only
+        if (os.getenv("EXPOSE_RESET_CODE", "").lower() in ("1", "true", "yes", "dev")):
+            out["dev_code"] = code
+
+        # Ensure contact in Resend audience if configured (best-effort)
         try:
-            _send_reset_email(to=user.email, url=out["reset_url"])
+            from app.email_resend import ensure_contact as _ensure
+            _ensure(user.email, getattr(user, "name", None))
         except Exception:
-            # Don't leak errors
+            pass
+        # Send code email
+        try:
+            _send_reset_code_email(to=user.email, code=code, minutes=mins)
+        except Exception:
+            # Don't leak provider errors
             pass
     return out
 
 
 @router.post("/reset-password", status_code=204)
-def reset_password(payload: ResetPassword, db: Session = Depends(get_db)):
+def reset_password(payload: ResetPassword, request: Request, db: Session = Depends(get_db)):
+    import os
+    from datetime import datetime, timezone
+    from app.security import PH
+
+    # Basic rate limiting to slow brute force
+    ip = request.headers.get("x-forwarded-for") or request.client.host or "?"
+    ip = (ip.split(",")[0]).strip()
+    if not allow_rate(ip, "reset-ip", max_requests=int(os.getenv("RESET_LIMIT_PER_IP", "20")), window_seconds=3600):
+        raise HTTPException(status_code=429, detail="Too many requests, try again later")
+
+    # A) Code + email flow
+    if (payload.code or "").strip():
+        if not payload.email:
+            raise HTTPException(status_code=400, detail="Email is required with code")
+        user = db.query(User).filter(User.email == payload.email).first()
+        # Avoid user enumeration
+        if not user:
+            raise HTTPException(status_code=400, detail="Invalid or expired code")
+        # Per-email rate limit on resets
+        if not allow_rate(user.email.lower(), "reset-email", max_requests=int(os.getenv("RESET_LIMIT_PER_EMAIL", "10")), window_seconds=3600):
+            raise HTTPException(status_code=429, detail="Too many requests, try again later")
+
+        now = datetime.now(timezone.utc)
+        recs = (
+            db.query(PasswordResetCode)
+            .filter(PasswordResetCode.user_id == user.id,
+                    PasswordResetCode.used_at.is_(None),
+                    PasswordResetCode.expires_at > now)
+            .order_by(PasswordResetCode.id.desc())
+            .all()
+        )
+        matched = None
+        for rec in recs:
+            try:
+                if PH.verify(rec.code_hash, payload.code):
+                    matched = rec
+                    break
+            except Exception:
+                pass
+        # attempt limiting on the newest active code
+        max_attempts = int(os.getenv("MAX_RESET_CODE_ATTEMPTS", "5"))
+        if not matched:
+            if recs:
+                latest = recs[0]
+                latest.attempts = (latest.attempts or 0) + 1
+                # retire after too many attempts
+                if latest.attempts >= max_attempts:
+                    latest.used_at = now
+                db.commit()
+            raise HTTPException(status_code=400, detail="Invalid or expired code")
+
+        # If already exceeded attempts, treat as invalid
+        if (matched.attempts or 0) >= max_attempts:
+            raise HTTPException(status_code=400, detail="Invalid or expired code")
+
+        matched.used_at = now
+        user.password_hash = hash_password(payload.new_password)
+        db.commit()
+        return Response(status_code=204)
+
+    # B) Legacy token (link) flow
+    if not payload.token:
+        raise HTTPException(status_code=400, detail="Token or code is required")
     try:
         data = decode_reset_token(payload.token)
         sub = int(data.get("sub"))
+        jti = str(data.get("jti") or "")
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
 
     user = db.get(User, sub)
     if not user:
         raise HTTPException(status_code=400, detail="Invalid token")
-    # Set/replace password without needing the old one
+    # Single-use: reject if jti already used
+    if jti:
+        existing = db.query(UsedResetToken).filter(UsedResetToken.jti == jti).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Invalid or expired token")
     user.password_hash = hash_password(payload.new_password)
+    # Record jti as used
+    if jti:
+        exp_ts = data.get("exp")
+        exp_dt = None
+        try:
+            if exp_ts:
+                exp_dt = datetime.fromtimestamp(exp_ts, tz=timezone.utc)
+        except Exception:
+            exp_dt = None
+        used = UsedResetToken(user_id=user.id, jti=jti, expires_at=exp_dt)
+        db.add(used)
     db.commit()
     return Response(status_code=204)
 
 
-def _send_reset_email(to: str, url: str) -> None:
+def _send_reset_code_email(to: str, code: str, minutes: int) -> dict:
     """Send a password reset email via configured provider.
 
     Supported:
@@ -163,28 +300,113 @@ def _send_reset_email(to: str, url: str) -> None:
     import os
     from email.message import EmailMessage
 
-    frm = os.getenv("EMAIL_FROM") or "no-reply@example.com"
+    frm = os.getenv("EMAIL_FROM") or "SmartGrocery <no-reply@smartgrocery.online>"
+
+    # Prefer Vercel function if configured (keeps Resend key in Vercel)
+    vercel_url = os.getenv("VERCEL_SEND_RESET_URL")
+    if vercel_url:
+        import httpx
+        headers = {"x-api-key": (os.getenv("EMAIL_TEST_SECRET") or os.getenv("CRON_SECRET") or "")}
+        payload = {"to": to, "code": code, "minutes": minutes, "from": frm}
+        r = httpx.post(vercel_url, json=payload, headers=headers, timeout=10.0)
+        try:
+            r.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            body = None
+            try:
+                body = e.response.json()
+            except Exception:
+                body = e.response.text
+            logging.getLogger("app.email").error("Vercel send failed %s body=%s", e.response.status_code, body)
+            raise
+        try:
+            data = r.json()
+        except Exception:
+            data = {"text": r.text}
+        logging.getLogger("app.email").info("Vercel relay sent reset code to %s", to)
+        return {"provider": "vercel", "status": r.status_code, "response": data}
 
     # Try Resend first
     rk = os.getenv("RESEND_API_KEY")
     if rk:
         import httpx
 
+        from urllib.parse import quote_plus
+
+        reset_link = f"{_frontend_url()}/reset?code={quote_plus(code)}&email={quote_plus(to)}"
+
         html = f"""
-        <p>Hello,</p>
-        <p>We received a request to reset your SmartGrocery Lite password.</p>
-        <p><a href=\"{url}\">Click here to reset your password</a>. This link expires in 30 minutes.</p>
-        <p>If you did not request this, you can ignore this email.</p>
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#eff4ff;padding:24px 12px;">
+          <tr>
+            <td align="center">
+              <table width="520" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;border-radius:14px;box-shadow:0 12px 30px rgba(15,23,42,0.08);font-family:Segoe UI,Roboto,sans-serif;color:#0f172a;">
+                <tr>
+                  <td style="padding:26px 30px;border-radius:14px 14px 0 0;background:#1d4ed8;color:#fff;">
+                    <div style="font-size:20px;font-weight:600;">SmartGrocery</div>
+                    <div style="font-size:14px;opacity:0.9;margin-top:4px;">Password reset request</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:26px 30px;">
+                    <p style="margin:0 0 14px;font-size:16px;">Hi there,</p>
+                    <p style="margin:0 0 18px;font-size:15px;line-height:1.5;">
+                      We received a request to reset your SmartGrocery password. Enter the one-time code below within {minutes} minutes.
+                    </p>
+                    <div style="font-size:30px;letter-spacing:10px;font-weight:600;background:#f4f7ff;border:2px dashed #c7d7ff;padding:18px 12px;text-align:center;border-radius:12px;color:#1d4ed8;">
+                      {code}
+                    </div>
+                    <p style="margin:22px 0 10px;font-size:14px;color:#475569;text-align:center;">You can also use the button:</p>
+                    <a href="{reset_link}"
+                       style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 30px;border-radius:999px;font-weight:600;font-size:14px;">
+                      Enter code in SmartGrocery
+                    </a>
+                    <p style="margin:24px 0 0;font-size:13px;color:#64748b;line-height:1.5;">
+                      If you did not request this reset, you can safely ignore this email and your password will stay the same.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:18px 30px;background:#f8fafc;border-radius:0 0 14px 14px;border-top:1px solid #e2e8f0;text-align:center;font-size:12px;color:#94a3b8;">
+                    SmartGrocery &middot; Shared lists • Pantry reminders • Recipe mode
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
         """
-        payload = {"from": frm, "to": [to], "subject": "Reset your password", "html": html}
+        text = (
+            "SmartGrocery password reset\n\n"
+            "We received a request to reset your SmartGrocery password.\n"
+            f"Reset code: {code}\n"
+            f"This code expires in {minutes} minutes.\n"
+            "Enter the code in the SmartGrocery app or ignore this email to keep your password unchanged.\n"
+        )
+        payload = {"from": frm, "to": [to], "subject": "SmartGrocery: Your reset code", "html": html, "text": text}
         r = httpx.post(
             "https://api.resend.com/emails",
             headers={"Authorization": f"Bearer {rk}", "Content-Type": "application/json"},
             json=payload,
             timeout=10.0,
         )
-        r.raise_for_status()
-        return
+        try:
+            r.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            # Log provider response for debugging
+            body = None
+            try:
+                body = e.response.json()
+            except Exception:
+                body = e.response.text
+            logging.getLogger("app.email").error("Resend error status=%s body=%s", e.response.status_code, body)
+            raise
+        # Success
+        try:
+            data = r.json()
+        except Exception:
+            data = {"text": r.text}
+        logging.getLogger("app.email").info("Resend sent reset code to %s id=%s", to, (data.get("id") if isinstance(data, dict) else "?"))
+        return {"provider": "resend", "status": r.status_code, "response": data}
 
     # Fallback to SMTP if configured
     host = os.getenv("SMTP_HOST")
@@ -195,15 +417,23 @@ def _send_reset_email(to: str, url: str) -> None:
         import smtplib
 
         msg = EmailMessage()
-        msg["Subject"] = "Reset your password"
+        msg["Subject"] = "SmartGrocery: Your reset code"
         msg["From"] = frm
         msg["To"] = to
-        msg.set_content(f"Reset your password: {url}\nThis link expires in 30 minutes.")
+        msg.set_content(
+            f"Hello,\n\n"
+            f"We received a request to reset your SmartGrocery password.\n"
+            f"Reset code: {code}\n"
+            f"This code expires in {minutes} minutes.\n"
+            f"If you did not request this, you can ignore this email.\n"
+        )
         msg.add_alternative(
             f"""
             <p>Hello,</p>
-            <p>We received a request to reset your SmartGrocery Lite password.</p>
-            <p><a href=\"{url}\">Click here to reset your password</a>. This link expires in 30 minutes.</p>
+            <p>We received a request to reset your SmartGrocery password.</p>
+            <p>Use this reset code in the app:</p>
+            <pre style=\"background:#f6f8fa;padding:12px;border-radius:6px;white-space:pre-wrap;word-break:break-all;\">{code}</pre>
+            <p>This code expires in {minutes} minutes.</p>
             <p>If you did not request this, you can ignore this email.</p>
             """,
             subtype="html",

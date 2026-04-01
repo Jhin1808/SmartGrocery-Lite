@@ -1,6 +1,7 @@
 import os
 from urllib.parse import quote_plus
 from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import sessionmaker
 
 def build_db_url() -> str:
@@ -27,10 +28,31 @@ def build_db_url() -> str:
 
 DATABASE_URL = build_db_url()
 
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,        # avoids stale connections in pooler
+# Prefer letting PgBouncer/Supabase pooler handle pooling in production.
+# Defaults:
+# - If DATABASE_URL contains "supabase", default to NullPool (open/close per request)
+# - Otherwise, allow a very small QueuePool unless explicitly overridden
+
+_env_disable_pool = os.getenv("DB_DISABLE_POOL")
+_default_disable_pool = ("supabase" in DATABASE_URL.lower())
+_disable_pool = (
+    _default_disable_pool if _env_disable_pool is None
+    else (_env_disable_pool.lower() in ("1", "true", "yes"))
 )
+
+if _disable_pool:
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,
+        poolclass=NullPool,
+    )
+else:
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,
+        pool_size=int(os.getenv("DB_POOL_SIZE", "1")),
+        max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "0")),
+    )
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 def get_db():

@@ -1,78 +1,87 @@
-import React from "react";
+import React, { Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-
-import AuthTabs from "./pages/AuthTabs";
-import Lists from "./pages/Lists";
-import ListDetail from "./pages/ListDetail";
-import Account from "./pages/Account";
-import Help from "./pages/Help";
-import OAuthCallback from "./pages/OAuthCallback";
-import Terms from "./pages/Terms";
-import ResetPassword from "./pages/ResetPassword";
-
-import NavBar from "./components/NavBar";
-
 import { AuthProvider, useAuth } from "./pages/AuthContext";
+
+// Code-split pages to reduce initial JS for login route
+const AuthTabs = React.lazy(() => import("./pages/EnhancedAuthTabs"));
+const Lists = React.lazy(() => import("./pages/EnhancedLists"));
+const ListDetail = React.lazy(() => import("./pages/ListDetail"));
+const Account = React.lazy(() => import("./pages/Account"));
+const Help = React.lazy(() => import("./pages/Help"));
+const OAuthCallback = React.lazy(() => import("./pages/OAuthCallback"));
+const Terms = React.lazy(() => import("./pages/Terms"));
+const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
+
+const NavBar = React.lazy(() => import("./components/NavBar"));
 
 // Guard
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
-  if (loading) return null;             // or a spinner
+  if (loading) return null; // or a spinner
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
   return children;
 }
 
 function AppShell() {
-  const { user } = useAuth();           // <— if no user, hide the NavBar entirely
+  const { user } = useAuth(); // if no user, hide the NavBar entirely
+  // Load Bootstrap Icons CSS only after auth to reduce initial bytes on /login
+  useEffect(() => {
+    if (user) {
+      import("bootstrap-icons/font/bootstrap-icons.css");
+    }
+  }, [user]);
+
   return (
     <>
-      {user ? <NavBar /> : null}
+      <Suspense fallback={null}><NavBar /></Suspense>
       <div className="container py-4">
-        <Routes>
-          <Route path="/" element={<Navigate to={user ? "/lists" : "/login"} replace />} />
+        <Suspense fallback={null}>
+          <Routes>
+            <Route path="/" element={<Navigate to={user ? "/lists" : "/login"} replace />} />
 
-          {/* Public */}
-          <Route path="/login" element={<AuthTabs />} />
-          <Route path="/oauth/callback" element={<OAuthCallback />} />
-          <Route path="/reset" element={<ResetPassword />} />
-          <Route path="/terms" element={<Terms />} />
+            {/* Public */}
+            <Route path="/login" element={<AuthTabs />} />
+            <Route path="/oauth/callback" element={<OAuthCallback />} />
+            <Route path="/reset" element={<ResetPassword />} />
+            <Route path="/terms" element={<Terms />} />
 
-          {/* Protected */}
-          <Route
-            path="/lists"
-            element={
-              <RequireAuth>
-                <Lists />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/lists/:id"
-            element={
-              <RequireAuth>
-                <ListDetail />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/account"
-            element={
-              <RequireAuth>
-                <Account />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/help"
-            element={
-              <RequireAuth>
-                <Help />
-              </RequireAuth>
-            }
-          />
-          <Route path="*" element={<Navigate to="/lists" replace />} />
-        </Routes>
+            {/* Protected */}
+            <Route
+              path="/lists"
+              element={
+                <RequireAuth>
+                  <Lists />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/lists/:id"
+              element={
+                <RequireAuth>
+                  <ListDetail />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/account"
+              element={
+                <RequireAuth>
+                  <Account />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/help"
+              element={
+                <RequireAuth>
+                  <Help />
+                </RequireAuth>
+              }
+            />
+            <Route path="*" element={<Navigate to="/lists" replace />} />
+          </Routes>
+        </Suspense>
       </div>
     </>
   );

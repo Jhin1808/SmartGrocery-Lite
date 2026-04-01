@@ -112,10 +112,13 @@ export const apiCreateList = (name) =>
 
 export const apiGetItems = (listId) => request(`/lists/${listId}/items`);
 
-export const apiAddItem = (listId, { name, quantity = 1, expiry = null }) =>
+export const apiAddItem = (
+  listId,
+  { name, quantity = 1, expiry = null, description = undefined }
+) =>
   request(`/lists/${listId}/items`, {
     method: "POST",
-    body: { name, quantity, expiry },
+    body: { name, quantity, expiry, description },
   });
 
 export const apiUpdateItem = (itemId, patch) =>
@@ -134,6 +137,11 @@ export const apiHideList = (listId) =>
 export const apiUnhideList = (listId) =>
   request(`/lists/${listId}/unhide`, { method: "POST" });
 
+// ---- Leave a shared list (non-owner) ----
+// Best-effort endpoint; if backend doesn't support, caller should gracefully fallback.
+export const apiLeaveSharedList = (listId) =>
+  request(`/lists/${listId}/share/leave`, { method: "POST" });
+
 // ---- Profile ----
 export const apiUpdateMe = (patch) =>
   request("/me", { method: "PATCH", body: patch });
@@ -148,8 +156,15 @@ export const apiChangePassword = ({ current_password, new_password }) =>
 export const apiForgotPassword = (email, captcha_token) =>
   request("/auth/forgot-password", { method: "POST", body: { email, captcha_token } });
 
-export const apiResetPassword = ({ token, new_password }) =>
-  request("/auth/reset-password", { method: "POST", body: { token, new_password } });
+export const apiResetPassword = ({ token, code, email, new_password }) => {
+  const body = { new_password };
+  if (token) body.token = token;
+  if (code) {
+    body.code = code;
+    if (email) body.email = email;
+  }
+  return request("/auth/reset-password", { method: "POST", body });
+};
 
 // ---- List rename ----
 export const apiRenameList = (listId, name) =>

@@ -10,6 +10,7 @@ from app.database import get_db
 from app.models import User
 from app.security import create_access_token
 from app.security_cookies import set_login_cookie, COOKIE_NAME
+from app.email_resend import ensure_contact
 
 router = APIRouter(prefix="/auth/google", tags=["auth:google"])
 
@@ -74,6 +75,10 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
     if not user:
         user = User(email=email, google_sub=sub, name=name, picture=pic)
         db.add(user); db.commit(); db.refresh(user)
+        try:
+            ensure_contact(user.email, user.name)
+        except Exception:
+            pass
     else:
         changed = False
         if not user.google_sub and sub:

@@ -192,6 +192,9 @@ def add_item(
         name=payload.name,
         quantity=payload.quantity,
         expiry=payload.expiry,
+        description=payload.description,
+        remind_on=payload.remind_on,
+        purchased=(payload.purchased if payload.purchased is not None else False),
         list_id=list_id,
     )
     db.add(item)
@@ -230,6 +233,19 @@ def update_item(
         item.quantity = payload.quantity
     if payload.expiry is not None:
         item.expiry = payload.expiry
+    if payload.description is not None:
+        # allow clearing description with empty string
+        item.description = payload.description or None
+    try:
+        provided = getattr(payload, "model_fields_set", set())
+    except Exception:
+        provided = set()
+    if "remind_on" in provided:
+        # allow setting or clearing
+        item.remind_on = payload.remind_on
+        item.reminded_at = None
+    if payload.purchased is not None:
+        item.purchased = bool(payload.purchased)
 
     db.commit()
     db.refresh(item)

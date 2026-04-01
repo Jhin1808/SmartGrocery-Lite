@@ -1,19 +1,16 @@
 // src/components/NavBar.jsx
-import { Navbar, Container, Nav, NavDropdown, Button } from "react-bootstrap";
+import { Navbar, Container, Nav, NavDropdown, Button, Image } from "react-bootstrap";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../pages/AuthContext";
 import weblogo from "../Weblogo.png";
+import ThemeToggle from "./ThemeToggle";
 
 export default function NavBar() {
-  const { user, loading, refresh, logout } = useAuth();
+  const { user, refresh, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Hide the navbar on auth pages
-  const hideOnRoutes = ["/login", "/oauth/callback", "/reset", "/terms"];
-  if (hideOnRoutes.some(p => location.pathname.startsWith(p))) {
-    return null;
-  }
+  const onLoginRoute = location.pathname.startsWith('/login');
 
   const onLogout = async () => {
     try {
@@ -25,7 +22,7 @@ export default function NavBar() {
   };
 
   return (
-    <Navbar bg="light" expand="md" className="shadow-sm">
+    <Navbar bg="light" expand="md" className="shadow-sm sticky-top">
       <Container>
         <Navbar.Brand as={NavLink} to="/lists">
           <img src={weblogo} alt="" style={{ height: 24, width: 24, marginRight: 8 }} />
@@ -41,28 +38,55 @@ export default function NavBar() {
             </Nav>
           )}
 
-          <Nav className="ms-auto">
-            {loading ? (
-              <Navbar.Text className="text-muted">Loading…</Navbar.Text>
-            ) : user ? (
-              <NavDropdown
-                align="end"
-                title={user.name || user.email || "Account"}
-                id="user-menu"
-              >
-                <NavDropdown.Item as={NavLink} to="/account">Profile</NavDropdown.Item>
-                <NavDropdown.Divider />
-                <NavDropdown.Item onClick={onLogout}>Sign out</NavDropdown.Item>
-              </NavDropdown>
+          <Nav className="ms-auto align-items-center" style={{ gap: 8 }}>
+            <ThemeToggle />
+            {user ? (
+              <>
+                <NavDropdown
+                  align="end"
+                  id="user-menu"
+                  title={(
+                    <span className="d-inline-flex align-items-center gap-2">
+                      <Avatar user={user} size={24} />
+                      <span className="d-none d-sm-inline truncate" style={{ maxWidth: 160 }}>
+                        {user.name || user.email || "Account"}
+                      </span>
+                    </span>
+                  )}
+                >
+                  <NavDropdown.Item as={NavLink} to="/account">Profile</NavDropdown.Item>
+                  <NavDropdown.Divider />
+                  <NavDropdown.Item onClick={onLogout}>Sign out</NavDropdown.Item>
+                </NavDropdown>
+              </>
             ) : (
-              // In case someone navigates directly to a non-auth page without being logged in
-              <Button variant="outline-primary" onClick={() => navigate("/login")}>
-                Sign in
-              </Button>
+              // If not logged in, show sign in except on login
+              !onLoginRoute && (
+                <Button variant="outline-success" onClick={() => navigate("/login")}> 
+                  Sign in
+                </Button>
+              )
             )}
           </Nav>
         </Navbar.Collapse>
       </Container>
     </Navbar>
+  );
+}
+
+function Avatar({ user, size = 24 }) {
+  const label = (user?.name || user?.email || "U").trim();
+  const ui = `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(label)}`;
+  const src = user?.picture || ui;
+  return (
+    <Image
+      src={src}
+      alt=""
+      width={size}
+      height={size}
+      roundedCircle
+      className="avatar"
+      style={{ objectFit: "cover" }}
+    />
   );
 }
