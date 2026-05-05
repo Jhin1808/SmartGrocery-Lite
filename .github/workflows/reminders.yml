@@ -11,6 +11,8 @@ concurrency:
   group: reminders
   cancel-in-progress: false
 
+permissions: {}
+
 jobs:
   trigger:
     runs-on: ubuntu-latest
