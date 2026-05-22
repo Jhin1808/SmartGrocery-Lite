@@ -8,6 +8,7 @@ import {
   apiRegister,
   API_BASE,
   AUTH_FALLBACK_STORAGE_KEY,
+  AUTH_HEADER_FALLBACK_ENABLED,
   googleLoginUrl,
 } from "../api";
 import "../enhanced-styles.css"; // Import the enhanced CSS
@@ -91,8 +92,10 @@ export default function EnhancedAuthTabs() {
     try {
       const tok = await apiLogin(loginEmail.trim(), loginPassword);
       try {
-        const val = tok?.access_token || tok?.token || tok;
-        if (val) localStorage.setItem(AUTH_FALLBACK_STORAGE_KEY, val);
+        const val = tok?.access_token || tok?.token || (typeof tok === "string" ? tok : "");
+        if (AUTH_HEADER_FALLBACK_ENABLED && typeof val === "string" && val) {
+          localStorage.setItem(AUTH_FALLBACK_STORAGE_KEY, val);
+        }
       } catch {}
       await refresh();
       navigate("/lists", { replace: true });
@@ -132,8 +135,10 @@ export default function EnhancedAuthTabs() {
       await apiRegister({ email: registerEmail.trim(), password: registerPassword });
       const tok = await apiLogin(registerEmail.trim(), registerPassword);
       try {
-        const val = tok?.access_token || tok?.token || tok;
-        if (val) localStorage.setItem(AUTH_FALLBACK_STORAGE_KEY, val);
+        const val = tok?.access_token || tok?.token || (typeof tok === "string" ? tok : "");
+        if (AUTH_HEADER_FALLBACK_ENABLED && typeof val === "string" && val) {
+          localStorage.setItem(AUTH_FALLBACK_STORAGE_KEY, val);
+        }
       } catch {}
       await refresh();
       navigate("/lists", { replace: true });

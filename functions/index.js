@@ -1,5 +1,9 @@
 // Optional manual trigger for testing at GET /
 export async function onRequestGet({ request, env }) {
+  if (!env.CRON_SECRET) {
+    return new Response('Cron secret not configured', { status: 503 });
+  }
+
   const auth = request.headers.get('authorization') || '';
   if (auth === `Bearer ${env.CRON_SECRET}`) {
     const res = await fetch('https://api.smartgrocery.online/tasks/run-reminders', {

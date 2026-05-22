@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { apiLogout, apiMe } from "../api";
+import { apiLogout, apiMe, AUTH_FALLBACK_STORAGE_KEY } from "../api";
 
 const AuthCtx = createContext({ user: null, loading: true });
 
@@ -32,7 +32,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     try {
       // Clear header token fallback
-      try { localStorage.removeItem("token"); } catch {}
+      try { localStorage.removeItem(AUTH_FALLBACK_STORAGE_KEY); } catch {}
       await apiLogout();
     } catch {}
     setUser(null);

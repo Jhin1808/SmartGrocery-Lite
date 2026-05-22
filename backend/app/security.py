@@ -5,10 +5,12 @@ import jwt
 from datetime import datetime, timedelta, timezone
 from argon2 import PasswordHasher, exceptions as argon2_exc
 
-SECRET_KEY = (
-    os.getenv("SECRET_KEY")
-    or os.getenv("JWT_SECRET_KEY")
-    or "change-me-in-dev"
+from app.config import load_secret
+
+SECRET_KEY = load_secret(
+    "SECRET_KEY",
+    fallback_names=("JWT_SECRET_KEY",),
+    dev_default="change-me-in-dev",
 )
 ALGORITHM = os.getenv("ALGORITHM") or os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(

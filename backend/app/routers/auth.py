@@ -1,5 +1,5 @@
 # app/routers/auth.py
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
@@ -16,6 +16,7 @@ from app.security import (
     decode_reset_token,
 )
 from app.security_cookies import set_login_cookie, clear_login_cookie
+from app.config import env_flag
 from app.rate_limit import allow as allow_rate
 from app.deps import get_current_user_any as get_current_user
 
@@ -35,7 +36,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         pass
     return UserRead(id=u.id, email=u.email)
 
-@router.post("/token", response_model=TokenResponse)
+@router.post("/token", response_model=TokenResponse, response_model_exclude_none=True)
 def token(
     response: Response,
     form: OAuth2PasswordRequestForm = Depends(),
@@ -47,9 +48,11 @@ def token(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Incorrect email or password")
     jwt = create_access_token(u.id)
-    # Set HttpOnly cookie and also return token for Safari/iOS fallback
+    # Prefer HttpOnly cookies; only return a bearer token when the fallback is explicitly enabled.
     set_login_cookie(response, jwt)
-    return TokenResponse(access_token=jwt)
+    if env_flag("AUTH_HEADER_FALLBACK_ENABLED"):
+        return TokenResponse(access_token=jwt)
+    return TokenResponse()
 
 @router.post("/logout", status_code=204)
 def logout():
@@ -59,7 +62,7 @@ def logout():
 
 class ChangePassword(BaseModel):
     current_password: str | None = None
-    new_password: str
+    new_password: str = Field(..., min_length=8, max_length=128)
 
 @router.post("/change-password", status_code=204)
 def change_password(payload: ChangePassword,
@@ -86,7 +89,7 @@ class ResetPassword(BaseModel):
     token: str | None = None
     code: str | None = None
     email: EmailStr | None = None
-    new_password: str
+    new_password: str = Field(..., min_length=8, max_length=128)
 
 
 def _frontend_url() -> str:

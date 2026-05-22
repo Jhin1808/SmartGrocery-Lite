@@ -61,13 +61,14 @@ def run_reminders(
 ):
     secret = os.getenv("CRON_SECRET")
     token_ok = False
-    if secret:
-        if x_api_key and x_api_key == secret:
-            token_ok = True
-        if authorization and authorization.lower().startswith("bearer ") and authorization.split(" ", 1)[1] == secret:
-            token_ok = True
-        if not token_ok:
-            raise HTTPException(status_code=401, detail="Unauthorized")
+    if not secret:
+        raise HTTPException(status_code=503, detail="Reminder task secret is not configured")
+    if x_api_key and x_api_key == secret:
+        token_ok = True
+    if authorization and authorization.lower().startswith("bearer ") and authorization.split(" ", 1)[1] == secret:
+        token_ok = True
+    if not token_ok:
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
     # Only open DB session after passing authorization (saves a connection on unauthorized calls).
     db = SessionLocal()

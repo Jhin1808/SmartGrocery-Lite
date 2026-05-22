@@ -1,8 +1,6 @@
-# backend/tests/test_lists.py
-def test_create_list_uses_default_user(client):
-    # owner_id omitted -> should auto-use DEFAULT_USER_EMAIL user
+def test_create_list_uses_current_user(client):
     r = client.post("/lists/", json={"name": "Monday"})
-    assert r.status_code == 200, r.text
+    assert r.status_code == 201, r.text
     data = r.json()
     assert data["name"] == "Monday"
     assert isinstance(data["owner_id"], int)
@@ -16,6 +14,12 @@ def test_read_lists_returns_created_list(client):
     names = [x["name"] for x in r.json()]
     assert "Groceries" in names
 
+
+def test_blank_list_name_is_rejected(client):
+    r = client.post("/lists/", json={"name": "   "})
+    assert r.status_code == 422
+
+
 def test_add_item_and_list_items(client):
     # create a list first
     r = client.post("/lists/", json={"name": "Tuesday"})
@@ -23,7 +27,7 @@ def test_add_item_and_list_items(client):
 
     # add item
     r2 = client.post(f"/lists/{list_id}/items", json={"name": "Milk", "quantity": 2})
-    assert r2.status_code == 200, r2.text
+    assert r2.status_code == 201, r2.text
     item = r2.json()
     assert item["name"] == "Milk"
     assert item["quantity"] == 2
@@ -34,6 +38,16 @@ def test_add_item_and_list_items(client):
     assert r3.status_code == 200
     items = r3.json()
     assert any(i["name"] == "Milk" and i["quantity"] == 2 for i in items)
+
+
+def test_item_quantity_must_be_positive(client):
+    r = client.post("/lists/", json={"name": "Quantity checks"})
+    list_id = r.json()["id"]
+
+    r2 = client.post(f"/lists/{list_id}/items", json={"name": "Milk", "quantity": 0})
+
+    assert r2.status_code == 422
+
 
 def test_delete_item(client):
     # new list

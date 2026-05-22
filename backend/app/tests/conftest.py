@@ -1,32 +1,33 @@
-# backend/tests/conftest.py
 import os
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+# The app reads DATABASE_URL while importing app.database.
+os.environ.setdefault("DATABASE_URL", "sqlite:///./.pytest-test.db")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-suite-32-bytes")
+os.environ.setdefault("SESSION_SECRET", "test-session-secret-for-suite-32")
+
 from app.main import app
 from app.database import get_db
-from app.models import Base
+from app.deps import get_current_user_any
+from app.models import Base, User
 
-# use a file-based sqlite so multiple threads can access it
-TEST_DB_URL = "sqlite:///./test.db"
+TEST_DB_URL = "sqlite:///./.pytest-test.db"
 engine = create_engine(
     TEST_DB_URL,
-    connect_args={"check_same_thread": False},  # needed for sqlite + TestClient
+    connect_args={"check_same_thread": False},
 )
 TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
-@pytest.fixture(scope="session", autouse=True)
-def _setup_db_once():
-    # make sure default dev user email is predictable in tests
-    os.environ.setdefault("DEFAULT_USER_EMAIL", "testuser@example.com")
-    # fresh tables
+
+@pytest.fixture(autouse=True)
+def _reset_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     yield
-    # optional cleanup: comment out if you want to inspect test.db afterwards
-    Base.metadata.drop_all(bind=engine)
+
 
 def _get_test_db():
     db = TestingSessionLocal()
@@ -38,6 +39,23 @@ def _get_test_db():
 # override the app's DB dependency to use our sqlite test DB
 app.dependency_overrides[get_db] = _get_test_db
 
+
 @pytest.fixture()
-def client():
-    return TestClient(app)
+def test_user():
+    db = TestingSessionLocal()
+    try:
+        user = User(email="testuser@example.com", password_hash="test-hash")
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return User(id=user.id, email=user.email, password_hash=user.password_hash)
+    finally:
+        db.close()
+
+
+@pytest.fixture()
+def client(test_user):
+    app.dependency_overrides[get_current_user_any] = lambda: test_user
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.pop(get_current_user_any, None)
