@@ -8,6 +8,9 @@ export const AUTH_FALLBACK_STORAGE_KEY =
   process.env.REACT_APP_AUTH_FALLBACK_STORAGE_KEY || "token";
 export const TOKEN_FRAGMENT_PARAM =
   process.env.REACT_APP_TOKEN_FRAGMENT_PARAM || "access_token";
+export const AUTH_HEADER_FALLBACK_ENABLED = ["1", "true", "yes", "on"].includes(
+  (process.env.REACT_APP_AUTH_HEADER_FALLBACK_ENABLED || "").toLowerCase()
+);
 
 // Safely join base + path
 function joinUrl(base, path) {
@@ -20,11 +23,13 @@ async function request(path, { method = "GET", headers = {}, body } = {}) {
   const url = joinUrl(API_BASE, path);
 
   const h = { ...headers };
-  // Bearer fallback for Safari/iOS when cookies are blocked
-  try {
-    const tok = localStorage.getItem(AUTH_FALLBACK_STORAGE_KEY);
-    if (tok && !h["Authorization"]) h["Authorization"] = `Bearer ${tok}`;
-  } catch {}
+  // Bearer fallback is opt-in; default auth is the HttpOnly cookie.
+  if (AUTH_HEADER_FALLBACK_ENABLED) {
+    try {
+      const tok = localStorage.getItem(AUTH_FALLBACK_STORAGE_KEY);
+      if (tok && !h["Authorization"]) h["Authorization"] = `Bearer ${tok}`;
+    } catch {}
+  }
   let payload = body;
   if (payload && !(payload instanceof FormData) && !h["Content-Type"]) {
     h["Content-Type"] = "application/json";

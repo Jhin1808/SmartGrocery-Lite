@@ -11,6 +11,7 @@ from app.models import User
 from app.security import create_access_token
 from app.security_cookies import set_login_cookie, COOKIE_NAME
 from app.email_resend import ensure_contact
+from app.config import env_flag
 
 router = APIRouter(prefix="/auth/google", tags=["auth:google"])
 
@@ -43,8 +44,12 @@ oauth.register(
     client_kwargs={"scope": "openid email profile"},
 )
 
-# Optional: include token in fragment for Safari/ITP fallback
-TOKEN_IN_FRAGMENT = (os.getenv("OAUTH_TOKEN_IN_FRAGMENT", "1").lower() in ("1", "true", "yes"))
+# Optional: include token in fragment for Safari/ITP fallback.
+# Disabled by default because URL fragments are readable by frontend JavaScript.
+TOKEN_IN_FRAGMENT = env_flag(
+    "OAUTH_TOKEN_IN_FRAGMENT",
+    default=env_flag("AUTH_HEADER_FALLBACK_ENABLED"),
+)
 FRAGMENT_TOKEN_PARAM = os.getenv("OAUTH_FRAGMENT_TOKEN_PARAM") or COOKIE_NAME
 
 @router.get("/login")

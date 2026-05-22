@@ -5,6 +5,11 @@
 // to invoke the backend endpoint on a schedule.
 
 export async function scheduled(event, env, ctx) {
+  if (!env.CRON_SECRET) {
+    console.error('run-reminders skipped: CRON_SECRET is not configured');
+    return;
+  }
+
   try {
     const res = await fetch('https://api.smartgrocery.online/tasks/run-reminders', {
       method: 'POST',

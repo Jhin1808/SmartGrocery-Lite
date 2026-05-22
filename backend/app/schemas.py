@@ -3,10 +3,31 @@ from datetime import date, datetime
 from typing import Optional, Literal
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
+
+def _strip_required_text(value):
+    if isinstance(value, str):
+        value = value.strip()
+        if not value:
+            raise ValueError("Value cannot be blank")
+    return value
+
+
+def _strip_optional_text(value):
+    if isinstance(value, str):
+        value = value.strip()
+        return value or None
+    return value
+
+
 # ----- Lists / Items -----
 class ListCreate(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1, max_length=100)
     owner_id: Optional[int] = None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_name(cls, v):
+        return _strip_required_text(v)
 
 class ListRead(BaseModel):
     id: int
@@ -17,15 +38,30 @@ class ListRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class ListUpdate(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1, max_length=100)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_name(cls, v):
+        return _strip_required_text(v)
 
 class ItemCreate(BaseModel):
-    name: str
-    quantity: int = 1
+    name: str = Field(..., min_length=1, max_length=100)
+    quantity: int = Field(default=1, ge=1, le=9999)
     expiry: Optional[date] = None
-    description: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=500)
     remind_on: Optional[date] = None
     purchased: Optional[bool] = None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_name(cls, v):
+        return _strip_required_text(v)
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def strip_description(cls, v):
+        return _strip_optional_text(v)
 
 class ItemRead(BaseModel):
     id: int
@@ -39,24 +75,36 @@ class ItemRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class ItemUpdate(BaseModel):
-    name: Optional[str] = None
-    quantity: Optional[int] = None
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    quantity: Optional[int] = Field(default=None, ge=1, le=9999)
     expiry: Optional[date] = None
-    description: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=500)
     remind_on: Optional[date] = None
     purchased: Optional[bool] = None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_name(cls, v):
+        if v is None:
+            return None
+        return _strip_required_text(v)
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def strip_description(cls, v):
+        return _strip_optional_text(v)
 
 # ----- Auth / Profile -----
 class RegisterRequest(BaseModel):
     email: EmailStr = Field(..., examples=["alice@example.com"])
-    password: str = Field(..., min_length=8, examples=["pass12345"])
+    password: str = Field(..., min_length=8, max_length=128, examples=["pass12345"])
 
 class UserRead(BaseModel):
     id: int
     email: EmailStr
 
 class TokenResponse(BaseModel):
-    access_token: str
+    access_token: Optional[str] = None
     token_type: str = "bearer"
 
 class UserProfileRead(BaseModel):
@@ -67,8 +115,8 @@ class UserProfileRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class UserMeUpdate(BaseModel):
-    name: Optional[str] = None
-    picture: Optional[str] = None
+    name: Optional[str] = Field(default=None, max_length=120)
+    picture: Optional[str] = Field(default=None, max_length=2048)
 
     @field_validator("name", "picture", mode="before")
     @classmethod

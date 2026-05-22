@@ -2,7 +2,11 @@
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
-import { AUTH_FALLBACK_STORAGE_KEY, TOKEN_FRAGMENT_PARAM } from "../api";
+import {
+  AUTH_FALLBACK_STORAGE_KEY,
+  AUTH_HEADER_FALLBACK_ENABLED,
+  TOKEN_FRAGMENT_PARAM,
+} from "../api";
 
 export default function OAuthCallback() {
   const { refresh } = useAuth();
@@ -21,7 +25,9 @@ export default function OAuthCallback() {
             p.get("token") ||
             p.get("jwt");
           if (t) {
-            try { localStorage.setItem(AUTH_FALLBACK_STORAGE_KEY, t); } catch {}
+            if (AUTH_HEADER_FALLBACK_ENABLED) {
+              try { localStorage.setItem(AUTH_FALLBACK_STORAGE_KEY, t); } catch {}
+            }
             // remove the fragment from the URL
             window.history.replaceState({}, document.title, pathname + (search || ""));
           }
