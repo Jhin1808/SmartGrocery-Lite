@@ -4,7 +4,7 @@ export default function Terms() {
   return (
     <div className="container py-4" style={{ maxWidth: 800, margin: "0 auto" }}>
       <h2>Terms of Service</h2>
-      <p className="text-muted">Last updated: {new Date().toISOString().slice(0, 10)}</p>
+      <p className="text-muted">Last updated: 2025-09-01</p>
 
       <p>
         These Terms of Service ("Terms") govern your use of this application.

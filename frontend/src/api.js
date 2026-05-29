@@ -1,4 +1,4 @@
-// src/api.js
+﻿// src/api.js
 const rawBase = process.env.REACT_APP_API_BASE || "";
 const API_BASE = rawBase.replace(/\/+$/, ""); // strip trailing slash if any
 export { API_BASE };
@@ -140,8 +140,8 @@ export const apiHideList = (listId) =>
   request(`/lists/${listId}/hide`, { method: "POST" });
 
 export const apiUnhideList = (listId) =>
-  request(`/lists/${listId}/unhide`, { method: "POST" });
-
+export const apiUnhideList = (listId) =>
+  request(`/lists/${listId}/hide`, { method: "DELETE" });
 // ---- Leave a shared list (non-owner) ----
 // Best-effort endpoint; if backend doesn't support, caller should gracefully fallback.
 export const apiLeaveSharedList = (listId) =>

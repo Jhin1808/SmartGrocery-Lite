@@ -1,6 +1,6 @@
 # app/routers/tasks.py
 import os
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Dict, List
 
 from fastapi import APIRouter, Header, HTTPException
@@ -105,7 +105,7 @@ def run_reminders(
             grouped.setdefault(owner.id, []).append((item, gl))
 
         total_sent = 0
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         for owner_id, pairs in grouped.items():
             owner = owners[owner_id]
             # Build digest HTML

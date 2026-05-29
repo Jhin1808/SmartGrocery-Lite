@@ -1,4 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
+// Clear any stale cached data from previous auth sessions
+let __listsCache = null;
+let __listsCacheHidden = null;
+let __itemsCache = {};
+const clearCaches = () => {
+  try { window.__sg_listsCache = null; window.__sg_listsCacheHidden = null; window.__sg_itemsCache = {}; } catch {}
+};
 import { apiLogout, apiMe, AUTH_FALLBACK_STORAGE_KEY } from "../api";
 
 const AuthCtx = createContext({ user: null, loading: true });

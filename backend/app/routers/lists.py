@@ -1,7 +1,7 @@
 # app/routers/lists.py
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
-from sqlalchemy import select, or_, and_
+from sqlalchemy import select, and_, true
 
 from app.database import get_db
 from app.models import GroceryList, User, ListItem, ListShare, ShareRole
@@ -83,7 +83,7 @@ def read_lists(
         .where(
             and_(
                 ListShare.user_id == current_user.id,
-                True if include_hidden else (ListShare.hidden == False),
+                True_() if include_hidden else (ListShare.hidden == False),
             )
         )
     ).all()

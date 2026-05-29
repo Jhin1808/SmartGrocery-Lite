@@ -7,7 +7,6 @@ from sqlalchemy.orm import DeclarativeBase, relationship
 import enum
 from sqlalchemy import Enum as SAEnum, UniqueConstraint
 
-
 class Base(DeclarativeBase):
     pass
 
@@ -22,7 +21,7 @@ class User(Base):
     # Core identity
     email = Column(String, unique=True, index=True, nullable=False)
 
-    # Google SSO link. We’ll enforce uniqueness via Alembic partial index,
+    # Google SSO link. We enforce uniqueness via Alembic partial index,
     # so keep this non-unique at the model level and just index it.
     google_sub = Column(String, index=True, nullable=True)
 
@@ -45,7 +44,7 @@ class GroceryList(Base):
     name = Column(String, nullable=False)
     owner_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
 
-    # 👇 add/ensure this line exists
+    # ðŸ‘‡ add/ensure this line exists
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     owner = relationship("User", back_populates="lists")
@@ -61,34 +60,6 @@ class GroceryList(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-# class GroceryList(Base):
-#     __tablename__ = "grocery_list"
-
-#     id = Column(Integer, primary_key=True)
-#     name = Column(String, nullable=False)
-#     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-#     owner_id = Column(
-#         Integer,
-#         ForeignKey("user.id", ondelete="CASCADE"),
-#         nullable=False,
-#     )
-    
-#     shares = relationship(
-#         "ListShare",
-#         back_populates="list",
-#         cascade="all, delete-orphan",
-#         passive_deletes=True,
-#     )
-    
-#     owner = relationship("User", back_populates="lists")
-#     items = relationship(
-#         "ListItem",
-#         back_populates="grocery_list",
-#         cascade="all, delete-orphan",
-#         passive_deletes=True,
-#     )
-
 class ListItem(Base):
     __tablename__ = "list_item"
 
@@ -112,7 +83,6 @@ class ListItem(Base):
 
     grocery_list = relationship("GroceryList", back_populates="items")
     
-    
 class ShareRole(str, enum.Enum):
     viewer = "viewer"
     editor = "editor"
@@ -131,7 +101,6 @@ class ListShare(Base):
     user = relationship("User")
     list = relationship("GroceryList", back_populates="shares")
 
-
 class PasswordResetCode(Base):
     __tablename__ = "password_reset_code"
 
@@ -147,7 +116,6 @@ class PasswordResetCode(Base):
     __table_args__ = (
         Index("ix_prc_user_active", "user_id", "expires_at"),
     )
-
 
 class UsedResetToken(Base):
     __tablename__ = "used_reset_token"

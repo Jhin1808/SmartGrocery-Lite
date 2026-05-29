@@ -11,15 +11,9 @@ from app.models import User
 from app.security import create_access_token
 from app.security_cookies import set_login_cookie, COOKIE_NAME
 from app.email_resend import ensure_contact
-from app.config import env_flag
+from app.config import env_flag, get_frontend_url
 
 router = APIRouter(prefix="/auth/google", tags=["auth:google"])
-
-def _frontend_url() -> str:
-    v = os.getenv("FRONTEND_URL")
-    if not v:
-        raise RuntimeError("FRONTEND_URL must be set")
-    return v.rstrip("/")
 
 def _backend_url(request: Request) -> str:
     # Prefer explicit env; otherwise reconstruct from forwarded headers
@@ -60,16 +54,16 @@ async def google_login(request: Request):
 @router.get("/callback")
 async def google_callback(request: Request, db: Session = Depends(get_db)):
     if request.query_params.get("error"):
-        return RedirectResponse(f"{_frontend_url()}/login")
+        return RedirectResponse(f"{get_frontend_url()}/login")
 
     try:
         token = await oauth.google.authorize_access_token(request)
     except OAuthError:
-        return RedirectResponse(f"{_frontend_url()}/login")
+        return RedirectResponse(f"{get_frontend_url()}/login")
 
     userinfo = token.get("userinfo")
     if not userinfo or "email" not in userinfo:
-        return RedirectResponse(f"{_frontend_url()}/login")
+        return RedirectResponse(f"{get_frontend_url()}/login")
 
     email = userinfo["email"]
     sub   = userinfo.get("sub")
@@ -96,7 +90,7 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
             db.commit(); db.refresh(user)
 
     jwt = create_access_token(user.id)
-    url = f"{_frontend_url()}/oauth/callback"
+    url = f"{get_frontend_url()}/oauth/callback"
     if TOKEN_IN_FRAGMENT:
         url = f"{url}#" + urlencode({FRAGMENT_TOKEN_PARAM: jwt})
     resp = RedirectResponse(url)

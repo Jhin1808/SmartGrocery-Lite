@@ -36,9 +36,9 @@ import {
 import "../enhanced-styles.css"; // Import the enhanced CSS
 
 // In-memory caches to avoid visible reloads when navigating back to Lists
-let __listsCache = { data: null, hidden: false, time: 0 };
-let __listsCacheHidden = { data: null, hidden: true, time: 0 };
-let __itemsCache = {};
+let window.__sg_listsCache = { data: null, hidden: false, time: 0 };
+let window.__sg_listsCacheHidden = { data: null, hidden: true, time: 0 };
+let window.__sg_itemsCache = {};
 
 // Enhanced expiry display helpers
 const parseDate = (s) => (s ? new Date(`${s}T00:00:00`) : null);
@@ -247,7 +247,7 @@ export default function EnhancedLists() {
 
   // Load lists on component mount (with cache hydration)
   useEffect(() => {
-    const cacheObj = showHidden ? __listsCacheHidden : __listsCache;
+    const cacheObj = showHidden ? window.__sg_listsCacheHidden : window.__sg_listsCache;
     if (cacheObj?.data) {
       setLists(cacheObj.data);
       setSelectedId((prev) => (prev ?? (cacheObj.data[0]?.id || null)));
@@ -259,8 +259,8 @@ export default function EnhancedLists() {
         setLists(data);
         setSelectedId((prev) => (prev ?? (data[0]?.id || null)));
         setIsLoading(false);
-        if (showHidden) __listsCacheHidden = { data, hidden: true, time: Date.now() };
-        else __listsCache = { data, hidden: false, time: Date.now() };
+        if (showHidden) window.__sg_listsCacheHidden = { data, hidden: true, time: Date.now() };
+        else window.__sg_listsCache = { data, hidden: false, time: Date.now() };
       } catch (e) {
         setErr(e.message || "Failed to load lists");
         setIsLoading(false);
@@ -274,14 +274,14 @@ export default function EnhancedLists() {
     const loadItems = async () => {
       if (!selectedId || itemsByList[selectedId]) return;
       // hydrate immediately from cache
-      if (__itemsCache[selectedId]) {
-        setItemsByList((m) => ({ ...m, [selectedId]: __itemsCache[selectedId] }));
+      if (window.__sg_itemsCache[selectedId]) {
+        setItemsByList((m) => ({ ...m, [selectedId]: window.__sg_itemsCache[selectedId] }));
       }
       try {
         setLoadingItems((s) => new Set(s).add(selectedId));
         const items = await apiGetItems(selectedId);
         setItemsByList((m) => ({ ...m, [selectedId]: items }));
-        __itemsCache[selectedId] = items;
+        window.__sg_itemsCache[selectedId] = items;
       } catch (e) {
         setErr(e.message || "Failed to load items");
       } finally {
@@ -337,7 +337,7 @@ export default function EnhancedLists() {
         ...m,
         [selectedId]: [item, ...(m[selectedId] || [])],
       }));
-      __itemsCache[selectedId] = [item, ...(__itemsCache[selectedId] || [])];
+      window.__sg_itemsCache[selectedId] = [item, ...(window.__sg_itemsCache[selectedId] || [])];
       
       setDrafts((d) => ({
         ...d,
@@ -361,7 +361,7 @@ export default function EnhancedLists() {
         ...m,
         [listId]: (m[listId] || []).filter((i) => i.id !== item.id),
       }));
-      __itemsCache[listId] = (__itemsCache[listId] || []).filter((i) => i.id !== item.id);
+      window.__sg_itemsCache[listId] = (window.__sg_itemsCache[listId] || []).filter((i) => i.id !== item.id);
       setEditing((s) => {
         const n = new Set(s);
         n.delete(item.id);
@@ -422,7 +422,7 @@ export default function EnhancedLists() {
           x.id === id ? updated : x
         ),
       }));
-      __itemsCache[selectedId] = (__itemsCache[selectedId] || []).map((x) => (x.id === id ? updated : x));
+      window.__sg_itemsCache[selectedId] = (window.__sg_itemsCache[selectedId] || []).map((x) => (x.id === id ? updated : x));
       cancelEdit(id);
       setToast({ message: "Item updated", variant: "success" });
     } catch (e) {

@@ -1,12 +1,10 @@
 # app/main.py
 import os
-import sqlalchemy
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 from urllib.parse import urlparse
-
 from app.database import engine
 from app.config import load_secret
 from app.security_cookies import COOKIE_NAME
@@ -25,11 +23,9 @@ try:
     from app.routers.email_test import router as email_test_router
 except Exception:
     email_test_router = None
-
 # One env only; can be single origin or comma-separated list
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 ALLOWED_ORIGINS = [o.strip().rstrip("/") for o in FRONTEND_URL.split(",") if o.strip()]
-
 SESSION_SECRET = load_secret(
     "SESSION_SECRET",
     fallback_names=("SECRET_KEY",),
@@ -40,12 +36,9 @@ COOKIE_SECURE = (os.getenv("COOKIE_SECURE", "false") or "false").lower() in ("1"
 # Enforce Secure when SameSite=None to comply with browser rules
 if COOKIE_SAMESITE == "none" and not COOKIE_SECURE:
     COOKIE_SECURE = True
-
 app = FastAPI(title="SmartGrocery Lite API", version="0.1.0")
-
-# Trust Koyeb/X-Forwarded-* headers
-
-
+# Koyeb sets X-Forwarded-Proto and X-Forwarded-Host headers.
+# These are used in _request_origin() and CORS origin matching below.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,   # pass the list directly
@@ -53,15 +46,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
     same_site=COOKIE_SAMESITE,
     https_only=COOKIE_SECURE,
 )
-
-
 def _origin_value(value: str | None) -> str | None:
     if not value:
         return None
@@ -69,8 +59,6 @@ def _origin_value(value: str | None) -> str | None:
     if not parsed.scheme or not parsed.netloc:
         return None
     return f"{parsed.scheme.lower()}://{parsed.netloc.lower()}"
-
-
 def _request_origin(request: Request) -> str | None:
     forwarded_proto = request.headers.get("x-forwarded-proto")
     forwarded_host = request.headers.get("x-forwarded-host")
@@ -79,8 +67,6 @@ def _request_origin(request: Request) -> str | None:
     if not host:
         return None
     return f"{scheme.lower()}://{host.lower()}"
-
-
 def _allowed_request_origin(request: Request) -> bool:
     source = _origin_value(request.headers.get("origin"))
     if not source:
@@ -92,8 +78,6 @@ def _allowed_request_origin(request: Request) -> bool:
     if current:
         allowed.add(current)
     return source.lower() in allowed
-
-
 @app.middleware("http")
 async def reject_cross_site_cookie_mutations(request: Request, call_next):
     unsafe_method = request.method.upper() not in {"GET", "HEAD", "OPTIONS", "TRACE"}
@@ -103,8 +87,6 @@ async def reject_cross_site_cookie_mutations(request: Request, call_next):
         if not _allowed_request_origin(request):
             return JSONResponse({"detail": "CSRF origin check failed"}, status_code=403)
     return await call_next(request)
-
-
 app.include_router(lists_router)
 app.include_router(auth_router)
 if google_router is not None:
@@ -113,9 +95,7 @@ app.include_router(me_router)
 app.include_router(tasks_router)
 if email_test_router is not None:
     app.include_router(email_test_router)
-
 # Removed startup connectivity check to avoid opening a DB connection at import time.
-
 @app.get("/")
 def root():
     return {"message": "Welcome to SmartGrocery Lite API"}

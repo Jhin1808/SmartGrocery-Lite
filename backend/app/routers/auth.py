@@ -16,7 +16,7 @@ from app.security import (
     decode_reset_token,
 )
 from app.security_cookies import set_login_cookie, clear_login_cookie
-from app.config import env_flag
+from app.config import env_flag, get_frontend_url
 from app.rate_limit import allow as allow_rate
 from app.deps import get_current_user_any as get_current_user
 
@@ -42,7 +42,7 @@ def token(
     form: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    # OAuth2 spec calls it "username" — we use email as username
+    # OAuth2 spec calls it "username" â€” we use email as username
     u = db.query(User).filter(User.email == form.username).first()
     if not u or not u.password_hash or not verify_password(form.password, u.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
@@ -92,16 +92,6 @@ class ResetPassword(BaseModel):
     new_password: str = Field(..., min_length=8, max_length=128)
 
 
-def _frontend_url() -> str:
-    import os
-    v = (os.getenv("FRONTEND_URL") or "http://localhost:3000").strip().strip('"').strip("'")
-    v = v.rstrip("/")
-    # If schema is missing, assume https for non-localhost
-    if v and not v.startswith("http://") and not v.startswith("https://"):
-        v = ("http://" if "localhost" in v else "https://") + v
-    return v
-
-
 @router.post("/forgot-password")
 def forgot_password(payload: ForgotPassword, request: Request, db: Session = Depends(get_db)):
     # Always respond OK to avoid user enumeration; include reset_url for dev convenience if user exists.
@@ -109,7 +99,7 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
     import httpx
 
     def _flag_true(val: str | None) -> bool:
-        return (val or "").strip().lower() in {"1", "true", "yes", "on", "disable"}
+        return (val or "").strip().lower() in {"1", "true", "yes", "on"}
 
     skip_rate_limits = _flag_true(os.getenv("FORGOT_LIMIT_DISABLE")) or _flag_true(
         os.getenv("DISABLE_FORGOT_RATE_LIMITS")
@@ -336,7 +326,7 @@ def _send_reset_code_email(to: str, code: str, minutes: int) -> dict:
 
         from urllib.parse import quote_plus
 
-        reset_link = f"{_frontend_url()}/reset?code={quote_plus(code)}&email={quote_plus(to)}"
+        reset_link = f"{get_frontend_url()}/reset?code={quote_plus(code)}&email={quote_plus(to)}"
 
         html = f"""
         <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#eff4ff;padding:24px 12px;">
@@ -370,7 +360,7 @@ def _send_reset_code_email(to: str, code: str, minutes: int) -> dict:
                 </tr>
                 <tr>
                   <td style="padding:18px 30px;background:#f8fafc;border-radius:0 0 14px 14px;border-top:1px solid #e2e8f0;text-align:center;font-size:12px;color:#94a3b8;">
-                    SmartGrocery &middot; Shared lists • Pantry reminders • Recipe mode
+                    SmartGrocery &middot; Shared lists â€¢ Pantry reminders â€¢ Recipe mode
                   </td>
                 </tr>
               </table>
@@ -447,132 +437,7 @@ def _send_reset_code_email(to: str, code: str, minutes: int) -> dict:
             s.login(user, pwd)
             s.send_message(msg)
         return
-    # Otherwise, no provider configured → do nothing
+    # Otherwise, no provider configured â†’ do nothing
 
 
-# # app/routers/auth.py
-# from fastapi import APIRouter, Depends, HTTPException, status, Response
-# from fastapi.security import OAuth2PasswordRequestForm
-# from sqlalchemy.orm import Session
 
-# from app.database import get_db
-# from app.models import User
-# from app.security import hash_password, verify_password, create_access_token
-# from app.schemas import RegisterRequest, UserRead
-# from app.security_cookies import set_access_cookie, clear_access_cookie
-
-# router = APIRouter(prefix="/auth", tags=["auth"])
-
-# @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-# def register(payload: RegisterRequest, db: Session = Depends(get_db)):
-#     if db.query(User).filter(User.email == payload.email).first():
-#         raise HTTPException(status_code=400, detail="Email already registered")
-#     u = User(email=payload.email, password_hash=hash_password(payload.password))
-#     db.add(u); db.commit(); db.refresh(u)
-#     return UserRead(id=u.id, email=u.email)
-
-# @router.post("/token", status_code=204)
-# def token(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-#     u = db.query(User).filter(User.email == form.username).first()
-#     if not u or not verify_password(form.password, u.password_hash or ""):
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
-#     jwt = create_access_token(u.id)
-#     resp = Response(status_code=204)
-#     set_access_cookie(resp, jwt)
-#     return resp
-
-# @router.post("/logout", status_code=204)
-# def logout():
-#     resp = Response(status_code=204)
-#     clear_access_cookie(resp)
-#     return resp
-
-
-# # app/routers/auth.py
-# from fastapi import APIRouter, Depends, HTTPException, status, Response
-# from fastapi.security import OAuth2PasswordRequestForm
-# from sqlalchemy.orm import Session
-
-# from app.database import get_db
-# from app.models import User
-# from app.security import hash_password, verify_password, create_access_token
-# from app.schemas import RegisterRequest, UserRead, TokenResponse
-# from fastapi import Response
-# from app.security_cookies import cookie_settings, set_access_cookie, clear_access_cookie
-
-
-# router = APIRouter(prefix="/auth", tags=["auth"])
-
-# @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-# def register(payload: RegisterRequest, db: Session = Depends(get_db)):
-#     if db.query(User).filter(User.email == payload.email).first():
-#         raise HTTPException(status_code=400, detail="Email already registered")
-#     u = User(email=payload.email, password_hash=hash_password(payload.password))
-#     db.add(u); db.commit(); db.refresh(u)
-#     return UserRead(id=u.id, email=u.email)
-
-# @router.post("/token", response_model=TokenResponse)
-# def token(response: Response, form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-#     u = db.query(User).filter(User.email == form.username).first()
-#     if not u or not verify_password(form.password, u.password_hash):
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
-#     jwt = create_access_token(u.id)
-#     set_access_cookie(response, jwt)              # <-- set HttpOnly cookie
-#     return TokenResponse(access_token=jwt)        # optional to also return JSON
-
-# # @router.post("/token", response_model=TokenResponse)
-# # def token(response: Response,
-# #           form: OAuth2PasswordRequestForm = Depends(),
-# #           db: Session = Depends(get_db)):
-# #     # OAuth2 form uses "username" — you’re using email as the username
-# #     u = db.query(User).filter(User.email == form.username).first()
-# #     # NOTE: u.password_hash may be NULL for Google-only accounts → treat as invalid for password flow
-# #     if not u or not u.password_hash or not verify_password(form.password, u.password_hash):
-# #         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
-
-# #     jwt = create_access_token(u.id)
-
-# #     # Set HttpOnly auth cookie (browser sends it automatically on same-origin requests)
-# #     response.set_cookie("access_token", jwt, **cookie_settings())
-
-# #     # Optional: still return the token in the JSON body for old code paths
-# #     return TokenResponse(access_token=jwt)
-# @router.post("/logout", status_code=204)
-# def logout(response: Response):
-#     clear_access_cookie(response)
-# # @router.post("/logout", status_code=204)
-# # def logout(response: Response):
-# #     # Delete the auth cookie
-# #     response.delete_cookie("access_token", path="/")
-# #     return Response(status_code=204)
-
-# # from fastapi import APIRouter, Depends, HTTPException, status
-# # from fastapi.security import OAuth2PasswordRequestForm
-# # from sqlalchemy.orm import Session
-
-# # from app.database import get_db
-# # from app.models import User
-# # from app.security import hash_password, verify_password, create_access_token
-# # from app.schemas import RegisterRequest, UserRead, TokenResponse
-
-# # from fastapi import Response
-# # from app.security_cookies import cookie_settings
-# # from app.security import create_access_token
-
-# # router = APIRouter(prefix="/auth", tags=["auth"])
-
-# # @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-# # def register(payload: RegisterRequest, db: Session = Depends(get_db)):
-# #     if db.query(User).filter(User.email == payload.email).first():
-# #         raise HTTPException(status_code=400, detail="Email already registered")
-# #     u = User(email=payload.email, password_hash=hash_password(payload.password))
-# #     db.add(u); db.commit(); db.refresh(u)
-# #     return UserRead(id=u.id, email=u.email)
-
-# # @router.post("/token", response_model=TokenResponse)
-# # def token(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-# #     # OAuth2 spec calls it "username"; we use email as the username
-# #     u = db.query(User).filter(User.email == form.username).first()
-# #     if not u or not verify_password(form.password, u.password_hash):
-# #         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
-# #     return TokenResponse(access_token=create_access_token(u.id))

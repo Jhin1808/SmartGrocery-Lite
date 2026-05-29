@@ -62,3 +62,12 @@ def load_secret(
         names = " or ".join(checked)
         raise RuntimeError(f"{names} must be set in production")
     return dev_default
+
+
+def get_frontend_url() -> str:
+    """Return the canonical frontend URL (no trailing slash, https by default)."""
+    v = (os.getenv("FRONTEND_URL") or "http://localhost:3000").strip().strip('"').strip("'")
+    v = v.rstrip("/")
+    if v and not v.startswith("http://") and not v.startswith("https://"):
+        v = ("http://" if "localhost" in v else "https://") + v
+    return v

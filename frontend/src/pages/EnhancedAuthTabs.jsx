@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Form, Button, Container, Row, Col, Card, Alert, Spinner, InputGroup } from "react-bootstrap";
 import 'bootstrap-icons/font/bootstrap-icons.css';
@@ -32,8 +32,6 @@ export default function EnhancedAuthTabs() {
   const [loginError, setLoginError] = useState("");
   
   // Register form state
-  const [registerFirstName, setRegisterFirstName] = useState("");
-  const [registerLastName, setRegisterLastName] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -350,38 +348,7 @@ export default function EnhancedAuthTabs() {
                       </div>
                     </div>
 
-                    {/* Email Register Form */}
-                    <Form onSubmit={handleRegister}>
-                      <Row className="mb-4">
-                        <Col md={6}>
-                          <Form.Group>
-                            <Form.Label className="text-forest-dark font-medium">First Name</Form.Label>
-                            <Form.Control
-                              type="text"
-                              placeholder="Your first name"
-                              value={registerFirstName}
-                              onChange={(e) => setRegisterFirstName(e.target.value)}
-                              required
-                              disabled={registerLoading}
-                              className="border-0 bg-light"
-                            />
-                          </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                          <Form.Group>
-                            <Form.Label className="text-forest-dark font-medium">Last Name</Form.Label>
-                            <Form.Control
-                              type="text"
-                              placeholder="Your last name"
-                              value={registerLastName}
-                              onChange={(e) => setRegisterLastName(e.target.value)}
-                              required
-                              disabled={registerLoading}
-                              className="border-0 bg-light"
-                            />
-                          </Form.Group>
-                        </Col>
-                      </Row>
+                    {/* Email Register Form */}`n                    <Form onSubmit={handleRegister}>
 
                       <Form.Group className="mb-4">
                         <Form.Label className="text-forest-dark font-medium">Email Address</Form.Label>
@@ -514,8 +481,6 @@ export default function EnhancedAuthTabs() {
                         className="w-100 py-3"
                         disabled={
                           registerLoading || 
-                          !registerFirstName || 
-                          !registerLastName || 
                           !registerEmail || 
                           !registerPassword || 
                           !confirmPassword ||
