@@ -70,3 +70,48 @@ def test_run_reminders_requires_configured_secret(client, monkeypatch):
     r = client.post("/tasks/run-reminders")
 
     assert r.status_code == 503
+
+
+def test_run_reminders_escapes_user_content_in_email_html(client, test_user, monkeypatch):
+    from datetime import date
+
+    from app.database import get_db
+    from app.models import GroceryList, ListItem, User
+    from app.routers import tasks
+
+    db_override = client.app.dependency_overrides[get_db]
+    db = next(db_override())
+    try:
+        user = db.get(User, test_user.id)
+        user.name = "<img src=x onerror=alert(1)>"
+        grocery_list = GroceryList(name="<script>alert(1)</script>", owner_id=user.id)
+        db.add(grocery_list)
+        db.flush()
+        db.add(
+            ListItem(
+                name="<b>Milk</b>",
+                quantity=1,
+                remind_on=date.today(),
+                purchased=False,
+                list_id=grocery_list.id,
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    sent = {}
+
+    def fake_send_email(to, subject, html, text=None):
+        sent["html"] = html
+
+    monkeypatch.setenv("CRON_SECRET", "test-cron-secret")
+    monkeypatch.setattr(tasks, "_send_email", fake_send_email)
+
+    r = client.post("/tasks/run-reminders", headers={"x-api-key": "test-cron-secret"})
+
+    assert r.status_code == 200, r.text
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in sent["html"]
+    assert "&lt;b&gt;Milk&lt;/b&gt;" in sent["html"]
+    assert "<script>alert(1)</script>" not in sent["html"]
+    assert "<b>Milk</b>" not in sent["html"]

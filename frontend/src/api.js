@@ -1,9 +1,8 @@
-﻿// src/api.js
+// src/api.js
 const rawBase = process.env.REACT_APP_API_BASE || "";
-const API_BASE = rawBase.replace(/\/+$/, ""); // strip trailing slash if any
+const API_BASE = rawBase.replace(/\/+$/, "");
 export { API_BASE };
 
-// Shared constants to avoid hardcoding names
 export const AUTH_FALLBACK_STORAGE_KEY =
   process.env.REACT_APP_AUTH_FALLBACK_STORAGE_KEY || "token";
 export const TOKEN_FRAGMENT_PARAM =
@@ -12,13 +11,11 @@ export const AUTH_HEADER_FALLBACK_ENABLED = ["1", "true", "yes", "on"].includes(
   (process.env.REACT_APP_AUTH_HEADER_FALLBACK_ENABLED || "").toLowerCase()
 );
 
-// Safely join base + path
 function joinUrl(base, path) {
   const p = path.startsWith("/") ? path : `/${path}`;
   return `${base}${p}`;
 }
 
-// Generic request helper (cookie-based auth)
 async function request(path, { method = "GET", headers = {}, body } = {}) {
   const url = joinUrl(API_BASE, path);
 
@@ -40,7 +37,7 @@ async function request(path, { method = "GET", headers = {}, body } = {}) {
     method,
     headers: h,
     body: payload,
-    credentials: "include", // keep cookies
+    credentials: "include",
     cache: "no-store",
   });
 
@@ -140,10 +137,8 @@ export const apiHideList = (listId) =>
   request(`/lists/${listId}/hide`, { method: "POST" });
 
 export const apiUnhideList = (listId) =>
-export const apiUnhideList = (listId) =>
   request(`/lists/${listId}/hide`, { method: "DELETE" });
 // ---- Leave a shared list (non-owner) ----
-// Best-effort endpoint; if backend doesn't support, caller should gracefully fallback.
 export const apiLeaveSharedList = (listId) =>
   request(`/lists/${listId}/share/leave`, { method: "POST" });
 

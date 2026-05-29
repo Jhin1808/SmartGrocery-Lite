@@ -42,7 +42,7 @@ def token(
     form: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    # OAuth2 spec calls it "username" â€” we use email as username
+    # OAuth2 calls the field "username"; this app accepts the user's email there.
     u = db.query(User).filter(User.email == form.username).first()
     if not u or not u.password_hash or not verify_password(form.password, u.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
@@ -360,7 +360,7 @@ def _send_reset_code_email(to: str, code: str, minutes: int) -> dict:
                 </tr>
                 <tr>
                   <td style="padding:18px 30px;background:#f8fafc;border-radius:0 0 14px 14px;border-top:1px solid #e2e8f0;text-align:center;font-size:12px;color:#94a3b8;">
-                    SmartGrocery &middot; Shared lists â€¢ Pantry reminders â€¢ Recipe mode
+                    SmartGrocery &middot; Shared lists &middot; Pantry reminders &middot; Recipe mode
                   </td>
                 </tr>
               </table>
@@ -437,7 +437,7 @@ def _send_reset_code_email(to: str, code: str, minutes: int) -> dict:
             s.login(user, pwd)
             s.send_message(msg)
         return
-    # Otherwise, no provider configured â†’ do nothing
+    # Otherwise, no provider is configured; leave email delivery as a no-op.
 
 
 

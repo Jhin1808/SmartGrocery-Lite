@@ -33,12 +33,21 @@ import {
   apiUnhideList,
   apiLeaveSharedList,
 } from "../api";
-import "../enhanced-styles.css"; // Import the enhanced CSS
+import "../enhanced-styles.css";
 
-// In-memory caches to avoid visible reloads when navigating back to Lists
-let window.__sg_listsCache = { data: null, hidden: false, time: 0 };
-let window.__sg_listsCacheHidden = { data: null, hidden: true, time: 0 };
-let window.__sg_itemsCache = {};
+if (typeof window !== "undefined") {
+  window.__sg_listsCache = window.__sg_listsCache || {
+    data: null,
+    hidden: false,
+    time: 0,
+  };
+  window.__sg_listsCacheHidden = window.__sg_listsCacheHidden || {
+    data: null,
+    hidden: true,
+    time: 0,
+  };
+  window.__sg_itemsCache = window.__sg_itemsCache || {};
+}
 
 // Enhanced expiry display helpers
 const parseDate = (s) => (s ? new Date(`${s}T00:00:00`) : null);
@@ -242,8 +251,6 @@ export default function EnhancedLists() {
         ...patch,
       },
     }));
-
-  // Using real API functions from ../api
 
   // Load lists on component mount (with cache hydration)
   useEffect(() => {
@@ -1420,8 +1427,6 @@ export default function EnhancedLists() {
           </Button>
         </Modal.Footer>
       </Modal>
-
-      {/* Confirm remove shared modal removed; immediate action handled on button */}
 
       {/* Toast Notifications */}
       <ToastContainer position="top-end" className="p-3">

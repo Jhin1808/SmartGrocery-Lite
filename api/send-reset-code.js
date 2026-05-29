@@ -14,15 +14,18 @@ export default async function handler(req, res) {
   const name = body.name || '';
 
   if (!to || !code) return res.status(400).json({ ok: false, error: 'missing to/code' });
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) {
+    return res.status(503).json({ ok: false, error: 'email provider not configured' });
+  }
 
-  // Optionally ensure contact in Audience first
   try {
     const audienceId = process.env.RESEND_AUDIENCE_ID;
     if (audienceId) {
       const up = await fetch('https://api.resend.com/contacts', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Authorization': `Bearer ${resendKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email: to, audience_id: audienceId, first_name: name || undefined }),
@@ -56,7 +59,7 @@ export default async function handler(req, res) {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Authorization': `Bearer ${resendKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ from, to: [to], subject: 'SmartGrocery: Your reset code', html, text }),

@@ -9,6 +9,11 @@ export default async function handler(req, res) {
   const { email, name } = req.body || {};
   if (!email) return res.status(400).json({ ok: false, error: 'missing email' });
 
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) {
+    return res.status(503).json({ ok: false, error: 'email provider not configured' });
+  }
+
   const audienceId = process.env.RESEND_AUDIENCE_ID;
   if (!audienceId) return res.status(400).json({ ok: false, error: 'no audience configured' });
 
@@ -16,7 +21,7 @@ export default async function handler(req, res) {
     const r = await fetch('https://api.resend.com/contacts', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Authorization': `Bearer ${resendKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ email, audience_id: audienceId, first_name: name || undefined }),

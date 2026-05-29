@@ -1,6 +1,7 @@
 # app/routers/tasks.py
 import os
 from datetime import datetime, date, timezone
+from html import escape
 from typing import Dict, List
 
 from fastapi import APIRouter, Header, HTTPException
@@ -108,16 +109,23 @@ def run_reminders(
         now = datetime.now(timezone.utc)
         for owner_id, pairs in grouped.items():
             owner = owners[owner_id]
-            # Build digest HTML
+            owner_label = owner.name or owner.email
             rows = []
             text_rows = []
             for item, gl in pairs:
                 exp = item.expiry.isoformat() if item.expiry else "-"
                 rn = item.remind_on.isoformat() if item.remind_on else "-"
-                rows.append(f"<tr><td>{gl.name}</td><td>{item.name}</td><td>{exp}</td><td>{rn}</td></tr>")
+                rows.append(
+                    "<tr>"
+                    f"<td>{escape(gl.name, quote=True)}</td>"
+                    f"<td>{escape(item.name, quote=True)}</td>"
+                    f"<td>{exp}</td>"
+                    f"<td>{rn}</td>"
+                    "</tr>"
+                )
                 text_rows.append(f"- {gl.name}: {item.name} | Expiry: {exp} | Remind On: {rn}")
             html = f"""
-            <p>Hi {owner.name or owner.email},</p>
+            <p>Hi {escape(owner_label, quote=True)},</p>
             <p>Here are your item reminders for today:</p>
             <table border=1 cellpadding=6 cellspacing=0>
               <thead><tr><th>List</th><th>Item</th><th>Expiry</th><th>Remind On</th></tr></thead>
@@ -126,7 +134,7 @@ def run_reminders(
             <p>You can adjust or clear reminders in the app.</p>
             """
             text = (
-                f"Hi {owner.name or owner.email},\n\n"
+                f"Hi {owner_label},\n\n"
                 "Here are your item reminders for today:\n"
                 + "\n".join(text_rows)
                 + "\n\nYou can adjust or clear reminders in the app.\n"

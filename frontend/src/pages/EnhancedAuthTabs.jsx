@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Form, Button, Container, Row, Col, Card, Alert, Spinner, InputGroup } from "react-bootstrap";
 import 'bootstrap-icons/font/bootstrap-icons.css';
@@ -11,7 +11,7 @@ import {
   AUTH_HEADER_FALLBACK_ENABLED,
   googleLoginUrl,
 } from "../api";
-import "../enhanced-styles.css"; // Import the enhanced CSS
+import "../enhanced-styles.css";
 import googleIcon from "../googleicon.png";
 import brand from "../Weblogo.png";
 
@@ -40,8 +40,6 @@ export default function EnhancedAuthTabs() {
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerError, setRegisterError] = useState("");
   const [passwordStrength, setPasswordStrength] = useState(0);
-
-  // Animation states (removed unused isLoading)
 
   // Show an error if OAuth callback sent ?error=...
   useEffect(() => {
@@ -348,7 +346,8 @@ export default function EnhancedAuthTabs() {
                       </div>
                     </div>
 
-                    {/* Email Register Form */}`n                    <Form onSubmit={handleRegister}>
+                    {/* Email Register Form */}
+                    <Form onSubmit={handleRegister}>
 
                       <Form.Group className="mb-4">
                         <Form.Label className="text-forest-dark font-medium">Email Address</Form.Label>

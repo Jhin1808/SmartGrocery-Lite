@@ -1,14 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-// Clear any stale cached data from previous auth sessions
-let __listsCache = null;
-let __listsCacheHidden = null;
-let __itemsCache = {};
-const clearCaches = () => {
-  try { window.__sg_listsCache = null; window.__sg_listsCacheHidden = null; window.__sg_itemsCache = {}; } catch {}
-};
 import { apiLogout, apiMe, AUTH_FALLBACK_STORAGE_KEY } from "../api";
 
 const AuthCtx = createContext({ user: null, loading: true });
+
+export function clearSessionCaches() {
+  if (typeof window === "undefined") return;
+  window.__sg_listsCache = { data: null, hidden: false, time: 0 };
+  window.__sg_listsCacheHidden = { data: null, hidden: true, time: 0 };
+  window.__sg_itemsCache = {};
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -20,6 +20,7 @@ export function AuthProvider({ children }) {
       const u = await apiMe();
       setUser(u);
     } catch {
+      clearSessionCaches();
       setUser(null);
     } finally {
       setLoading(false);
@@ -42,6 +43,7 @@ export function AuthProvider({ children }) {
       try { localStorage.removeItem(AUTH_FALLBACK_STORAGE_KEY); } catch {}
       await apiLogout();
     } catch {}
+    clearSessionCaches();
     setUser(null);
   }, []);
 

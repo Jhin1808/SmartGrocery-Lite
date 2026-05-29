@@ -44,7 +44,6 @@ class GroceryList(Base):
     name = Column(String, nullable=False)
     owner_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
 
-    # ðŸ‘‡ add/ensure this line exists
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     owner = relationship("User", back_populates="lists")
