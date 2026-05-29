@@ -42,9 +42,9 @@
 |                        SmartGrocery-Lite                             |
 |                                                                      |
 |  +-----------------+     +----------------------------------------+  |
-|  |   Vercel CDN     |     |        Koyeb / PaaS Hosting             |  |
-|  | (smartgrocery    |     |  (api.smartgrocery.online)              |  |
-|  |  .online)        |     |                                        |  |
+|  |   Frontend CDN   |     |        API Hosting                      |  |
+|  |                  |     |                                        |  |
+|  |                  |     |                                        |  |
 |  |                  |     |  +----------------------------------+  |  |
 |  |  React SPA       |     |  |       FastAPI Application         |  |  |
 |  |  (static files)  |<--->|  |                                  |  |  |
@@ -72,9 +72,9 @@
 
 | Deployment | URL |
 |---|---|
-| Frontend (Vercel) | `https://smartgrocery.online` |
-| Frontend (alt) | `https://smart-grocery-lite.vercel.app` |
-| Backend (Koyeb) | `https://api.smartgrocery.online` |
+| Frontend | Stored locally only; see `DEPLOYMENT_URLS.local.md` |
+| Frontend alternate | Stored locally only; see `DEPLOYMENT_URLS.local.md` |
+| Backend API | Stored locally only; see `DEPLOYMENT_URLS.local.md` |
 
 ### Tech Stack
 
@@ -711,7 +711,7 @@ Renders branded HTML email: SmartGrocery header with blue gradient, code display
 
 | File | Purpose | Auth |
 |---|---|---|
-| `cron-run-reminders.js` | Vercel Cron → POSTs to backend `/tasks/run-reminders` | `x-vercel-cron` header OR `Bearer <CRON_SECRET>` |
+| `cron-run-reminders.js` | Vercel Cron → POSTs to backend `/tasks/run-reminders` | `Bearer <CRON_SECRET>` |
 | `resend-upsert.js` | Relay contact upsert to Resend (keeps key in Vercel) | `x-api-key` matching `EMAIL_TEST_SECRET` or `CRON_SECRET` |
 | `send-reset-code.js` | Relay reset code email sending via Resend API | `x-api-key` matching `EMAIL_TEST_SECRET` or `CRON_SECRET` |
 
