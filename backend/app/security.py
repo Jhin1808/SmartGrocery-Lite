@@ -9,7 +9,7 @@ from app.config import load_secret
 
 SECRET_KEY = load_secret(
     "SECRET_KEY",
-    fallback_names=("JWT_SECRET_KEY",),
+    fallback_names=("JWT_SECRET_KEY", "JWT_SECRET"),
     dev_default="change-me-in-dev",
 )
 ALGORITHM = os.getenv("ALGORITHM") or os.getenv("JWT_ALGORITHM", "HS256")
@@ -55,5 +55,4 @@ def decode_reset_token(token: str) -> dict:
     if data.get("purpose") != "reset":
         raise jwt.InvalidTokenError("Invalid token purpose")
     return data
-
 

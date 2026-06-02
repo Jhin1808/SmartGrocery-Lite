@@ -394,7 +394,7 @@ Standalone individual list page at `/lists/:id`:
 | `create_reset_token(subject, expires=30)` | Convenience wrapper: purpose="reset" |
 | `decode_reset_token(token)` | Validates purpose="reset", returns payload |
 
-**Key loading:** `SECRET_KEY` loaded via `load_secret()` with fallback to `JWT_SECRET_KEY`.
+**Key loading:** `SECRET_KEY` loaded via `load_secret()` with fallback to `JWT_SECRET_KEY` or `JWT_SECRET`.
 
 ### 3.5 Auth Dependencies
 
@@ -772,7 +772,7 @@ Renders branded HTML email: SmartGrocery header with blue gradient, code display
 | `FRONTEND_URL` | `http://localhost:3000` | CORS origin + redirect target |
 | `DATABASE_URL` | `postgresql://...` | PostgreSQL connection string |
 | `SECRET_KEY` | *required (≥32 chars)* | JWT signing key |
-| `SESSION_SECRET` | *required* | Starlette session encryption |
+| `SESSION_SECRET` | optional when `SECRET_KEY`/JWT alias is set | Starlette session encryption; falls back to the JWT signing secret |
 | `REQUIRE_STRONG_SECRETS` | `0` | Enforce prod security in non-prod envs |
 | `COOKIE_SECURE` | `0` | Set `Secure` flag on cookies |
 | `COOKIE_SAMESITE` | `lax` | SameSite cookie attribute |
@@ -794,6 +794,8 @@ Renders branded HTML email: SmartGrocery header with blue gradient, code display
 | `DB_DISABLE_POOL` | *auto-detected* | Force disable connection pooling |
 | `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | `1` / `0` | Connection pool tuning |
 | `OAUTH_TOKEN_IN_FRAGMENT` | `0` | Include JWT in URL fragment (Safari fallback) |
+
+Koyeb/backend deploys must set one JWT signing secret: prefer `SECRET_KEY`, or reuse an existing `JWT_SECRET_KEY`/`JWT_SECRET`. Use at least 32 random characters. `SESSION_SECRET` can be omitted when one of those JWT signing secrets is set.
 
 ### Frontend Variables (`REACT_APP_*`)
 
