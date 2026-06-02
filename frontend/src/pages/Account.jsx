@@ -1,6 +1,23 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../pages/AuthContext";
 import { apiUpdateMe, apiChangePassword } from "../api";
+
+function sanitizeImageUrl(u) {
+  if (!u) return "";
+  const s = String(u).trim();
+  if (!s || s.startsWith("<")) return "";
+  if (s.startsWith("data:")) {
+    const head = s.slice(5, 40).toLowerCase();
+    const ok = ["image/png", "image/jpeg", "image/gif", "image/webp"].some((t) => head.startsWith(t));
+    return ok ? s : "";
+  }
+  try {
+    const url = new URL(s, window.location.origin);
+    const proto = url.protocol.replace(":", "");
+    if (["http", "https", "blob"].includes(proto)) return url.href;
+  } catch {}
+  return "";
+}
 
 function Toast({ toast, onClose }) {
   useEffect(() => {
@@ -56,45 +73,13 @@ export default function Account() {
   const [name, setName] = useState("");
   const [picture, setPicture] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
-  const [previewSrc, setPreviewSrc] = useState("");
-  const hadErrorRef = useRef(false);
 
   useEffect(() => {
     setName(user?.name || "");
     setPicture(user?.picture || "");
-    hadErrorRef.current = false;
   }, [user]);
 
-  const fallbackAvatar = useMemo(() => "", []);
-
-  const sanitizeImageUrl = (u) => {
-    if (!u) return "";
-    const s = String(u).trim();
-    if (!s || s.startsWith("<")) return "";
-    if (s.startsWith("data:")) {
-      const head = s.slice(5, 40).toLowerCase();
-      const ok = ["image/png", "image/jpeg", "image/gif", "image/webp"].some((t) => head.startsWith(t));
-      return ok ? s : "";
-    }
-    try {
-      const url = new URL(s, window.location.origin);
-      const proto = url.protocol.replace(":", "");
-      if (["http", "https", "blob"].includes(proto)) return url.href;
-    } catch {}
-    return "";
-  };
-
-  useEffect(() => {
-    const safe = sanitizeImageUrl(picture);
-    setPreviewSrc(safe || fallbackAvatar);
-  }, [picture, fallbackAvatar]);
-
-  const onImgError = () => {
-    if (!hadErrorRef.current) {
-      hadErrorRef.current = true;
-      setPreviewSrc("");
-    }
-  };
+  const savedAvatarSrc = useMemo(() => sanitizeImageUrl(user?.picture), [user?.picture]);
 
   const dirtyProfile = name !== (user?.name || "") || picture !== (user?.picture || "");
   const clearPicture = () => setPicture("");
@@ -150,7 +135,7 @@ export default function Account() {
 
       <div className="lm-card lm-card--elevated anim-fade" style={{ overflow: "hidden" }}>
         <div style={{ padding: "20px 24px", display: "flex", alignItems: "center", gap: 16, borderBottom: "1px solid var(--border)", background: "var(--surface-hover)" }}>
-          <Avatar user={user} url={previewSrc} />
+          <Avatar user={user} url={savedAvatarSrc} />
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 18, fontWeight: 700 }} className="truncate">{user?.name || "Welcome"}</div>
             <div style={{ fontSize: 13, color: "var(--text-muted)" }} className="truncate">{user?.email}</div>
@@ -218,7 +203,6 @@ export default function Account() {
                       placeholder="https://example.com/photo.jpg"
                       value={picture}
                       onChange={(e) => setPicture(e.target.value)}
-                      onError={onImgError}
                     />
                     {picture && (
                       <button type="button" className="btn btn-ghost-danger" onClick={clearPicture} title="Remove picture">
