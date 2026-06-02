@@ -1,6 +1,22 @@
 import pytest
 
 
+def _restore_import_secret_state(monkeypatch):
+    import importlib
+    import app.main as main
+    import app.security as security
+
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///./.pytest-test.db")
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key-for-suite-32-bytes")
+    monkeypatch.setenv("SESSION_SECRET", "test-session-secret-for-suite-32")
+    monkeypatch.setenv("FRONTEND_URL", "http://localhost:3000")
+    monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+    monkeypatch.delenv("JWT_SECRET", raising=False)
+
+    importlib.reload(security)
+    importlib.reload(main)
+
+
 def test_public_deployment_rejects_default_secrets(monkeypatch):
     from app.config import load_secret
 
@@ -14,6 +30,43 @@ def test_public_deployment_rejects_default_secrets(monkeypatch):
             fallback_names=("JWT_SECRET_KEY",),
             dev_default="change-me-in-dev",
         )
+
+
+def test_jwt_secret_alias_is_accepted_in_public_deployment(monkeypatch):
+    import importlib
+
+    alias_value = "test-jwt-secret-alias-value-with-32-chars"
+    try:
+        monkeypatch.delenv("SECRET_KEY", raising=False)
+        monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+        monkeypatch.setenv("JWT_SECRET", alias_value)
+        monkeypatch.setenv("FRONTEND_URL", "https://smartgrocery.online")
+
+        import app.security as security
+
+        security = importlib.reload(security)
+        assert security.SECRET_KEY == alias_value
+    finally:
+        _restore_import_secret_state(monkeypatch)
+
+
+def test_session_secret_can_reuse_jwt_secret_alias(monkeypatch):
+    import importlib
+
+    alias_value = "test-jwt-secret-alias-value-with-32-chars"
+    try:
+        monkeypatch.delenv("SESSION_SECRET", raising=False)
+        monkeypatch.delenv("SECRET_KEY", raising=False)
+        monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+        monkeypatch.setenv("JWT_SECRET", alias_value)
+        monkeypatch.setenv("FRONTEND_URL", "https://smartgrocery.online")
+
+        import app.main as main
+
+        main = importlib.reload(main)
+        assert main.SESSION_SECRET == alias_value
+    finally:
+        _restore_import_secret_state(monkeypatch)
 
 
 def test_token_endpoint_does_not_return_bearer_token_by_default(client, test_user):

@@ -1808,18 +1808,22 @@ textarea.form-control { resize: vertical; min-height: 60px; line-height: 1.5; }
 .lm-cta__headline {
   font-family: var(--font-display);
   font-size: 44px;
-  line-height: 1.05;
-  letter-spacing: -0.035em;
+  line-height: 1.16;
+  letter-spacing: 0;
   font-weight: 600;
   color: var(--neutral-50);
   margin: 0;
+  overflow: visible;
 }
 .lm-cta__headline em {
+  display: inline-block;
   font-style: italic;
   background: linear-gradient(120deg, var(--brand-200), var(--accent-300));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  padding-right: 0.04em;
+  padding-bottom: 0.08em;
 }
 .lm-cta__sub { font-size: 15px; color: rgba(245, 245, 244, 0.7); line-height: 1.55; margin: 0; max-width: 460px; }
 

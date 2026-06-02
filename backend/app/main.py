@@ -35,7 +35,7 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 ALLOWED_ORIGINS = [o.strip().rstrip("/") for o in FRONTEND_URL.split(",") if o.strip()]
 SESSION_SECRET = load_secret(
     "SESSION_SECRET",
-    fallback_names=("SECRET_KEY",),
+    fallback_names=("SECRET_KEY", "JWT_SECRET_KEY", "JWT_SECRET"),
     dev_default="dev-insecure",
 )
 COOKIE_SAMESITE = (os.getenv("COOKIE_SAMESITE", "lax") or "lax").lower()
