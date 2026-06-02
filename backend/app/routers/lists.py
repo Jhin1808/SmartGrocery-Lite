@@ -12,6 +12,7 @@ from app.schemas import (
     ListReadEx,
 )
 from app.deps import get_current_user_any as get_current_user
+from app.catalog.auto_categorize import categorize as auto_categorize
 
 router = APIRouter(prefix="/lists", tags=["lists"])
 
@@ -188,6 +189,18 @@ def add_item(
     gl = _get_list_or_404(db, list_id)
     _require_edit(db, gl, current_user)
 
+    # Auto-categorize when caller didn't supply one
+    category = payload.category
+    subcategory = payload.subcategory
+    if not category:
+        canonical, _display, hint = auto_categorize(payload.name)
+        if canonical:
+            # Store the canonical path in `category` for filtering; the
+            # human-friendly display name is in `subcategory` as a fallback.
+            category = canonical
+            if not subcategory:
+                subcategory = hint
+
     item = ListItem(
         name=payload.name,
         quantity=payload.quantity,
@@ -196,6 +209,17 @@ def add_item(
         remind_on=payload.remind_on,
         purchased=(payload.purchased if payload.purchased is not None else False),
         list_id=list_id,
+        category=category,
+        subcategory=subcategory,
+        weight_value=payload.weight_value,
+        weight_unit=payload.weight_unit,
+        brand=payload.brand,
+        barcode=payload.barcode,
+        product_image_url=payload.product_image_url,
+        price=payload.price,
+        price_source=payload.price_source,
+        store_id=payload.store_id,
+        nutrition_json=payload.nutrition_json,
     )
     db.add(item)
     db.commit()
@@ -246,6 +270,33 @@ def update_item(
         item.reminded_at = None
     if payload.purchased is not None:
         item.purchased = bool(payload.purchased)
+
+    # Catalog fields
+    if payload.category is not None:
+        item.category = payload.category or None
+    if payload.subcategory is not None:
+        item.subcategory = payload.subcategory or None
+    if payload.weight_value is not None:
+        item.weight_value = payload.weight_value
+    if payload.weight_unit is not None:
+        item.weight_unit = payload.weight_unit or None
+    if payload.brand is not None:
+        item.brand = payload.brand or None
+    if payload.barcode is not None:
+        item.barcode = payload.barcode or None
+    if payload.product_image_url is not None:
+        item.product_image_url = payload.product_image_url or None
+    if payload.price is not None:
+        item.price = payload.price
+        # If caller sets a price but not a source, default to "user"
+        if not item.price_source and payload.price_source is None:
+            item.price_source = "user"
+    if payload.price_source is not None:
+        item.price_source = payload.price_source
+    if payload.store_id is not None:
+        item.store_id = payload.store_id or None
+    if payload.nutrition_json is not None:
+        item.nutrition_json = payload.nutrition_json
 
     db.commit()
     db.refresh(item)

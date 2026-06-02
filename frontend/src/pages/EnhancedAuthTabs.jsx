@@ -1,7 +1,5 @@
-import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Form, Button, Container, Row, Col, Card, Alert, Spinner, InputGroup } from "react-bootstrap";
-import 'bootstrap-icons/font/bootstrap-icons.css';
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import {
   apiLogin,
@@ -11,37 +9,188 @@ import {
   AUTH_HEADER_FALLBACK_ENABLED,
   googleLoginUrl,
 } from "../api";
-import "../enhanced-styles.css";
 import googleIcon from "../googleicon.png";
-import brand from "../Weblogo.png";
+
+function BrandMark({ size = 32 }) {
+  return (
+    <span
+      className="lm-mark"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.45) }}
+      aria-hidden="true"
+    >
+      <svg viewBox="0 0 24 24" width={Math.round(size * 0.55)} height={Math.round(size * 0.55)} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3h2l2.4 12.3a2 2 0 0 0 2 1.7h8.5a2 2 0 0 0 2-1.6L21 8H6" />
+        <circle cx="9" cy="20" r="1.4" />
+        <circle cx="18" cy="20" r="1.4" />
+      </svg>
+    </span>
+  );
+}
+
+function PasswordField({ value, onChange, placeholder, show, onToggle, disabled, autoComplete, name }) {
+  return (
+    <div className="password-input">
+      <input
+        type={show ? "text" : "password"}
+        className="form-control"
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        autoComplete={autoComplete}
+        name={name}
+        required
+      />
+      <button
+        type="button"
+        className="password-input__toggle"
+        onClick={onToggle}
+        aria-label={show ? "Hide password" : "Show password"}
+        tabIndex={-1}
+      >
+        <i className={`bi ${show ? "bi-eye-slash" : "bi-eye"}`} />
+      </button>
+    </div>
+  );
+}
+
+function StrengthMeter({ password }) {
+  const score = useMemo(() => {
+    let s = 0;
+    if (password.length >= 8) s++;
+    if (password.length >= 12) s++;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) s++;
+    if (/\d/.test(password)) s++;
+    if (/[^a-zA-Z0-9]/.test(password)) s++;
+    return Math.min(s, 4);
+  }, [password]);
+
+  const level = ["", "Weak", "Fair", "Good", "Strong"][score];
+  const cls = ["", "weak", "weak", "fair", "strong"][score];
+
+  if (!password) return null;
+
+  return (
+    <div className="strength-meter">
+      <div className={`strength-meter__bar ${cls}`}>
+        <div /><div /><div /><div />
+      </div>
+      <div className="strength-meter__label">
+        <span>Password strength</span>
+        <span>{level}</span>
+      </div>
+    </div>
+  );
+}
+
+function AuthAside() {
+  return (
+    <aside className="auth-aside" aria-hidden="true">
+      <div className="flex items-center gap-3" style={{ color: "var(--neutral-50)" }}>
+        <BrandMark size={40} />
+        <span style={{ fontWeight: 800, fontSize: 18, letterSpacing: "-0.02em" }}>SmartGrocery</span>
+      </div>
+
+      <div className="lm-cta" style={{ flex: 1, justifyContent: "center" }}>
+        <span className="lm-cta__eyebrow">
+          <i className="bi bi-stars" /> New • Real-time sharing
+        </span>
+        <h1 className="lm-cta__headline">
+          Grocery lists that <em>actually</em> get done.
+        </h1>
+        <p className="lm-cta__sub">
+          Plan together, share instantly, and check items off as you walk the aisles.
+          SmartGrocery keeps your household in sync — no more duplicate buys or forgotten staples.
+        </p>
+
+        <div className="flex flex-col" style={{ gap: 12, marginTop: 12 }}>
+          <div className="lm-feature">
+            <span className="lm-feature__icon"><i className="bi bi-list-check" /></span>
+            <div>
+              <p className="lm-feature__title">Smart lists</p>
+              <p className="lm-feature__desc">Group items by aisle, mark favourites, track expiry dates.</p>
+            </div>
+          </div>
+          <div className="lm-feature">
+            <span className="lm-feature__icon lm-feature__icon--accent"><i className="bi bi-people-fill" /></span>
+            <div>
+              <p className="lm-feature__title">Live sharing</p>
+              <p className="lm-feature__desc">Invite your partner, roommates or family in a single tap.</p>
+            </div>
+          </div>
+          <div className="lm-feature">
+            <span className="lm-feature__icon lm-feature__icon--violet"><i className="bi bi-bag-check-fill" /></span>
+            <div>
+              <p className="lm-feature__title">Shop mode</p>
+              <p className="lm-feature__desc">Tap to check off, see live progress, never miss an item again.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="lm-trust">
+        <div className="lm-trust__avatars">
+          <span className="lm-avatar">A</span>
+          <span className="lm-avatar">M</span>
+          <span className="lm-avatar">S</span>
+          <span className="lm-avatar">+</span>
+        </div>
+        <div className="lm-trust__text">
+          Trusted by <strong>thousands of households</strong> to plan their week.
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function GoogleButton({ onClick, disabled, children }) {
+  return (
+    <button
+      type="button"
+      className="btn btn-secondary btn-block btn-social"
+      onClick={onClick}
+      disabled={disabled}
+    >
+      <img src={googleIcon} alt="" width={18} height={18} />
+      {children}
+    </button>
+  );
+}
 
 export default function EnhancedAuthTabs() {
-  const { refresh } = useAuth();
+  const { refresh, loginAsDemo } = useAuth();
   const navigate = useNavigate();
   const { search } = useLocation();
+  const [demoLoading, setDemoLoading] = useState(false);
+
+  const tryDemo = async () => {
+    setDemoLoading(true);
+    try {
+      await loginAsDemo();
+      navigate("/lists", { replace: true });
+    } catch {
+      setDemoLoading(false);
+    }
+  };
+
   const [activeTab, setActiveTab] = useState("login");
   const [showLoginPwd, setShowLoginPwd] = useState(false);
   const [showRegPwd, setShowRegPwd] = useState(false);
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
-  
-  // Login form state
+
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
-  
-  // Register form state
+
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
-  const [subscribeNewsletter, setSubscribeNewsletter] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerError, setRegisterError] = useState("");
-  const [passwordStrength, setPasswordStrength] = useState(0);
 
-  // Show an error if OAuth callback sent ?error=...
   useEffect(() => {
     try {
       const p = new URLSearchParams(search);
@@ -54,33 +203,15 @@ export default function EnhancedAuthTabs() {
     } catch {}
   }, [search]);
 
-  // Friendly page title
   useEffect(() => {
     const prev = document.title;
-    document.title = "SmartGrocery Lite - Sign in or Register";
-    return () => {
-      document.title = prev;
-    };
-  }, []);
+    document.title = activeTab === "login" ? "Sign in · SmartGrocery" : "Create account · SmartGrocery";
+    return () => { document.title = prev; };
+  }, [activeTab]);
 
-  // Password strength checker
-  useEffect(() => {
-    if (registerPassword) {
-      let strength = 0;
-      if (registerPassword.length >= 8) strength++;
-      if (registerPassword.match(/[a-z]/) && registerPassword.match(/[A-Z]/)) strength++;
-      if (registerPassword.match(/[0-9]/)) strength++;
-      if (registerPassword.match(/[^a-zA-Z0-9]/)) strength++;
-      setPasswordStrength(strength);
-    } else {
-      setPasswordStrength(0);
-    }
-  }, [registerPassword]);
-
-  // Check if passwords match
   const passwordsMatch = registerPassword === confirmPassword && registerPassword.length > 0;
+  const registerValid = registerEmail && registerPassword && confirmPassword && agreeTerms && passwordsMatch && registerPassword.length >= 8;
 
-  // Handle login form submission
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginLoading(true);
@@ -96,37 +227,33 @@ export default function EnhancedAuthTabs() {
       await refresh();
       navigate("/lists", { replace: true });
     } catch (error) {
-      setLoginError(error.message || "Login failed. Please check your credentials.");
+      setLoginError(error.message || "Sign in failed. Check your email and password.");
     } finally {
       setLoginLoading(false);
     }
   };
 
-  // Handle register form submission
   const handleRegister = async (e) => {
     e.preventDefault();
     setRegisterLoading(true);
     setRegisterError("");
-    
-    // Validation
+
     if (!agreeTerms) {
-      setRegisterError("Please agree to the Terms of Service and Privacy Policy.");
+      setRegisterError("Please accept the Terms of Service and Privacy Policy.");
       setRegisterLoading(false);
       return;
     }
-    
     if (registerPassword !== confirmPassword) {
-      setRegisterError("Passwords do not match.");
+      setRegisterError("Passwords don't match.");
       setRegisterLoading(false);
       return;
     }
-    
     if (registerPassword.length < 8) {
-      setRegisterError("Password must be at least 8 characters long.");
+      setRegisterError("Password must be at least 8 characters.");
       setRegisterLoading(false);
       return;
     }
-    
+
     try {
       await apiRegister({ email: registerEmail.trim(), password: registerPassword });
       const tok = await apiLogin(registerEmail.trim(), registerPassword);
@@ -139,426 +266,276 @@ export default function EnhancedAuthTabs() {
       await refresh();
       navigate("/lists", { replace: true });
     } catch (error) {
-      setRegisterError(error.message || "Registration failed. Please try again.");
+      setRegisterError(error.message || "Couldn't create your account. Try again.");
     } finally {
       setRegisterLoading(false);
     }
   };
 
-  // Social login handlers
-  const handleSocialLogin = (provider) => {
-    if (provider === "google") {
-      try {
-        const url = googleLoginUrl ? googleLoginUrl() : `${API_BASE}/auth/google/login`;
-        window.location.href = url;
-      } catch {
-        window.location.href = `${API_BASE}/auth/google/login`;
-      }
+  const handleSocialLogin = () => {
+    try {
+      const url = googleLoginUrl ? googleLoginUrl() : `${API_BASE}/auth/google/login`;
+      window.location.href = url;
+    } catch {
+      window.location.href = `${API_BASE}/auth/google/login`;
     }
   };
 
-  // Password strength indicator
-  const getPasswordStrengthColor = () => {
-    if (passwordStrength === 0) return "bg-secondary";
-    if (passwordStrength <= 1) return "bg-danger";
-    if (passwordStrength === 2) return "bg-warning";
-    return "bg-success";
-  };
-
-  const getPasswordStrengthWidth = () => {
-    return `${(passwordStrength / 4) * 100}%`;
-  };
-
   return (
-    <div className="min-vh-100 d-flex align-items-center py-5">
-      <div className="organic-pattern"></div>
-      
-      <Container>
-        <Row className="justify-content-center">
-          <Col xs={12} lg={8} xl={6}>
-            {/* Header */}
-            <div className="text-center mb-5">
-              <div className="d-flex align-items-center justify-content-center gap-3 mb-3">
-                <img src={brand} width={56} height={56} alt="SmartGrocery" />
-                <h1 className="font-display text-4xl font-bold text-forest-dark mb-0">SmartGrocery</h1>
+    <div className="auth-shell">
+      <AuthAside />
+
+      <section className="auth-panel anim-fade">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+          <div className="lm-md-hide" style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+            <BrandMark size={32} />
+            <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em" }}>SmartGrocery</span>
+          </div>
+          <div className="lm-tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "login"}
+              className={"lm-tab" + (activeTab === "login" ? " is-active" : "")}
+              onClick={() => setActiveTab("login")}
+            >
+              Sign in
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "register"}
+              className={"lm-tab" + (activeTab === "register" ? " is-active" : "")}
+              onClick={() => setActiveTab("register")}
+            >
+              Create account
+            </button>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 28 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.03em", margin: 0 }}>
+            {activeTab === "login" ? "Welcome back" : "Get started"}
+          </h1>
+          <p style={{ fontSize: 14.5, color: "var(--text-secondary)", margin: "8px 0 0" }}>
+            {activeTab === "login"
+              ? "Sign in to access your lists and pick up where you left off."
+              : "Create a free account — no credit card required."}
+          </p>
+        </div>
+
+        {activeTab === "login" ? (
+          <form onSubmit={handleLogin} className="anim-fade" noValidate>
+            <div className="flex flex-col" style={{ gap: 16 }}>
+              <GoogleButton onClick={handleSocialLogin} disabled={loginLoading}>
+                Continue with Google
+              </GoogleButton>
+
+              <div className="lm-divider">or use email</div>
+
+              <div className="form-field">
+                <label className="form-label" htmlFor="login-email">Email</label>
+                <input
+                  id="login-email"
+                  type="email"
+                  className="form-control"
+                  placeholder="you@example.com"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  required
+                  disabled={loginLoading}
+                  autoComplete="email"
+                />
               </div>
-              <p className="text-xl text-text-secondary">
-                {activeTab === "login" 
-                  ? "Welcome back! Let's make shopping smarter." 
-                  : "Join thousands making grocery shopping easier!"}
+
+              <div className="form-field">
+                <div className="flex items-center justify-between">
+                  <label className="form-label" htmlFor="login-pwd">Password</label>
+                  <Link to="/reset" style={{ fontSize: 12.5, fontWeight: 600 }}>Forgot?</Link>
+                </div>
+                <PasswordField
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  show={showLoginPwd}
+                  onToggle={() => setShowLoginPwd((v) => !v)}
+                  disabled={loginLoading}
+                  autoComplete="current-password"
+                  name="password"
+                />
+              </div>
+
+              <label className="form-check" style={{ marginTop: 4 }}>
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  disabled={loginLoading}
+                />
+                <span style={{ fontSize: 13.5 }}>Keep me signed in</span>
+              </label>
+
+              {loginError && (
+                <div className="lm-alert lm-alert--danger" role="alert">
+                  <i className="bi bi-exclamation-circle lm-alert__icon" />
+                  <span>{loginError}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="btn btn-primary btn-lg btn-block"
+                disabled={loginLoading || !loginEmail || !loginPassword}
+              >
+                {loginLoading ? <><span className="lm-spinner" /> Signing in…</> : "Sign in"}
+              </button>
+
+              <div className="lm-divider" style={{ marginTop: 4 }}>or just explore</div>
+
+              <button
+                type="button"
+                className="btn btn-accent btn-lg btn-block"
+                onClick={tryDemo}
+                disabled={demoLoading || loginLoading}
+              >
+                {demoLoading ? <><span className="lm-spinner" /> Loading demo…</> : <><i className="bi bi-magic" /> Try the demo</>}
+              </button>
+
+              <p style={{ textAlign: "center", fontSize: 12, color: "var(--text-muted)", margin: 0, marginTop: -4 }}>
+                No signup, no backend — explore every page with sample data.
+              </p>
+
+              <p style={{ textAlign: "center", fontSize: 13, color: "var(--text-muted)", margin: 0 }}>
+                New here?{" "}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("register")}
+                  style={{ background: "none", border: 0, color: "var(--color-primary)", fontWeight: 600, cursor: "pointer", padding: 0, fontSize: 13 }}
+                >
+                  Create an account
+                </button>
               </p>
             </div>
+          </form>
+        ) : (
+          <form onSubmit={handleRegister} className="anim-fade" noValidate>
+            <div className="flex flex-col" style={{ gap: 16 }}>
+              <GoogleButton onClick={handleSocialLogin} disabled={registerLoading}>
+                Continue with Google
+              </GoogleButton>
 
-            {/* Auth Card */}
-            <Card className="shadow-lg border-0">
-              <Card.Body className="p-0">
-                {/* Tab Navigation */}
-                <div className="d-flex border-bottom bg-light gap-3 px-2">
-                  <button
-                    className={`flex-1 py-4 px-4 border-0 bg-transparent font-semibold text-lg transition-colors ${
-                      activeTab === "login"
-                        ? "text-forest-dark border-b-2 border-leaf-green"
-                        : "text-text-secondary hover:text-forest-medium"
-                    }`}
-                    onClick={() => setActiveTab("login")}
-                    disabled={loginLoading || registerLoading}
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    className={`flex-1 py-4 px-4 border-0 bg-transparent font-semibold text-lg transition-colors ${
-                      activeTab === "register"
-                        ? "text-forest-dark border-b-2 border-leaf-green"
-                        : "text-text-secondary hover:text-forest-medium"
-                    }`}
-                    onClick={() => setActiveTab("register")}
-                    disabled={loginLoading || registerLoading}
-                  >
-                    Create Account
-                  </button>
-                </div>
+              <div className="lm-divider">or sign up with email</div>
 
-                {/* Login Form */}
-                {activeTab === "login" && (
-                  <div className="p-6">
-                    {/* Social Login */}
-                    <div className="mb-6">
-                      <div className="d-grid gap-3">
-                        <Button
-                          variant="outline-secondary"
-                          className="d-flex align-items-center justify-content-center gap-3 py-3"
-                          onClick={() => handleSocialLogin("google")}
-                          disabled={loginLoading}
-                        >
-                          <img src={googleIcon} alt="Google" className="w-5 h-5" />
-                          Continue with Google
-                        </Button>
-                        
-                        
-                      </div>
-
-                      <div className="d-flex align-items-center gap-3 my-4">
-                        <div className="flex-1 border-top"></div>
-                        <span className="text-sm text-text-secondary">or sign in with email</span>
-                        <div className="flex-1 border-top"></div>
-                      </div>
-                    </div>
-
-                    {/* Email Login Form */}
-                    <Form onSubmit={handleLogin}>
-                      <Form.Group className="mb-4">
-                        <Form.Label className="text-forest-dark font-medium">Email Address</Form.Label>
-                        <Form.Control
-                          type="email"
-                          placeholder="Enter your email"
-                          value={loginEmail}
-                          onChange={(e) => setLoginEmail(e.target.value)}
-                          required
-                          disabled={loginLoading}
-                          className=""
-                        />
-                      </Form.Group>
-
-                      <Form.Group className="mb-4">
-                        <Form.Label className="text-forest-dark font-medium">Password</Form.Label>
-                        <InputGroup>
-                          <Form.Control
-                            type={showLoginPwd ? "text" : "password"}
-                            placeholder="Enter your password"
-                            value={loginPassword}
-                            onChange={(e) => setLoginPassword(e.target.value)}
-                            required
-                            disabled={loginLoading}
-                            className=""
-                          />
-                          <Button
-                            variant="outline-secondary"
-                            onClick={() => setShowLoginPwd((v) => !v)}
-                            title={showLoginPwd ? "Hide password" : "Show password"}
-                          >
-                            <i className={`bi ${showLoginPwd ? 'bi-eye-slash' : 'bi-eye'}`} />
-                          </Button>
-                        </InputGroup>
-                      </Form.Group>
-
-                      <div className="d-flex justify-content-between align-items-center mb-6">
-                        <Form.Check
-                          type="checkbox"
-                          id="remember-me"
-                          label="Remember me"
-                          checked={rememberMe}
-                          onChange={(e) => setRememberMe(e.target.checked)}
-                          disabled={loginLoading}
-                        />
-                        <a href="/reset" className="text-forest-medium hover:text-leaf-green text-sm">
-                          Forgot password?
-                        </a>
-                      </div>
-
-                      {loginError && (
-                        <Alert variant="danger" className="mb-4">
-                          {loginError}
-                        </Alert>
-                      )}
-
-                      <Button
-                        type="submit"
-                        variant="success"
-                        className="w-100 py-3"
-                        disabled={loginLoading || !loginEmail || !loginPassword}
-                      >
-                        {loginLoading ? (
-                          <>
-                            <Spinner size="sm" className="me-2" />
-                            Signing in...
-                          </>
-                        ) : (
-                          "Sign In"
-                        )}
-                      </Button>
-                    </Form>
-                  </div>
-                )}
-
-                {/* Register Form */}
-                {activeTab === "register" && (
-                  <div className="p-6">
-                    {/* Social Register */}
-                    <div className="mb-6">
-                      <div className="d-grid gap-3">
-                        <Button
-                          variant="outline-secondary"
-                          className="d-flex align-items-center justify-content-center gap-3 py-3"
-                          onClick={() => handleSocialLogin("google")}
-                          disabled={registerLoading}
-                        >
-                          <img src={googleIcon} alt="Google" className="w-5 h-5" />
-                          Continue with Google
-                        </Button>
-                        
-                        
-                      </div>
-
-                      <div className="d-flex align-items-center gap-3 my-4">
-                        <div className="flex-1 border-top"></div>
-                        <span className="text-sm text-text-secondary">or sign up with email</span>
-                        <div className="flex-1 border-top"></div>
-                      </div>
-                    </div>
-
-                    {/* Email Register Form */}
-                    <Form onSubmit={handleRegister}>
-
-                      <Form.Group className="mb-4">
-                        <Form.Label className="text-forest-dark font-medium">Email Address</Form.Label>
-                        <Form.Control
-                          type="email"
-                          placeholder="Enter your email"
-                          value={registerEmail}
-                          onChange={(e) => setRegisterEmail(e.target.value)}
-                          required
-                          disabled={registerLoading}
-                          className=""
-                        />
-                      </Form.Group>
-
-                      <Form.Group className="mb-3">
-                        <Form.Label className="text-forest-dark font-medium">Password</Form.Label>
-                        <InputGroup>
-                          <Form.Control
-                            type={showRegPwd ? "text" : "password"}
-                            placeholder="Create a strong password"
-                            value={registerPassword}
-                            onChange={(e) => setRegisterPassword(e.target.value)}
-                            required
-                            disabled={registerLoading}
-                            className=""
-                          />
-                          <Button
-                            variant="outline-secondary"
-                            onClick={() => setShowRegPwd((v) => !v)}
-                            title={showRegPwd ? "Hide password" : "Show password"}
-                          >
-                            <i className={`bi ${showRegPwd ? 'bi-eye-slash' : 'bi-eye'}`} />
-                          </Button>
-                        </InputGroup>
-                        <Form.Text className="text-muted">
-                          Must be at least 8 characters with uppercase, lowercase, and numbers
-                        </Form.Text>
-                      </Form.Group>
-
-                      {/* Password Strength Indicator */}
-                      {registerPassword && (
-                        <div className="mb-4">
-                          <div className="d-flex justify-content-between align-items-center mb-2">
-                            <small className="text-muted">Password Strength</small>
-                            <small className={`text-${
-                              passwordStrength <= 1 ? 'danger' : 
-                              passwordStrength === 2 ? 'warning' : 'success'
-                            }`}>
-                              {passwordStrength <= 1 ? 'Weak' : 
-                               passwordStrength === 2 ? 'Fair' : 
-                               passwordStrength === 3 ? 'Good' : 'Strong'}
-                            </small>
-                          </div>
-                          <div className="progress" style={{height: '4px'}}>
-                            <div 
-                              className={`progress-bar ${getPasswordStrengthColor()}`}
-                              style={{width: getPasswordStrengthWidth()}}
-                            ></div>
-                          </div>
-                        </div>
-                      )}
-
-                      <Form.Group className="mb-4">
-                        <Form.Label className="text-forest-dark font-medium">Confirm Password</Form.Label>
-                        <InputGroup>
-                          <Form.Control
-                            type={showConfirmPwd ? "text" : "password"}
-                            placeholder="Confirm your password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            required
-                            disabled={registerLoading}
-                            className=""
-                            isInvalid={confirmPassword && !passwordsMatch}
-                          />
-                          <Button
-                            variant="outline-secondary"
-                            onClick={() => setShowConfirmPwd((v) => !v)}
-                            title={showConfirmPwd ? "Hide password" : "Show password"}
-                          >
-                            <i className={`bi ${showConfirmPwd ? 'bi-eye-slash' : 'bi-eye'}`} />
-                          </Button>
-                          <Form.Control.Feedback type="invalid">
-                            Passwords do not match
-                          </Form.Control.Feedback>
-                        </InputGroup>
-                      </Form.Group>
-
-                      <div className="space-y-3 mb-6">
-                        <Form.Check
-                          type="checkbox"
-                          id="terms-agree"
-                          required
-                          checked={agreeTerms}
-                          onChange={(e) => setAgreeTerms(e.target.checked)}
-                          disabled={registerLoading}
-                          label={
-                            <small className="text-muted">
-                              I agree to the{" "}
-                              <a href="/terms" className="text-forest-medium hover:text-leaf-green">Terms of Service</a>{" "}
-                              and{" "}
-                              <a href="/terms" className="text-forest-medium hover:text-leaf-green">Privacy Policy</a>
-                            </small>
-                          }
-                        />
-                        
-                        <Form.Check
-                          type="checkbox"
-                          id="newsletter"
-                          checked={subscribeNewsletter}
-                          onChange={(e) => setSubscribeNewsletter(e.target.checked)}
-                          disabled={registerLoading}
-                          label={
-                            <small className="text-muted">
-                              Send me tips, recipes, and updates about SmartGrocery (optional)
-                            </small>
-                          }
-                        />
-                      </div>
-
-                      {registerError && (
-                        <Alert variant="danger" className="mb-4">
-                          {registerError}
-                        </Alert>
-                      )}
-
-                      <Button
-                        type="submit"
-                        variant="success"
-                        className="w-100 py-3"
-                        disabled={
-                          registerLoading || 
-                          !registerEmail || 
-                          !registerPassword || 
-                          !confirmPassword ||
-                          !agreeTerms ||
-                          !passwordsMatch
-                        }
-                      >
-                        {registerLoading ? (
-                          <>
-                            <Spinner size="sm" className="me-2" />
-                            Creating Account...
-                          </>
-                        ) : (
-                          "Create Account"
-                        )}
-                      </Button>
-                    </Form>
-                  </div>
-                )}
-              </Card.Body>
-
-              {/* Footer */}
-              <Card.Footer className="bg-light text-center py-4 border-0">
-                <p className="text-sm text-text-secondary mb-0">
-                  {activeTab === "login" 
-                    ? "Don't have an account? " 
-                    : "Already have an account? "}
-                  <button
-                    onClick={() => setActiveTab(activeTab === "login" ? "register" : "login")}
-                    className="text-forest-medium hover:text-leaf-green font-medium border-0 bg-transparent"
-                    disabled={loginLoading || registerLoading}
-                  >
-                    {activeTab === "login" ? "Sign up" : "Sign in"}
-                  </button>
-                </p>
-              </Card.Footer>
-            </Card>
-
-            {/* Features Section */}
-            <div className="mt-8 text-center">
-              <div className="row g-4">
-                <div className="col-md-4">
-                  <div className="p-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-leaf-green to-mint-light rounded-full flex items-center justify-center mx-auto mb-3">
-                      <i className="bi bi-list-check text-white text-xl"></i>
-                    </div>
-                    <h3 className="font-semibold text-forest-dark mb-2">Smart Lists</h3>
-                    <p className="text-sm text-text-secondary">
-                      AI-powered suggestions and automatic categorization
-                    </p>
-                  </div>
-                </div>
-                <div className="col-md-4">
-                  <div className="p-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-leaf-green to-mint-light rounded-full flex items-center justify-center mx-auto mb-3">
-                      <i className="bi bi-people text-white text-xl"></i>
-                    </div>
-                    <h3 className="font-semibold text-forest-dark mb-2">Family Sharing</h3>
-                    <p className="text-sm text-text-secondary">
-                      Share lists and collaborate with family members
-                    </p>
-                  </div>
-                </div>
-                <div className="col-md-4">
-                  <div className="p-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-leaf-green to-mint-light rounded-full flex items-center justify-center mx-auto mb-3">
-                      <i className="bi bi-clock text-white text-xl"></i>
-                    </div>
-                    <h3 className="font-semibold text-forest-dark mb-2">Expiry Tracking</h3>
-                    <p className="text-sm text-text-secondary">
-                      Never waste food with smart expiry notifications
-                    </p>
-                  </div>
-                </div>
+              <div className="form-field">
+                <label className="form-label" htmlFor="reg-email">Email</label>
+                <input
+                  id="reg-email"
+                  type="email"
+                  className="form-control"
+                  placeholder="you@example.com"
+                  value={registerEmail}
+                  onChange={(e) => setRegisterEmail(e.target.value)}
+                  required
+                  disabled={registerLoading}
+                  autoComplete="email"
+                />
               </div>
+
+              <div className="form-field">
+                <label className="form-label" htmlFor="reg-pwd">Password</label>
+                <PasswordField
+                  value={registerPassword}
+                  onChange={(e) => setRegisterPassword(e.target.value)}
+                  placeholder="At least 8 characters"
+                  show={showRegPwd}
+                  onToggle={() => setShowRegPwd((v) => !v)}
+                  disabled={registerLoading}
+                  autoComplete="new-password"
+                  name="new-password"
+                />
+                <StrengthMeter password={registerPassword} />
+              </div>
+
+              <div className="form-field">
+                <label className="form-label" htmlFor="reg-confirm">Confirm password</label>
+                <PasswordField
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repeat your password"
+                  show={showConfirmPwd}
+                  onToggle={() => setShowConfirmPwd((v) => !v)}
+                  disabled={registerLoading}
+                  autoComplete="new-password"
+                  name="confirm-password"
+                />
+                {confirmPassword && !passwordsMatch && (
+                  <span className="form-error">Passwords don't match</span>
+                )}
+              </div>
+
+              <div className="flex flex-col" style={{ gap: 10, marginTop: 4 }}>
+                <label className="form-check">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    checked={agreeTerms}
+                    onChange={(e) => setAgreeTerms(e.target.checked)}
+                    disabled={registerLoading}
+                    required
+                  />
+                  <span style={{ fontSize: 13 }}>
+                    I agree to the{" "}
+                    <Link to="/terms">Terms</Link> and{" "}
+                    <Link to="/terms">Privacy Policy</Link>.
+                  </span>
+                </label>
+              </div>
+
+              {registerError && (
+                <div className="lm-alert lm-alert--danger" role="alert">
+                  <i className="bi bi-exclamation-circle lm-alert__icon" />
+                  <span>{registerError}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="btn btn-primary btn-lg btn-block"
+                disabled={registerLoading || !registerValid}
+              >
+                {registerLoading ? <><span className="lm-spinner" /> Creating account…</> : "Create account"}
+              </button>
+
+              <div className="lm-divider" style={{ marginTop: 4 }}>or just explore</div>
+
+              <button
+                type="button"
+                className="btn btn-accent btn-lg btn-block"
+                onClick={tryDemo}
+                disabled={demoLoading || registerLoading}
+              >
+                {demoLoading ? <><span className="lm-spinner" /> Loading demo…</> : <><i className="bi bi-magic" /> Try the demo</>}
+              </button>
+
+              <p style={{ textAlign: "center", fontSize: 12, color: "var(--text-muted)", margin: 0, marginTop: -4 }}>
+                No signup, no backend — explore every page with sample data.
+              </p>
+
+              <p style={{ textAlign: "center", fontSize: 13, color: "var(--text-muted)", margin: 0 }}>
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("login")}
+                  style={{ background: "none", border: 0, color: "var(--color-primary)", fontWeight: 600, cursor: "pointer", padding: 0, fontSize: 13 }}
+                >
+                  Sign in
+                </button>
+              </p>
             </div>
-          </Col>
-        </Row>
-      </Container>
+          </form>
+        )}
+      </section>
     </div>
   );
 }

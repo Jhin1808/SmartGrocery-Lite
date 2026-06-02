@@ -2,7 +2,6 @@ import React, { Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./pages/AuthContext";
 
-// Code-split pages to reduce initial JS for login route
 const AuthTabs = React.lazy(() => import("./pages/EnhancedAuthTabs"));
 const Lists = React.lazy(() => import("./pages/EnhancedLists"));
 const ListDetail = React.lazy(() => import("./pages/ListDetail"));
@@ -11,79 +10,54 @@ const Help = React.lazy(() => import("./pages/Help"));
 const OAuthCallback = React.lazy(() => import("./pages/OAuthCallback"));
 const Terms = React.lazy(() => import("./pages/Terms"));
 const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
-
+const Stores = React.lazy(() => import("./pages/Stores"));
+const Recipes = React.lazy(() => import("./pages/Recipes"));
+const Templates = React.lazy(() => import("./pages/Templates"));
 const NavBar = React.lazy(() => import("./components/NavBar"));
 
-// Guard
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
-  if (loading) return null; // or a spinner
+  if (loading) return null;
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
   return children;
 }
 
 function AppShell() {
-  const { user } = useAuth(); // if no user, hide the NavBar entirely
-  // Load Bootstrap Icons CSS only after auth to reduce initial bytes on /login
+  const { user } = useAuth();
+
   useEffect(() => {
-    if (user) {
-      import("bootstrap-icons/font/bootstrap-icons.css");
-    }
-  }, [user]);
+    document.documentElement.setAttribute("data-bs-theme", "light");
+  }, []);
 
   return (
-    <>
-      <Suspense fallback={null}><NavBar /></Suspense>
-      <div className="container py-4">
+    <div className="app-shell">
+      <Suspense fallback={null}>
+        {user && <NavBar />}
+      </Suspense>
+      <main className={"app-main" + (user ? " app-main--nav" : "")}>
         <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<Navigate to={user ? "/lists" : "/login"} replace />} />
 
-            {/* Public */}
             <Route path="/login" element={<AuthTabs />} />
             <Route path="/oauth/callback" element={<OAuthCallback />} />
             <Route path="/reset" element={<ResetPassword />} />
             <Route path="/terms" element={<Terms />} />
 
-            {/* Protected */}
-            <Route
-              path="/lists"
-              element={
-                <RequireAuth>
-                  <Lists />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/lists/:id"
-              element={
-                <RequireAuth>
-                  <ListDetail />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/account"
-              element={
-                <RequireAuth>
-                  <Account />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/help"
-              element={
-                <RequireAuth>
-                  <Help />
-                </RequireAuth>
-              }
-            />
+            <Route path="/lists" element={<RequireAuth><Lists /></RequireAuth>} />
+            <Route path="/lists/:id" element={<RequireAuth><ListDetail /></RequireAuth>} />
+            <Route path="/account" element={<RequireAuth><Account /></RequireAuth>} />
+            <Route path="/help" element={<RequireAuth><Help /></RequireAuth>} />
+            <Route path="/stores" element={<RequireAuth><Stores /></RequireAuth>} />
+            <Route path="/recipes" element={<RequireAuth><Recipes /></RequireAuth>} />
+            <Route path="/templates" element={<RequireAuth><Templates /></RequireAuth>} />
+
             <Route path="*" element={<Navigate to="/lists" replace />} />
           </Routes>
         </Suspense>
-      </div>
-    </>
+      </main>
+    </div>
   );
 }
 
