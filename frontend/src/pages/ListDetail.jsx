@@ -167,6 +167,10 @@ export default function ListDetail() {
     setDraft((d) => ({ ...d, ...fields, name: d.name || fields.name }));
     setShowDetails(true);
   };
+  const submitCustomName = (name) => {
+    setDraft((d) => ({ ...d, name }));
+    setShowDetails(false);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -368,6 +372,7 @@ export default function ListDetail() {
                   value={draft.name}
                   onChange={(v) => updateDraft({ name: v })}
                   onPick={applyProductToDraft}
+                  onSubmitCustom={submitCustomName}
                   placeholder="Add an item or search the catalog…"
                   autoFocus
                 />
@@ -622,14 +627,17 @@ export default function ListDetail() {
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       {isEd ? (
                         <>
-                          <input
-                            type="number"
-                            min="1"
-                            className="form-control"
-                            value={edit.quantity}
-                            onChange={(e) => setEdit((s) => ({ ...s, quantity: e.target.value }))}
-                            style={{ width: 80, height: 34, textAlign: "center", fontSize: 13.5 }}
-                          />
+                          <div className="lm-item__qty-edit" title="Quantity">
+                            <i className="bi bi-123" />
+                            <input
+                              type="number"
+                              min="1"
+                              className="form-control"
+                              value={edit.quantity}
+                              onChange={(e) => setEdit((s) => ({ ...s, quantity: e.target.value }))}
+                              aria-label="Quantity"
+                            />
+                          </div>
                           <input
                             type="date"
                             className="form-control"
@@ -640,7 +648,11 @@ export default function ListDetail() {
                         </>
                       ) : (
                         <>
-                          <span className="lm-item__qty">×{it.quantity}</span>
+                          <span className="lm-item__qty" title={`Quantity: ${it.quantity}`}>
+                            <i className="bi bi-123" />
+                            <span className="lm-item__qty-label">Qty</span>
+                            <span className="lm-item__qty-value">{it.quantity}</span>
+                          </span>
                           <ExpiryPill expiry={it.expiry} />
                         </>
                       )}
