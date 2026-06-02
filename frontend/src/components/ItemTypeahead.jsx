@@ -11,10 +11,73 @@ function useDebounced(value, delay = 300) {
   return v;
 }
 
+function norm(s) {
+  return (s || "").toString().toLowerCase().trim();
+}
+
+function scoreMatch(p, q) {
+  if (!q) return -1;
+  const name = norm(p.name);
+  const brand = norm(p.brand);
+  const display = norm(p.display);
+  const cat = norm(p.canonical);
+  const tokens = q.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return -1;
+
+  let score = 0;
+  let allTokensContained = true;
+  for (const t of tokens) {
+    let tokenBest = 0;
+    if (name === t) tokenBest = Math.max(tokenBest, 1000);
+    else if (name.startsWith(t)) tokenBest = Math.max(tokenBest, 600);
+    else if (new RegExp(`\\b${escapeRegExp(t)}`).test(name)) tokenBest = Math.max(tokenBest, 400);
+    else if (name.includes(t)) tokenBest = Math.max(tokenBest, 200);
+
+    if (brand && brand.includes(t)) tokenBest = Math.max(tokenBest, 80);
+    if (display && display.includes(t)) tokenBest = Math.max(tokenBest, 40);
+    if (cat && cat.includes(t)) tokenBest = Math.max(tokenBest, 30);
+
+    if (tokenBest === 0) allTokensContained = false;
+    score += tokenBest;
+  }
+  if (!allTokensContained) return -1;
+  return score;
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function highlightMatch(text, q) {
+  if (!text || !q) return text || "";
+  const tokens = q.split(/\s+/).filter(Boolean).map(escapeRegExp);
+  if (tokens.length === 0) return text;
+  const re = new RegExp(`(${tokens.join("|")})`, "ig");
+  const parts = text.split(re);
+  return parts.map((p, i) =>
+    re.test(p) ? (
+      <mark key={i} className="lm-typeahead__match">{p}</mark>
+    ) : (
+      <React.Fragment key={i}>{p}</React.Fragment>
+    )
+  );
+}
+
+function matchQuality(p, q) {
+  const name = norm(p.name);
+  if (name === q) return "exact";
+  if (name.startsWith(q)) return "starts";
+  const re = new RegExp(`\\b${escapeRegExp(q)}`);
+  if (re.test(name)) return "word";
+  if (name.includes(q)) return "partial";
+  return "fuzzy";
+}
+
 export default function ItemTypeahead({
   value,
   onChange,
   onPick,
+  onSubmitCustom,
   disabled,
   placeholder = "Search or type an item…",
   autoFocus = false,
@@ -27,6 +90,7 @@ export default function ItemTypeahead({
   const [loading, setLoading] = useState(false);
   const [active, setActive] = useState(-1);
   const [error, setError] = useState("");
+  const [hasExactMatch, setHasExactMatch] = useState(false);
   const debounced = useDebounced(value, 300);
   const wrapRef = useRef(null);
   const inputRef = useRef(null);
@@ -45,45 +109,77 @@ export default function ItemTypeahead({
   useEffect(() => {
     if (!FEATURE_CATALOG) {
       setResults([]);
+      setHasExactMatch(false);
       return;
     }
     const q = (debounced || "").trim();
     if (q.length < minChars) {
       setResults([]);
       setError("");
+      setHasExactMatch(false);
       return;
     }
     const id = ++reqIdRef.current;
     setLoading(true);
     setError("");
-    apiCatalogSearch({ q, category, pageSize: maxResults })
+    apiCatalogSearch({ q, category, pageSize: maxResults * 2 })
       .then((rows) => {
         if (id !== reqIdRef.current) return;
-        setResults(Array.isArray(rows) ? rows.slice(0, maxResults) : []);
+        const arr = Array.isArray(rows) ? rows : [];
+        const scored = arr
+          .map((p) => ({ p, s: scoreMatch(p, q), quality: matchQuality(p, q) }))
+          .filter((x) => x.s > 0)
+          .sort((a, b) => b.s - a.s)
+          .slice(0, maxResults)
+          .map((x) => ({ ...x.p, _quality: x.quality }));
+        setResults(scored);
+        setHasExactMatch(scored.some((x) => x._quality === "exact" || x._quality === "starts"));
         setOpen(true);
       })
       .catch((e) => {
         if (id !== reqIdRef.current) return;
         setError(e?.message || "Search failed");
         setResults([]);
+        setHasExactMatch(false);
       })
       .finally(() => {
         if (id === reqIdRef.current) setLoading(false);
       });
   }, [debounced, category, maxResults, minChars]);
 
+  const q = (value || "").trim();
+  const showAddCustom = q.length >= minChars && !hasExactMatch && onSubmitCustom;
+  const menuItemCount = results.length + (error ? 1 : 0) + (q.length >= minChars && !loading ? 1 : 0) + (showAddCustom ? 1 : 0);
+
   const onKeyDown = (e) => {
-    if (!open || results.length === 0) return;
     if (e.key === "ArrowDown") {
+      if (menuItemCount === 0) return;
       e.preventDefault();
-      setActive((i) => Math.min(i + 1, results.length - 1));
-    } else if (e.key === "ArrowUp") {
+      setOpen(true);
+      setActive((i) => Math.min(i + 1, menuItemCount - 1));
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      if (menuItemCount === 0) return;
       e.preventDefault();
       setActive((i) => Math.max(i - 1, 0));
-    } else if (e.key === "Enter" && active >= 0) {
-      e.preventDefault();
-      handlePick(results[active]);
-    } else if (e.key === "Escape") {
+      return;
+    }
+    if (e.key === "Enter") {
+      // If a result is highlighted, pick it.
+      if (active >= 0 && active < results.length) {
+        e.preventDefault();
+        handlePick(results[active]);
+        return;
+      }
+      // Otherwise: if no exact match, fall back to custom.
+      if (q.length >= minChars && showAddCustom) {
+        e.preventDefault();
+        handleCustom();
+        return;
+      }
+    }
+    if (e.key === "Escape") {
       setOpen(false);
     }
   };
@@ -92,6 +188,13 @@ export default function ItemTypeahead({
     setOpen(false);
     setActive(-1);
     if (onPick) onPick(p);
+  }
+
+  function handleCustom() {
+    if (!onSubmitCustom || !q) return;
+    setOpen(false);
+    setActive(-1);
+    onSubmitCustom(q);
   }
 
   return (
@@ -111,7 +214,7 @@ export default function ItemTypeahead({
           setOpen(true);
           setActive(-1);
         }}
-        onFocus={() => { if (results.length > 0) setOpen(true); }}
+        onFocus={() => { if (results.length > 0 || showAddCustom) setOpen(true); }}
         onKeyDown={onKeyDown}
         style={{ height: 40, paddingRight: 28 }}
       />
@@ -120,11 +223,23 @@ export default function ItemTypeahead({
           <span className="lm-spinner" />
         </span>
       )}
-      {open && (results.length > 0 || error) && (
+      {open && (results.length > 0 || error || (q.length >= minChars && !loading)) && (
         <div className="lm-typeahead__menu" role="listbox">
           {error && <div className="lm-typeahead__error">{error}</div>}
+
+          {results.length === 0 && !error && q.length >= minChars && !loading && (
+            <div className="lm-typeahead__empty">
+              <i className="bi bi-info-circle" />
+              <span>
+                No matches for <strong>&ldquo;{q}&rdquo;</strong> in the catalog. You can still add it as a custom item.
+              </span>
+            </div>
+          )}
+
           {results.map((p, i) => {
             const color = categoryColor(p.canonical);
+            const quality = p._quality || "fuzzy";
+            const isExact = quality === "exact" || quality === "starts";
             return (
               <button
                 key={`${p.source}-${p.code || i}`}
@@ -144,7 +259,14 @@ export default function ItemTypeahead({
                   )}
                 </div>
                 <div className="lm-typeahead__body">
-                  <div className="lm-typeahead__name truncate">{p.name || "Unknown"}</div>
+                  <div className="lm-typeahead__name truncate">
+                    {highlightMatch(p.name || "Unknown", q)}
+                    {isExact ? (
+                      <span className="lm-typeahead__match-badge" style={{ marginLeft: 6 }}>
+                        <i className="bi bi-stars" /> Best match
+                      </span>
+                    ) : null}
+                  </div>
                   <div className="lm-typeahead__meta">
                     {p.brand && <span className="lm-typeahead__brand">{p.brand}</span>}
                     {p.display && (
@@ -155,7 +277,7 @@ export default function ItemTypeahead({
                     )}
                     {(p.weight_value != null && p.weight_value > 0) && (
                       <span className="lm-typeahead__weight">
-                        <i className="bi bi-box" />
+                        <i className="bi bi-rulers" />
                         {p.weight_value}{p.weight_unit || ""}
                       </span>
                     )}
@@ -167,6 +289,21 @@ export default function ItemTypeahead({
               </button>
             );
           })}
+
+          {showAddCustom && (
+            <button
+              type="button"
+              className="lm-typeahead__add"
+              onMouseDown={(e) => { e.preventDefault(); handleCustom(); }}
+              onMouseEnter={() => setActive(results.length)}
+            >
+              <i className="bi bi-plus-circle-fill" />
+              <span className="lm-typeahead__add-label">
+                Add &ldquo;<em>{q}</em>&rdquo; as a custom item
+              </span>
+              <i className="bi bi-arrow-return" />
+            </button>
+          )}
         </div>
       )}
     </div>

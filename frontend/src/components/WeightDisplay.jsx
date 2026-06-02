@@ -10,11 +10,10 @@ const UNIT_LABELS = {
   l: "L",
 };
 
-function fmt(value, unit) {
+function fmt(value) {
   if (value == null) return null;
   let n = Number(value);
   if (!isFinite(n) || n <= 0) return null;
-  // Trim trailing zeros for cleaner display
   let s = (Math.round(n * 100) / 100).toString();
   if (s.includes(".") && !s.endsWith(".5")) {
     s = s.replace(/\.?0+$/, "");
@@ -22,15 +21,29 @@ function fmt(value, unit) {
   return s;
 }
 
-export default function WeightDisplay({ value, unit, fallback = null, compact = true }) {
-  const num = fmt(value, unit);
+export default function WeightDisplay({
+  value,
+  unit,
+  fallback = null,
+  compact = true,
+  showLabel = true,
+  label = "Size",
+  className = "",
+}) {
+  const num = fmt(value);
   if (num == null) return fallback;
   const u = unit ? (UNIT_LABELS[String(unit).toLowerCase()] || unit) : null;
-  if (!u) return <span className="lm-weight-pill">{num}</span>;
+  const titleParts = ["Size"];
+  if (num != null) titleParts.push(`${num}${u ? " " + u : ""}`);
+  const display = u ? `${num} ${u}` : `${num}`;
   return (
-    <span className="lm-weight-pill" title={`${num} ${u}`}>
-      <i className="bi bi-box" />
-      {compact ? <span>{num}{u}</span> : <span>{num} {u}</span>}
+    <span
+      className={`lm-weight-pill ${className}`}
+      title={titleParts.join(": ")}
+    >
+      <i className="bi bi-rulers" />
+      {showLabel && <span className="lm-weight-pill__label">{label}</span>}
+      <span>{display}</span>
     </span>
   );
 }
