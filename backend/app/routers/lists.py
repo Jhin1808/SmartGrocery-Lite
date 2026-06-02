@@ -1,10 +1,12 @@
 # app/routers/lists.py
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_, true
 
 from app.database import get_db
-from app.models import GroceryList, User, ListItem, ListShare, ShareRole
+from app.models import GroceryList, User, ListItem, ListShare, ShareRole, ConnectedStore
 from app.schemas import (
     ListCreate, ListRead, ListUpdate,
     ItemCreate, ItemRead, ItemUpdate,
@@ -51,6 +53,19 @@ def _require_read(db: Session, gl: GroceryList, user: User):
 def _require_edit(db: Session, gl: GroceryList, user: User):
     if not _can_edit(db, gl, user):
         raise HTTPException(status_code=404, detail="List not found")
+
+def _resolve_owned_store_id(db: Session, store_id: Optional[int], user: User) -> Optional[int]:
+    if store_id is None:
+        return None
+
+    owned_store_id = db.execute(
+        select(ConnectedStore.id).where(
+            (ConnectedStore.id == store_id) & (ConnectedStore.user_id == user.id)
+        )
+    ).scalar_one_or_none()
+    if owned_store_id is None:
+        raise HTTPException(status_code=404, detail="Store not found")
+    return owned_store_id
 
 # ---------- Lists ----------
 
@@ -201,6 +216,8 @@ def add_item(
             if not subcategory:
                 subcategory = hint
 
+    store_id = _resolve_owned_store_id(db, payload.store_id, current_user)
+
     item = ListItem(
         name=payload.name,
         quantity=payload.quantity,
@@ -218,7 +235,7 @@ def add_item(
         product_image_url=payload.product_image_url,
         price=payload.price,
         price_source=payload.price_source,
-        store_id=payload.store_id,
+        store_id=store_id,
         nutrition_json=payload.nutrition_json,
     )
     db.add(item)
@@ -293,8 +310,8 @@ def update_item(
             item.price_source = "user"
     if payload.price_source is not None:
         item.price_source = payload.price_source
-    if payload.store_id is not None:
-        item.store_id = payload.store_id or None
+    if "store_id" in provided:
+        item.store_id = _resolve_owned_store_id(db, payload.store_id, current_user)
     if payload.nutrition_json is not None:
         item.nutrition_json = payload.nutrition_json
 

@@ -82,6 +82,7 @@ def upgrade() -> None:
     )
     op.create_index('ix_taxonomy_entry_slug', 'taxonomy_entry', ['slug'])
     op.create_index('ix_taxonomy_entry_canonical', 'taxonomy_entry', ['canonical'])
+    op.create_index('ix_taxonomy_entry_parent_slug', 'taxonomy_entry', ['parent_slug'])
     op.create_index('ix_taxonomy_entry_top_level', 'taxonomy_entry', ['top_level'])
 
     # 6) recipe
@@ -123,6 +124,7 @@ def downgrade() -> None:
     op.drop_index('ix_recipe_external_id', table_name='recipe')
     op.drop_table('recipe')
     op.drop_index('ix_taxonomy_entry_top_level', table_name='taxonomy_entry')
+    op.drop_index('ix_taxonomy_entry_parent_slug', table_name='taxonomy_entry')
     op.drop_index('ix_taxonomy_entry_canonical', table_name='taxonomy_entry')
     op.drop_index('ix_taxonomy_entry_slug', table_name='taxonomy_entry')
     op.drop_table('taxonomy_entry')

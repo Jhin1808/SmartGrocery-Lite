@@ -62,7 +62,7 @@ class ItemCreate(BaseModel):
     product_image_url: Optional[str] = Field(default=None, max_length=2048)
     price: Optional[float] = Field(default=None, ge=0)
     price_source: Optional[Literal["user", "kroger", "off", "manual"]] = None
-    store_id: Optional[int] = None
+    store_id: Optional[int] = Field(default=None, ge=1)
     nutrition_json: Optional[dict] = None
 
     @field_validator("name", mode="before")
@@ -127,7 +127,7 @@ class ItemUpdate(BaseModel):
     product_image_url: Optional[str] = Field(default=None, max_length=2048)
     price: Optional[float] = Field(default=None, ge=0)
     price_source: Optional[Literal["user", "kroger", "off", "manual"]] = None
-    store_id: Optional[int] = None
+    store_id: Optional[int] = Field(default=None, ge=1)
     nutrition_json: Optional[dict] = None
 
     @field_validator("name", mode="before")

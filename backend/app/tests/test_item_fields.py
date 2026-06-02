@@ -87,3 +87,71 @@ def test_add_item_accepts_kroger_price_source(client, test_user):
     body = r.json()
     assert body["price_source"] == "kroger"
     assert body["price"] == 3.29
+
+
+def test_item_store_id_must_belong_to_current_user(client, test_user):
+    from app.database import get_db
+    from app.models import ConnectedStore, User
+
+    db_override = client.app.dependency_overrides[get_db]
+    db = next(db_override())
+    try:
+        other_user = User(email="other-store-owner@example.com", password_hash="x")
+        db.add(other_user)
+        db.flush()
+
+        owned_store = ConnectedStore(
+            user_id=test_user.id,
+            source="kroger",
+            chain="Kroger",
+            location_id="owned-1",
+            name="Owned Kroger",
+        )
+        other_store = ConnectedStore(
+            user_id=other_user.id,
+            source="kroger",
+            chain="Kroger",
+            location_id="other-1",
+            name="Other Kroger",
+        )
+        db.add_all([owned_store, other_store])
+        db.flush()
+        owned_store_id = owned_store.id
+        other_store_id = other_store.id
+        db.commit()
+    finally:
+        db.close()
+
+    r = client.post("/lists/", json={"name": "L"})
+    assert r.status_code == 201, r.text
+    list_id = r.json()["id"]
+
+    r = client.post(
+        f"/lists/{list_id}/items",
+        json={"name": "Milk", "store_id": owned_store_id},
+    )
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["store_id"] == owned_store_id
+    item_id = body["id"]
+
+    r = client.post(
+        f"/lists/{list_id}/items",
+        json={"name": "Eggs", "store_id": other_store_id},
+    )
+    assert r.status_code == 404
+    assert r.json()["detail"] == "Store not found"
+
+    r = client.patch(
+        f"/lists/items/{item_id}",
+        json={"store_id": other_store_id},
+    )
+    assert r.status_code == 404
+    assert r.json()["detail"] == "Store not found"
+
+    r = client.patch(
+        f"/lists/items/{item_id}",
+        json={"store_id": None},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["store_id"] is None
