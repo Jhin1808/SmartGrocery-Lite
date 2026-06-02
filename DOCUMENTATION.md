@@ -795,7 +795,7 @@ Renders branded HTML email: SmartGrocery header with blue gradient, code display
 | `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | `1` / `0` | Connection pool tuning |
 | `OAUTH_TOKEN_IN_FRAGMENT` | `0` | Include JWT in URL fragment (Safari fallback) |
 
-Koyeb/backend deploys must set one JWT signing secret: prefer `SECRET_KEY`, or reuse an existing `JWT_SECRET_KEY`/`JWT_SECRET`. Use at least 32 random characters. `SESSION_SECRET` can be omitted when one of those JWT signing secrets is set.
+Koyeb/backend deploys should set one JWT signing secret for stable sessions: prefer `SECRET_KEY`, or reuse an existing `JWT_SECRET_KEY`/`JWT_SECRET`. Use at least 32 random characters. `SESSION_SECRET` can be omitted when one of those JWT signing secrets is set. If all signing secrets are omitted on Koyeb, the backend generates a runtime-only fallback secret so the app can start, but users may be logged out after restarts or instance changes.
 
 ### Frontend Variables (`REACT_APP_*`)
 
