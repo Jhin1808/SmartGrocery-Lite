@@ -1,8 +1,10 @@
 import os
+import secrets
 from urllib.parse import urlparse
 
 
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "0.0.0.0"}
+_EPHEMERAL_SECRET_CACHE: dict[str, str] = {}
 
 
 def env_flag(name: str, default: bool = False) -> bool:
@@ -89,6 +91,22 @@ def is_production_like() -> bool:
     return _public_url_configured(os.getenv("FRONTEND_URL"))
 
 
+def is_koyeb_environment() -> bool:
+    return any(name.startswith("KOYEB_") for name in os.environ)
+
+
+def _get_ephemeral_secret(names: tuple[str, ...], min_length: int) -> str:
+    for name in names:
+        value = _EPHEMERAL_SECRET_CACHE.get(name)
+        if value:
+            return value
+
+    value = secrets.token_urlsafe(max(32, min_length))
+    for name in names:
+        _EPHEMERAL_SECRET_CACHE[name] = value
+    return value
+
+
 def load_secret(
     primary_name: str,
     *,
@@ -107,6 +125,8 @@ def load_secret(
             return value
 
     if is_production_like():
+        if is_koyeb_environment() and not env_flag("REQUIRE_STRONG_SECRETS"):
+            return _get_ephemeral_secret(checked, min_length)
         names = " or ".join(checked)
         raise RuntimeError(f"{names} must be set in production")
     return dev_default

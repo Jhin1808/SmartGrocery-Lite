@@ -1,11 +1,21 @@
 import pytest
 
 
+def _clear_koyeb_env(monkeypatch):
+    import os
+
+    for name in list(os.environ):
+        if name.startswith("KOYEB_"):
+            monkeypatch.delenv(name, raising=False)
+
+
 def _restore_import_secret_state(monkeypatch):
     import importlib
+    import app.config as config
     import app.main as main
     import app.security as security
 
+    _clear_koyeb_env(monkeypatch)
     monkeypatch.setenv("DATABASE_URL", "sqlite:///./.pytest-test.db")
     monkeypatch.setenv("SECRET_KEY", "test-secret-key-for-suite-32-bytes")
     monkeypatch.setenv("SESSION_SECRET", "test-session-secret-for-suite-32")
@@ -13,6 +23,7 @@ def _restore_import_secret_state(monkeypatch):
     monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
     monkeypatch.delenv("JWT_SECRET", raising=False)
 
+    importlib.reload(config)
     importlib.reload(security)
     importlib.reload(main)
 
@@ -20,8 +31,10 @@ def _restore_import_secret_state(monkeypatch):
 def test_public_deployment_rejects_default_secrets(monkeypatch):
     from app.config import load_secret
 
+    _clear_koyeb_env(monkeypatch)
     monkeypatch.delenv("SECRET_KEY", raising=False)
     monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+    monkeypatch.delenv("JWT_SECRET", raising=False)
     monkeypatch.setenv("FRONTEND_URL", "https://smartgrocery.online")
 
     with pytest.raises(RuntimeError, match="SECRET_KEY"):
@@ -30,6 +43,31 @@ def test_public_deployment_rejects_default_secrets(monkeypatch):
             fallback_names=("JWT_SECRET_KEY",),
             dev_default="change-me-in-dev",
         )
+
+
+def test_koyeb_deployment_can_generate_runtime_secret_when_missing(monkeypatch):
+    import importlib
+
+    try:
+        monkeypatch.delenv("SECRET_KEY", raising=False)
+        monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+        monkeypatch.delenv("JWT_SECRET", raising=False)
+        monkeypatch.delenv("SESSION_SECRET", raising=False)
+        monkeypatch.setenv("FRONTEND_URL", "https://smartgrocery.online")
+        monkeypatch.setenv("KOYEB_APP_NAME", "smartgrocery-lite")
+
+        import app.config as config
+        import app.security as security
+        import app.main as main
+
+        importlib.reload(config)
+        security = importlib.reload(security)
+        main = importlib.reload(main)
+
+        assert len(security.SECRET_KEY) >= 32
+        assert main.SESSION_SECRET == security.SECRET_KEY
+    finally:
+        _restore_import_secret_state(monkeypatch)
 
 
 def test_jwt_secret_alias_is_accepted_in_public_deployment(monkeypatch):
