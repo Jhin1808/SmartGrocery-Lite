@@ -1,15 +1,22 @@
 # app/main.py
 import os
+from contextlib import asynccontextmanager
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 from urllib.parse import urlparse
 from app.database import engine
-from app.config import load_secret
+from app.config import load_secret, CATALOG_TIMEOUT_SECONDS
 from app.security_cookies import COOKIE_NAME
 from app.routers.lists import router as lists_router
 from app.routers.auth import router as auth_router
+from app.routers.catalog import router as catalog_router
+from app.routers.stores import router as stores_router
+from app.routers.auth_kroger import router as auth_kroger_router
+from app.routers.recipes import router as recipes_router
+from app.routers.templates import router as templates_router
 google_router = None
 try:
     from app.routers.auth_google import router as google_router
@@ -36,7 +43,44 @@ COOKIE_SECURE = (os.getenv("COOKIE_SECURE", "false") or "false").lower() in ("1"
 # Enforce Secure when SameSite=None to comply with browser rules
 if COOKIE_SAMESITE == "none" and not COOKIE_SECURE:
     COOKIE_SECURE = True
-app = FastAPI(title="SmartGrocery Lite API", version="0.1.0")
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    # Single shared HTTP client for all catalog/recipe upstream calls.
+    app.state.http = httpx.AsyncClient(timeout=CATALOG_TIMEOUT_SECONDS)
+    # One-time taxonomy seed (idempotent) so the /catalog/categories endpoint
+    # can be served from the DB if a future migration wants to filter/sort it.
+    try:
+        from app.catalog.taxonomy import ensure_taxonomy_in_db, get_cached_taxonomy
+        from app.database import SessionLocal
+        db = SessionLocal()
+        try:
+            ensure_taxonomy_in_db(db, get_cached_taxonomy())
+        finally:
+            db.close()
+    except Exception:
+        # Don't fail startup on taxonomy seed issues; the in-memory tree
+        # still works.
+        pass
+    # One-time list-template seed (idempotent) so /templates is populated
+    # the first time the app starts against a fresh DB.
+    try:
+        from app.templates_seed import ensure_templates_in_db
+        from app.database import SessionLocal
+        db = SessionLocal()
+        try:
+            ensure_templates_in_db(db)
+        finally:
+            db.close()
+    except Exception:
+        # Don't fail startup on template seed issues.
+        pass
+    try:
+        yield
+    finally:
+        await app.state.http.aclose()
+
+
+app = FastAPI(title="SmartGrocery Lite API", version="0.1.0", lifespan=_lifespan)
 # Koyeb sets X-Forwarded-Proto and X-Forwarded-Host headers.
 # These are used in _request_origin() and CORS origin matching below.
 app.add_middleware(
@@ -95,6 +139,13 @@ app.include_router(me_router)
 app.include_router(tasks_router)
 if email_test_router is not None:
     app.include_router(email_test_router)
+# Catalog / Stores / Recipes (M1+)
+app.include_router(catalog_router)
+app.include_router(stores_router)
+app.include_router(auth_kroger_router)
+app.include_router(recipes_router)
+# List Templates (M5)
+app.include_router(templates_router)
 # Removed startup connectivity check to avoid opening a DB connection at import time.
 @app.get("/")
 def root():

@@ -17,3 +17,5 @@ pydantic>=2.6
 email-validator>=2.1
 authlib>=1.3
 itsdangerous>=2.1
+rapidfuzz>=3.9
+tenacity>=8.2

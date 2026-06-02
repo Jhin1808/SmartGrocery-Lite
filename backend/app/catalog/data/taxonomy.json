@@ -1,0 +1,107 @@
+{
+  "_comment": "Local mirror of Open Food Facts category slugs, mapped to a normalized canonical path. Seeded once via scripts/seed_taxonomy.py; this file is bundled for offline use. To extend: add a slug + canonical + display + parent_slug + top_level.",
+  "version": 1,
+  "top_levels": [
+    {"slug": "produce",   "canonical": "produce",        "display": "Produce",     "top_level": "produce"},
+    {"slug": "dairy",     "canonical": "dairy",          "display": "Dairy",       "top_level": "dairy"},
+    {"slug": "meat",      "canonical": "meat",           "display": "Meat",        "top_level": "meat"},
+    {"slug": "seafood",   "canonical": "seafood",        "display": "Seafood",     "top_level": "seafood"},
+    {"slug": "bakery",    "canonical": "bakery",         "display": "Bakery",      "top_level": "bakery"},
+    {"slug": "pantry",    "canonical": "pantry",         "display": "Pantry",      "top_level": "pantry"},
+    {"slug": "frozen",    "canonical": "frozen",         "display": "Frozen",      "top_level": "frozen"},
+    {"slug": "beverages", "canonical": "beverages",      "display": "Beverages",   "top_level": "beverages"},
+    {"slug": "snacks",    "canonical": "snacks",         "display": "Snacks",      "top_level": "snacks"},
+    {"slug": "condiments","canonical": "condiments",     "display": "Condiments",  "top_level": "condiments"},
+    {"slug": "eggs",      "canonical": "eggs",           "display": "Eggs",        "top_level": "dairy"}
+  ],
+  "entries": [
+    {"slug": "en:produce",            "canonical": "produce",          "display": "Produce",                     "parent_slug": null,                "top_level": "produce"},
+    {"slug": "en:meats",              "canonical": "meat",             "display": "Meat",                        "parent_slug": null,                "top_level": "meat"},
+    {"slug": "en:seafood",            "canonical": "seafood",          "display": "Seafood",                     "parent_slug": null,                "top_level": "seafood"},
+    {"slug": "en:bakery",             "canonical": "bakery",           "display": "Bakery",                      "parent_slug": null,                "top_level": "bakery"},
+    {"slug": "en:frozen-foods",       "canonical": "frozen",           "display": "Frozen",                      "parent_slug": null,                "top_level": "frozen"},
+    {"slug": "en:beverages",          "canonical": "beverages",        "display": "Beverages",                   "parent_slug": null,                "top_level": "beverages"},
+    {"slug": "en:snacks",             "canonical": "snacks",           "display": "Snacks",                      "parent_slug": null,                "top_level": "snacks"},
+    {"slug": "en:condiments",         "canonical": "condiments",       "display": "Condiments",                  "parent_slug": null,                "top_level": "condiments"},
+    {"slug": "en:canned",             "canonical": "pantry.canned",    "display": "Pantry > Canned",             "parent_slug": null,                "top_level": "pantry"},
+    {"slug": "en:breakfasts",         "canonical": "pantry.breakfast", "display": "Pantry > Breakfast",          "parent_slug": null,                "top_level": "pantry"},
+    {"slug": "en:eggs",               "canonical": "eggs",             "display": "Eggs",                        "parent_slug": null,                "top_level": "dairy"},
+
+    {"slug": "en:dairies",            "canonical": "dairy",            "display": "Dairy",                       "parent_slug": null,                "top_level": "dairy"},
+    {"slug": "en:milks",              "canonical": "dairy.milk",       "display": "Dairy > Milk",                "parent_slug": "en:dairies",        "top_level": "dairy"},
+    {"slug": "en:whole-milks",        "canonical": "dairy.milk.whole", "display": "Dairy > Milk > Whole",        "parent_slug": "en:milks",          "top_level": "dairy"},
+    {"slug": "en:semi-skimmed-milks", "canonical": "dairy.milk.2pct",  "display": "Dairy > Milk > 2% / Reduced Fat","parent_slug": "en:milks",       "top_level": "dairy"},
+    {"slug": "en:reduced-fat-milks",  "canonical": "dairy.milk.2pct",  "display": "Dairy > Milk > 2% / Reduced Fat","parent_slug": "en:milks",       "top_level": "dairy"},
+    {"slug": "en:low-fat-milks",      "canonical": "dairy.milk.1pct",  "display": "Dairy > Milk > 1% / Low Fat",  "parent_slug": "en:milks",          "top_level": "dairy"},
+    {"slug": "en:skimmed-milks",      "canonical": "dairy.milk.skim",  "display": "Dairy > Milk > Skim",          "parent_slug": "en:milks",          "top_level": "dairy"},
+    {"slug": "en:fat-free-milks",     "canonical": "dairy.milk.fat-free","display": "Dairy > Milk > Fat-Free",    "parent_slug": "en:milks",          "top_level": "dairy"},
+    {"slug": "en:lactose-free-milks","canonical": "dairy.milk.lactose-free","display": "Dairy > Milk > Lactose-Free","parent_slug": "en:milks",   "top_level": "dairy"},
+    {"slug": "en:plant-based-milks",  "canonical": "dairy.milk.dairy-free","display": "Dairy > Milk > Dairy-Free / Plant-Based","parent_slug": "en:milks", "top_level": "dairy"},
+    {"slug": "en:oat-milks",          "canonical": "dairy.milk.dairy-free.oat","display": "Dairy > Milk > Dairy-Free > Oat","parent_slug": "en:plant-based-milks","top_level": "dairy"},
+    {"slug": "en:almond-milks",       "canonical": "dairy.milk.dairy-free.almond","display": "Dairy > Milk > Dairy-Free > Almond","parent_slug": "en:plant-based-milks","top_level": "dairy"},
+    {"slug": "en:soy-milks",          "canonical": "dairy.milk.dairy-free.soy","display": "Dairy > Milk > Dairy-Free > Soy","parent_slug": "en:plant-based-milks","top_level": "dairy"},
+    {"slug": "en:coconut-milks",      "canonical": "dairy.milk.dairy-free.coconut","display": "Dairy > Milk > Dairy-Free > Coconut","parent_slug": "en:plant-based-milks","top_level": "dairy"},
+
+    {"slug": "en:cheeses",            "canonical": "dairy.cheese",     "display": "Dairy > Cheese",               "parent_slug": "en:dairies",        "top_level": "dairy"},
+    {"slug": "en:yogurts",            "canonical": "dairy.yogurt",     "display": "Dairy > Yogurt",               "parent_slug": "en:dairies",        "top_level": "dairy"},
+    {"slug": "en:butters",            "canonical": "dairy.butter",     "display": "Dairy > Butter",               "parent_slug": "en:dairies",        "top_level": "dairy"},
+    {"slug": "en:creams",             "canonical": "dairy.cream",      "display": "Dairy > Cream",                "parent_slug": "en:dairies",        "top_level": "dairy"},
+
+    {"slug": "en:eggs",               "canonical": "eggs",             "display": "Eggs",                          "parent_slug": null,               "top_level": "dairy"},
+
+    {"slug": "en:fruits",             "canonical": "produce.fruit",    "display": "Produce > Fruits",              "parent_slug": "en:produce",        "top_level": "produce"},
+    {"slug": "en:vegetables",         "canonical": "produce.vegetable","display": "Produce > Vegetables",          "parent_slug": "en:produce",        "top_level": "produce"},
+    {"slug": "en:leafy-vegetables",   "canonical": "produce.vegetable.leafy","display": "Produce > Vegetables > Leafy","parent_slug": "en:vegetables",  "top_level": "produce"},
+    {"slug": "en:herbs",              "canonical": "produce.herb",     "display": "Produce > Herbs",               "parent_slug": "en:produce",        "top_level": "produce"},
+
+    {"slug": "en:beef",               "canonical": "meat.beef",        "display": "Meat > Beef",                   "parent_slug": "en:meats",          "top_level": "meat"},
+    {"slug": "en:chicken",            "canonical": "meat.chicken",     "display": "Meat > Chicken",                "parent_slug": "en:meats",          "top_level": "meat"},
+    {"slug": "en:pork",               "canonical": "meat.pork",        "display": "Meat > Pork",                   "parent_slug": "en:meats",          "top_level": "meat"},
+    {"slug": "en:turkeys",            "canonical": "meat.turkey",      "display": "Meat > Turkey",                 "parent_slug": "en:meats",          "top_level": "meat"},
+
+    {"slug": "en:fishes",             "canonical": "seafood.fish",     "display": "Seafood > Fish",                "parent_slug": "en:seafood",        "top_level": "seafood"},
+    {"slug": "en:shrimps",            "canonical": "seafood.shrimp",   "display": "Seafood > Shrimp",              "parent_slug": "en:seafood",        "top_level": "seafood"},
+
+    {"slug": "en:breakfasts",         "canonical": "pantry.breakfast", "display": "Pantry > Breakfast",            "parent_slug": null,                "top_level": "pantry"},
+    {"slug": "en:rice",               "canonical": "pantry.rice",      "display": "Pantry > Rice",                 "parent_slug": null,                "top_level": "pantry"},
+    {"slug": "en:pastas",             "canonical": "pantry.pasta",     "display": "Pantry > Pasta",                "parent_slug": null,                "top_level": "pantry"},
+    {"slug": "en:noodles",            "canonical": "pantry.noodles",   "display": "Pantry > Noodles",              "parent_slug": null,                "top_level": "pantry"},
+    {"slug": "en:flours",             "canonical": "pantry.flour",     "display": "Pantry > Flour",                "parent_slug": null,                "top_level": "pantry"},
+    {"slug": "en:sugars",             "canonical": "pantry.sugar",     "display": "Pantry > Sugar",                "parent_slug": null,                "top_level": "pantry"},
+    {"slug": "en:oils",               "canonical": "pantry.oil",       "display": "Pantry > Oils",                 "parent_slug": null,                "top_level": "pantry"},
+    {"slug": "en:vinegars",           "canonical": "condiments.vinegar","display": "Condiments > Vinegar",          "parent_slug": "en:condiments",     "top_level": "condiments"},
+    {"slug": "en:sauces",             "canonical": "condiments.sauce", "display": "Condiments > Sauces",           "parent_slug": "en:condiments",     "top_level": "condiments"},
+    {"slug": "en:salts",              "canonical": "condiments.salt",  "display": "Condiments > Salt",             "parent_slug": "en:condiments",     "top_level": "condiments"},
+    {"slug": "en:spices",             "canonical": "condiments.spice", "display": "Condiments > Spices",           "parent_slug": "en:condiments",     "top_level": "condiments"},
+
+    {"slug": "en:breads",             "canonical": "bakery.bread",     "display": "Bakery > Bread",                "parent_slug": "en:bakery",         "top_level": "bakery"},
+    {"slug": "en: pastries",          "canonical": "bakery.pastry",    "display": "Bakery > Pastry",               "parent_slug": "en:bakery",         "top_level": "bakery"},
+
+    {"slug": "en:frozen-meals",       "canonical": "frozen.meals",     "display": "Frozen > Meals",                "parent_slug": "en:frozen-foods",   "top_level": "frozen"},
+    {"slug": "en:frozen-vegetables",  "canonical": "frozen.vegetables","display": "Frozen > Vegetables",           "parent_slug": "en:frozen-foods",   "top_level": "frozen"},
+    {"slug": "en:ice-creams",         "canonical": "frozen.ice-cream", "display": "Frozen > Ice Cream",            "parent_slug": "en:frozen-foods",   "top_level": "frozen"},
+
+    {"slug": "en:waters",             "canonical": "beverages.water",  "display": "Beverages > Water",             "parent_slug": "en:beverages",      "top_level": "beverages"},
+    {"slug": "en:soft-drinks",        "canonical": "beverages.soda",   "display": "Beverages > Soda",              "parent_slug": "en:beverages",      "top_level": "beverages"},
+    {"slug": "en:juices",             "canonical": "beverages.juice",  "display": "Beverages > Juice",             "parent_slug": "en:beverages",      "top_level": "beverages"},
+    {"slug": "en:coffees",            "canonical": "beverages.coffee", "display": "Beverages > Coffee",            "parent_slug": "en:beverages",      "top_level": "beverages"},
+    {"slug": "en:teas",               "canonical": "beverages.tea",    "display": "Beverages > Tea",               "parent_slug": "en:beverages",      "top_level": "beverages"},
+
+    {"slug": "en:chips",              "canonical": "snacks.chips",     "display": "Snacks > Chips",                "parent_slug": "en:snacks",         "top_level": "snacks"},
+    {"slug": "en:cookies",            "canonical": "snacks.cookies",   "display": "Snacks > Cookies",              "parent_slug": "en:snacks",         "top_level": "snacks"},
+    {"slug": "en:chocolates",         "canonical": "snacks.chocolate", "display": "Snacks > Chocolate",            "parent_slug": "en:snacks",         "top_level": "snacks"},
+    {"slug": "en:candies",            "canonical": "snacks.candy",     "display": "Snacks > Candy",                "parent_slug": "en:snacks",         "top_level": "snacks"}
+  ],
+  "synonyms": {
+    "2%": "fat-reduced",
+    "1%": "low-fat",
+    "skim": "fat-free",
+    "fat free": "fat-free",
+    "low fat": "low-fat",
+    "reduced fat": "fat-reduced",
+    "lactose free": "lactose-free",
+    "dairy free": "dairy-free",
+    "plant based": "dairy-free",
+    "plant-based": "dairy-free"
+  }
+}

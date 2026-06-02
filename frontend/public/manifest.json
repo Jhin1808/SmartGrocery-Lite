@@ -1,7 +1,7 @@
 {
   "short_name": "SmartGrocery",
   "name": "SmartGrocery Lite",
-  "description": "Simple, shared grocery lists to plan and shop together faster.",
+  "description": "Plan, share, and shop smarter with people you live with.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -24,6 +24,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#1266f1",
-  "background_color": "#ffffff"
+  "theme_color": "#0d9488",
+  "background_color": "#fafaf9"
 }

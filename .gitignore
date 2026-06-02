@@ -80,6 +80,8 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 backend/.pytest-test.db
+backend/.pytest-*.db
+backend/pytest-cache-files-*/
 
 # Flask stuff:
 instance/

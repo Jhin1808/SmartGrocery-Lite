@@ -114,17 +114,39 @@ export const apiCreateList = (name) =>
 
 export const apiGetItems = (listId) => request(`/lists/${listId}/items`);
 
-export const apiAddItem = (
-  listId,
-  { name, quantity = 1, expiry = null, description = undefined }
-) =>
-  request(`/lists/${listId}/items`, {
-    method: "POST",
-    body: { name, quantity, expiry, description },
-  });
+const _pickCatalogFields = (p) => {
+  if (!p) return undefined;
+  const out = {};
+  const keys = [
+    "category", "subcategory", "weight_value", "weight_unit",
+    "brand", "barcode", "product_image_url",
+    "price", "price_source", "store_id", "nutrition_json",
+  ];
+  for (const k of keys) {
+    if (k in p && p[k] !== undefined) out[k] = p[k];
+  }
+  return Object.keys(out).length ? out : undefined;
+};
 
-export const apiUpdateItem = (itemId, patch) =>
-  request(`/lists/items/${itemId}`, { method: "PATCH", body: patch });
+export const apiAddItem = (listId, payload) => {
+  const body = {
+    name: payload.name,
+    quantity: payload.quantity ?? 1,
+    expiry: payload.expiry ?? null,
+    description: payload.description,
+    remind_on: payload.remind_on,
+    purchased: payload.purchased,
+    ...(_pickCatalogFields(payload) || {}),
+  };
+  return request(`/lists/${listId}/items`, { method: "POST", body });
+};
+
+export const apiUpdateItem = (itemId, patch) => {
+  const body = { ...patch };
+  const cat = _pickCatalogFields(patch);
+  if (cat) Object.assign(body, cat);
+  return request(`/lists/items/${itemId}`, { method: "PATCH", body });
+};
 
 export const apiDeleteItem = (itemId) =>
   request(`/lists/items/${itemId}`, { method: "DELETE" });
@@ -182,5 +204,99 @@ export const apiUpdateShare = (listId, shareId, { role }) =>
 export const apiRevokeShare = (listId, shareId) =>
   request(`/lists/${listId}/share/${shareId}`, { method: "DELETE" });
 
+// Optional — backend may implement a signed share link endpoint. Wrapped
+// safely; if the backend doesn't support it, the UI falls back to a
+// /share/:id URL of the current origin.
+export const apiGetShareLink = (listId) =>
+  request(`/lists/${listId}/share-link`);
+
 // Optional helper for Google login button in the SPA:
 export const googleLoginUrl = () => joinUrl(API_BASE, "/auth/google/login");
+
+// ---- Feature flags (catalog / stores / recipes) ----
+export const FEATURE_CATALOG = ["1", "true", "yes", "on"].includes(
+  (process.env.REACT_APP_ENABLE_CATALOG || "1").toLowerCase()
+);
+export const FEATURE_KROGER = ["1", "true", "yes", "on"].includes(
+  (process.env.REACT_APP_ENABLE_KROGER || "1").toLowerCase()
+);
+export const FEATURE_RECIPES = ["1", "true", "yes", "on"].includes(
+  (process.env.REACT_APP_ENABLE_RECIPES || "1").toLowerCase()
+);
+export const FEATURE_TEMPLATES = ["1", "true", "yes", "on"].includes(
+  (process.env.REACT_APP_ENABLE_TEMPLATES || "1").toLowerCase()
+);
+
+// ---- Catalog (M1+) ----
+export const apiCatalogSearch = ({ q, category, page = 1, pageSize = 10, useKroger = true } = {}) => {
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (category) params.set("category", category);
+  params.set("page", String(page));
+  params.set("page_size", String(pageSize));
+  params.set("use_kroger", useKroger ? "1" : "0");
+  return request(`/catalog/search?${params.toString()}`);
+};
+
+export const apiCatalogBarcode = (ean, { useKroger = true } = {}) =>
+  request(`/catalog/barcode/${encodeURIComponent(ean)}?use_kroger=${useKroger ? "1" : "0"}`);
+
+export const apiCatalogCategories = () => request("/catalog/categories");
+
+// ---- Kroger / Stores (M1+) ----
+export const apiKrogerStatus = () => request("/auth/kroger/status");
+
+export const apiKrogerChains = () => request("/stores/chains");
+
+export const apiStoreSearch = ({ zip, lat, lng, radius = 10, limit = 10, chain } = {}) => {
+  const params = new URLSearchParams();
+  if (zip) params.set("zip", zip);
+  if (lat != null) params.set("lat", String(lat));
+  if (lng != null) params.set("lng", String(lng));
+  params.set("radius", String(radius));
+  params.set("limit", String(limit));
+  if (chain) params.set("chain", chain);
+  return request(`/stores/search?${params.toString()}`);
+};
+
+export const apiConnectedStore = () => request("/stores/connected");
+
+export const apiConnectStore = (payload) =>
+  request("/stores/connect", { method: "POST", body: payload });
+
+export const apiDisconnectStore = () =>
+  request("/stores/connected", { method: "DELETE" });
+
+// ---- Recipes (M1+, full UI in M4) ----
+export const apiRecipeSearch = ({ q, ingredient } = {}) => {
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (ingredient) params.set("ingredient", ingredient);
+  return request(`/recipes/search?${params.toString()}`);
+};
+
+export const apiRecipeDetail = (externalId) =>
+  request(`/recipes/${encodeURIComponent(externalId)}`);
+
+export const apiRecipeAddToList = (externalId, listId) =>
+  request(`/recipes/${encodeURIComponent(externalId)}/to-list/${listId}`, { method: "POST" });
+
+// ---- List Templates (M5) ----
+export const apiListTemplates = ({ category, search } = {}) => {
+  const params = new URLSearchParams();
+  if (category) params.set("category", category);
+  if (search) params.set("search", search);
+  const qs = params.toString();
+  return request(`/templates${qs ? `?${qs}` : ""}`);
+};
+
+export const apiTemplateCategories = () => request("/templates/categories");
+
+export const apiGetTemplate = (slug) =>
+  request(`/templates/${encodeURIComponent(slug)}`);
+
+export const apiCloneTemplate = (slug, { list_id, list_name } = {}) =>
+  request(`/templates/${encodeURIComponent(slug)}/clone`, {
+    method: "POST",
+    body: { list_id, list_name },
+  });

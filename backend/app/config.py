@@ -12,6 +12,54 @@ def env_flag(name: str, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def env_int(name: str, default: int) -> int:
+    raw = (os.getenv(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+def env_float(name: str, default: float) -> float:
+    raw = (os.getenv(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+
+# -------- Catalog / Recipes (M1+) --------
+
+# Open Food Facts (free, no key)
+OFF_BASE_URL = (os.getenv("OFF_BASE_URL") or "https://world.openfoodfacts.org").rstrip("/")
+# TheMealDB (free, no key)
+MEALDB_BASE_URL = (os.getenv("MEALDB_BASE_URL") or "https://www.themealdb.com/api/json/v1/1").rstrip("/")
+# Kroger Public API (free, register at https://developer.kroger.com)
+KROGER_BASE_URL = (os.getenv("KROGER_BASE_URL") or "https://api.kroger.com").rstrip("/")
+KROGER_CLIENT_ID = (os.getenv("KROGER_CLIENT_ID") or "").strip()
+KROGER_CLIENT_SECRET = (os.getenv("KROGER_CLIENT_SECRET") or "").strip()
+KROGER_SCOPES = (os.getenv("KROGER_SCOPES") or "product.compact").strip()
+KROGER_TOKEN_CACHE_TTL_SECONDS = env_int("KROGER_TOKEN_CACHE_TTL_SECONDS", 1500)
+
+# Cache + rate limiting
+CATALOG_CACHE_TTL_HOURS = env_int("CATALOG_CACHE_TTL_HOURS", 24)
+CATALOG_TIMEOUT_SECONDS = env_float("CATALOG_TIMEOUT_SECONDS", 4.0)
+CATALOG_RATE_LIMIT_PER_MIN = env_int("CATALOG_RATE_LIMIT_PER_MIN", 30)
+
+# Reserved for future paid tier (off in v1)
+SPOONACULAR_API_KEY = (os.getenv("SPOONACULAR_API_KEY") or "").strip()
+EDAMAM_APP_ID = (os.getenv("EDAMAM_APP_ID") or "").strip()
+EDAMAM_APP_KEY = (os.getenv("EDAMAM_APP_KEY") or "").strip()
+
+
+def kroger_configured() -> bool:
+    return bool(KROGER_CLIENT_ID and KROGER_CLIENT_SECRET)
+
+
 def _public_url_configured(value: str | None) -> bool:
     if not value:
         return False

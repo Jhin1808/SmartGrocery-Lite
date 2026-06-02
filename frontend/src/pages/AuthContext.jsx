@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { apiLogout, apiMe, AUTH_FALLBACK_STORAGE_KEY } from "../api";
+import { isDemo, demoGetUser, enterDemo, exitDemo } from "../demo";
 
 const AuthCtx = createContext({ user: null, loading: true });
 
@@ -17,6 +18,10 @@ export function AuthProvider({ children }) {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
+      if (isDemo()) {
+        setUser(demoGetUser());
+        return;
+      }
       const u = await apiMe();
       setUser(u);
     } catch {
@@ -28,18 +33,36 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    // Avoid early /me on public routes; callback/login handle their own flow
+    if (isDemo()) {
+      setUser(demoGetUser());
+      setLoading(false);
+      return;
+    }
     try {
       const path = window?.location?.pathname || "";
       const skip = ["/login", "/oauth/callback", "/reset", "/terms"];
-      if (skip.some((p) => path.startsWith(p))) return;
+      if (skip.some((p) => path.startsWith(p))) {
+        setLoading(false);
+        return;
+      }
     } catch {}
     refresh();
   }, [refresh]);
 
+  const loginAsDemo = useCallback(() => {
+    enterDemo();
+    setUser(demoGetUser());
+    setLoading(false);
+  }, []);
+
   const logout = useCallback(async () => {
+    if (isDemo()) {
+      exitDemo();
+      clearSessionCaches();
+      setUser(null);
+      return;
+    }
     try {
-      // Clear header token fallback
       try { localStorage.removeItem(AUTH_FALLBACK_STORAGE_KEY); } catch {}
       await apiLogout();
     } catch {}
@@ -48,7 +71,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthCtx.Provider value={{ user, loading, refresh, logout }}>
+    <AuthCtx.Provider value={{ user, loading, refresh, logout, loginAsDemo, isDemo: isDemo() }}>
       {children}
     </AuthCtx.Provider>
   );
