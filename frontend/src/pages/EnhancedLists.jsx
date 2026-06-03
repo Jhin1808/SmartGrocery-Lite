@@ -70,6 +70,16 @@ const daysUntil = (s) => {
   return Math.ceil((d - today) / (1000 * 60 * 60 * 24));
 };
 
+function nextNewListName(lists) {
+  const safeLists = Array.isArray(lists) ? lists : [];
+  const names = new Set(safeLists.map((list) => (list.name || "").trim().toLowerCase()).filter(Boolean));
+  if (!names.has("new list")) return "New list";
+
+  let next = 2;
+  while (names.has(`new list ${next}`)) next += 1;
+  return `New list ${next}`;
+}
+
 const ExpiryPill = ({ expiry }) => {
   const n = daysUntil(expiry);
   if (n === null) return <span className="lm-badge">No expiry</span>;
@@ -669,8 +679,7 @@ export default function EnhancedLists() {
 
   const onCreateList = async (e) => {
     e.preventDefault();
-    const nm = newListName.trim();
-    if (!nm) return;
+    const nm = newListName.trim() || nextNewListName(lists);
     try {
       setCreating(true);
       const created = await safeCreateList(nm);
@@ -1022,7 +1031,7 @@ export default function EnhancedLists() {
               <button
                 type="submit"
                 className="btn btn-primary btn-icon"
-                disabled={!newListName.trim() || creating}
+                disabled={creating}
                 aria-label="Create list"
                 title="Create list"
                 style={{ width: 40, height: 40 }}
