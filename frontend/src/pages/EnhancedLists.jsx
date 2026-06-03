@@ -674,10 +674,21 @@ export default function EnhancedLists() {
     try {
       setCreating(true);
       const created = await safeCreateList(nm);
+      const createdList = created?.id
+        ? { hidden: false, owner_id: me?.id, name: nm, ...created }
+        : null;
       setNewListName("");
       const data = await safeGetLists(showHidden);
-      setLists(Array.isArray(data) ? data : []);
-      if (created?.id) setSelectedId(created.id);
+      const refreshed = Array.isArray(data) ? data : [];
+      const nextLists = createdList && !refreshed.some((list) => list.id === createdList.id)
+        ? [createdList, ...refreshed]
+        : refreshed;
+      setLists(nextLists);
+      setListQuery("");
+      if (createdList?.id) {
+        setSelectedId(createdList.id);
+        setItemsByList((m) => ({ ...m, [createdList.id]: m[createdList.id] || [] }));
+      }
       pushToast({ message: `Created "${created?.name || nm}"`, variant: "success" });
     } catch (e) {
       pushToast({ message: e.message || "Couldn't create list", variant: "danger" });
@@ -1085,17 +1096,21 @@ export default function EnhancedLists() {
                             {total === 0 ? "Empty" : `${pending} pending · ${total} total`}
                           </span>
                         </div>
-                        {pending > 0 && <span className="lm-badge lm-badge--brand">{pending}</span>}
-                        {isListOwner && (
-                          <button
-                            type="button"
-                            className="lm-list__item-share"
-                            aria-label={`Share ${list.name}`}
-                            title="Share list"
-                            onClick={(e) => { e.stopPropagation(); openShare(list.id); }}
-                          >
-                            <i className="bi bi-share" />
-                          </button>
+                        {(pending > 0 || isListOwner) && (
+                          <div className="lm-list__item-actions">
+                            {pending > 0 && <span className="lm-badge lm-badge--brand">{pending}</span>}
+                            {isListOwner && (
+                              <button
+                                type="button"
+                                className="lm-list__item-share"
+                                aria-label={`Share ${list.name}`}
+                                title="Share list"
+                                onClick={(e) => { e.stopPropagation(); openShare(list.id); }}
+                              >
+                                <i className="bi bi-share" />
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     );

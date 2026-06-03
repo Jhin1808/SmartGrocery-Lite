@@ -1428,16 +1428,22 @@ textarea.form-control { resize: vertical; min-height: 60px; line-height: 1.5; }
 }
 
 /* ---------- 14f. Sidebar list quick-share button ----------------------- */
-.lm-list__item { position: relative; }
+.lm-list__item-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lm-list__item-actions .lm-badge {
+  flex-shrink: 0;
+}
 
 .lm-list__item-share {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
   width: 32px;
   height: 32px;
-  display: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border);
@@ -1446,15 +1452,16 @@ textarea.form-control { resize: vertical; min-height: 60px; line-height: 1.5; }
   border-radius: var(--radius-sm);
   font-size: 14px;
   cursor: pointer;
-  z-index: 2;
+  flex-shrink: 0;
   opacity: 0.85;
+  pointer-events: auto;
   transition: all var(--t-fast) var(--ease-out);
 }
 
 .lm-list__item:hover .lm-list__item-share,
 .lm-list__item:focus-within .lm-list__item-share,
 .lm-list__item.is-active .lm-list__item-share {
-  display: inline-flex;
+  opacity: 1;
 }
 
 .lm-list__item-share:hover {
@@ -1464,11 +1471,8 @@ textarea.form-control { resize: vertical; min-height: 60px; line-height: 1.5; }
   opacity: 1;
 }
 
-/* On touch devices there's no hover, so show the share button always when
-   the list item is in the visible viewport. We use a simple "always after
-   first item" approach via the list__item-share rule below. */
 @media (hover: none) {
-  .lm-list__item-share { display: inline-flex; opacity: 0.7; }
+  .lm-list__item-share { opacity: 0.7; pointer-events: auto; }
 }
 
 /* ---------- 14g. Mobile-only inline helpers ---------------------------- */
