@@ -58,6 +58,28 @@ beforeEach(() => {
   apiSafe.safeGetShareLink.mockResolvedValue("https://example.test/share/1");
 });
 
+test("creates a manual list from the create button even when no name is typed yet", async () => {
+  apiSafe.safeGetLists.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+  apiSafe.safeCreateList.mockResolvedValue({
+    id: 41,
+    name: "New list",
+    owner_id: 1,
+    hidden: false,
+  });
+
+  render(<EnhancedLists />);
+
+  await screen.findByText("No lists yet");
+  const createButton = screen.getByRole("button", { name: /create list/i });
+  expect(createButton).toBeEnabled();
+  fireEvent.click(createButton);
+
+  await waitFor(() => expect(apiSafe.safeCreateList).toHaveBeenCalledWith("New list"));
+  const createdNames = await screen.findAllByText("New list");
+  const createdRow = createdNames.map((node) => node.closest(".lm-list__item")).find(Boolean);
+  expect(createdRow).toBeInTheDocument();
+});
+
 test("keeps a manually created list visible when the refresh does not include it yet", async () => {
   apiSafe.safeGetLists.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
   apiSafe.safeCreateList.mockResolvedValue({
