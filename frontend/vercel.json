@@ -4,19 +4,19 @@
     {
       "source": "/:path*",
       "has": [{ "type": "host", "value": "smartgrocery.online" }],
-      "destination": "https://tobuylists.com/:path*",
+      "destination": "https://www.tobuylists.com/:path*",
       "permanent": true
     },
     {
       "source": "/:path*",
       "has": [{ "type": "host", "value": "www.smartgrocery.online" }],
-      "destination": "https://tobuylists.com/:path*",
+      "destination": "https://www.tobuylists.com/:path*",
       "permanent": true
     },
     {
       "source": "/:path*",
       "has": [{ "type": "host", "value": "smart-grocery-lite.vercel.app" }],
-      "destination": "https://tobuylists.com/:path*",
+      "destination": "https://www.tobuylists.com/:path*",
       "permanent": true
     }
   ],
