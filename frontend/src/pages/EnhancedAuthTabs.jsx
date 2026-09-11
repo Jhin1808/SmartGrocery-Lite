@@ -4,12 +4,18 @@ import { useAuth } from "./AuthContext";
 import {
   apiLogin,
   apiRegister,
-  API_BASE,
   AUTH_FALLBACK_STORAGE_KEY,
   AUTH_HEADER_FALLBACK_ENABLED,
   googleLoginUrl,
 } from "../api";
 import googleIcon from "../googleicon.png";
+
+const AUTH_ERRORS = {
+  google_cancelled: "Google sign-in was cancelled. You can try again when you're ready.",
+  google_failed: "Google sign-in could not be completed. Please try again from this page.",
+  google_unavailable: "Google sign-in is temporarily unavailable. Please try again later or sign in with your email.",
+  session_missing: "Google sign-in finished, but your session could not be saved. Please try again. If this continues, contact support.",
+};
 
 function BrandMark({ size = 32 }) {
   return (
@@ -88,7 +94,7 @@ function AuthAside() {
     <aside className="auth-aside" aria-hidden="true">
       <div className="flex items-center gap-3" style={{ color: "var(--neutral-50)" }}>
         <BrandMark size={40} />
-        <span style={{ fontWeight: 800, fontSize: 18, letterSpacing: "-0.02em" }}>SmartGrocery</span>
+        <span style={{ fontWeight: 800, fontSize: 18, letterSpacing: "-0.02em" }}>ToBuyLists</span>
       </div>
 
       <div className="lm-cta" style={{ flex: 1, justifyContent: "center" }}>
@@ -100,7 +106,7 @@ function AuthAside() {
         </h1>
         <p className="lm-cta__sub">
           Plan together, share instantly, and check items off as you walk the aisles.
-          SmartGrocery keeps your household in sync — no more duplicate buys or forgotten staples.
+          ToBuyLists keeps your household in sync — no more duplicate buys or forgotten staples.
         </p>
 
         <div className="flex flex-col" style={{ gap: 12, marginTop: 12 }}>
@@ -184,6 +190,11 @@ export default function EnhancedAuthTabs() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
 
+  useEffect(() => {
+    const code = new URLSearchParams(search).get("auth_error");
+    if (code) setLoginError(AUTH_ERRORS[code] || "Sign-in could not be completed. Please try again.");
+  }, [search]);
+
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -205,7 +216,7 @@ export default function EnhancedAuthTabs() {
 
   useEffect(() => {
     const prev = document.title;
-    document.title = activeTab === "login" ? "Sign in · SmartGrocery" : "Create account · SmartGrocery";
+    document.title = activeTab === "login" ? "Sign in · ToBuyLists" : "Create account · ToBuyLists";
     return () => { document.title = prev; };
   }, [activeTab]);
 
@@ -224,7 +235,8 @@ export default function EnhancedAuthTabs() {
           localStorage.setItem(AUTH_FALLBACK_STORAGE_KEY, val);
         }
       } catch {}
-      await refresh();
+      const user = await refresh();
+      if (!user) throw new Error(AUTH_ERRORS.session_missing);
       navigate("/lists", { replace: true });
     } catch (error) {
       setLoginError(error.message || "Sign in failed. Check your email and password.");
@@ -263,7 +275,8 @@ export default function EnhancedAuthTabs() {
           localStorage.setItem(AUTH_FALLBACK_STORAGE_KEY, val);
         }
       } catch {}
-      await refresh();
+      const user = await refresh();
+      if (!user) throw new Error(AUTH_ERRORS.session_missing);
       navigate("/lists", { replace: true });
     } catch (error) {
       setRegisterError(error.message || "Couldn't create your account. Try again.");
@@ -273,12 +286,7 @@ export default function EnhancedAuthTabs() {
   };
 
   const handleSocialLogin = () => {
-    try {
-      const url = googleLoginUrl ? googleLoginUrl() : `${API_BASE}/auth/google/login`;
-      window.location.href = url;
-    } catch {
-      window.location.href = `${API_BASE}/auth/google/login`;
-    }
+    window.location.assign(googleLoginUrl());
   };
 
   return (
@@ -289,7 +297,7 @@ export default function EnhancedAuthTabs() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
           <div className="lm-md-hide" style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
             <BrandMark size={32} />
-            <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em" }}>SmartGrocery</span>
+            <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em" }}>ToBuyLists</span>
           </div>
           <div className="lm-tabs" role="tablist">
             <button

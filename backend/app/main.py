@@ -8,7 +8,7 @@ from starlette.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 from urllib.parse import urlparse
 from app.database import engine
-from app.config import load_secret, CATALOG_TIMEOUT_SECONDS
+from app.config import load_secret, CATALOG_TIMEOUT_SECONDS, get_frontend_origins
 from app.security_cookies import COOKIE_NAME
 from app.routers.lists import router as lists_router
 from app.routers.auth import router as auth_router
@@ -17,22 +17,14 @@ from app.routers.stores import router as stores_router
 from app.routers.auth_kroger import router as auth_kroger_router
 from app.routers.recipes import router as recipes_router
 from app.routers.templates import router as templates_router
-google_router = None
-try:
-    from app.routers.auth_google import router as google_router
-except Exception:
-    # In test or minimal environments, Google OAuth deps or env may be missing.
-    # Skip loading the Google router in that case.
-    google_router = None
+from app.routers.auth_google import router as google_router
 from app.routers.me import router as me_router
 from app.routers.tasks import router as tasks_router
 try:
     from app.routers.email_test import router as email_test_router
 except Exception:
     email_test_router = None
-# One env only; can be single origin or comma-separated list
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
-ALLOWED_ORIGINS = [o.strip().rstrip("/") for o in FRONTEND_URL.split(",") if o.strip()]
+ALLOWED_ORIGINS = get_frontend_origins()
 SESSION_SECRET = load_secret(
     "SESSION_SECRET",
     fallback_names=("SECRET_KEY", "JWT_SECRET_KEY", "JWT_SECRET"),

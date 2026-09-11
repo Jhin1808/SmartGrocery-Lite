@@ -3,6 +3,12 @@
   "redirects": [
     {
       "source": "/:path*",
+      "has": [{ "type": "host", "value": "tobuylists.com" }],
+      "destination": "https://www.tobuylists.com/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
       "has": [{ "type": "host", "value": "smartgrocery.online" }],
       "destination": "https://www.tobuylists.com/:path*",
       "permanent": true
@@ -20,6 +26,18 @@
       "permanent": true
     }
   ],
+  "rewrites": [
+    { "source": "/oauth/callback", "destination": "/index.html" },
+    { "source": "/login", "destination": "/index.html" },
+    { "source": "/lists/:path*", "destination": "/index.html" },
+    { "source": "/account", "destination": "/index.html" },
+    { "source": "/help", "destination": "/index.html" },
+    { "source": "/stores", "destination": "/index.html" },
+    { "source": "/recipes", "destination": "/index.html" },
+    { "source": "/templates", "destination": "/index.html" },
+    { "source": "/reset", "destination": "/index.html" },
+    { "source": "/terms", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -31,4 +49,3 @@
     }
   ]
 }
-

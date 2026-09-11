@@ -132,10 +132,34 @@ def load_secret(
     return dev_default
 
 
+def _frontend_origins(value: str) -> list[str]:
+    origins = []
+    for raw in value.split(","):
+        raw = raw.strip().strip("\"'").strip().rstrip("/")
+        if not raw:
+            continue
+        if "://" not in raw:
+            host = urlparse(f"//{raw}").hostname
+            raw = ("http://" if host in LOCAL_HOSTS else "https://") + raw
+        parsed = urlparse(raw)
+        if (parsed.scheme not in {"http", "https"} or not parsed.hostname
+                or parsed.username or parsed.password or parsed.path
+                or parsed.query or parsed.fragment):
+            raise ValueError("Frontend URLs must be HTTP(S) origins without paths")
+        origins.append(f"{parsed.scheme.lower()}://{parsed.netloc.lower()}")
+    return list(dict.fromkeys(origins))
+
+
 def get_frontend_url() -> str:
-    """Return the canonical frontend URL (no trailing slash, https by default)."""
-    v = (os.getenv("FRONTEND_URL") or "http://localhost:3000").strip().strip('"').strip("'")
-    v = v.rstrip("/")
-    if v and not v.startswith("http://") and not v.startswith("https://"):
-        v = ("http://" if "localhost" in v else "https://") + v
-    return v
+    """One canonical redirect destination, even with legacy comma-separated config."""
+    origins = _frontend_origins(os.getenv("FRONTEND_URL") or "http://localhost:3000")
+    return origins[0] if origins else "http://localhost:3000"
+
+
+def get_frontend_origins() -> list[str]:
+    """Allowed browser origins for CORS and cookie-authenticated mutations."""
+    return list(dict.fromkeys([
+        get_frontend_url(),
+        *_frontend_origins(os.getenv("FRONTEND_URL") or ""),
+        *_frontend_origins(os.getenv("FRONTEND_ORIGINS") or ""),
+    ]))

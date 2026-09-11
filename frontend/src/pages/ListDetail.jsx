@@ -307,7 +307,7 @@ export default function ListDetail() {
   };
 
   return (
-    <div className="lm-container" style={{ paddingTop: 24, paddingBottom: 60, maxWidth: 980 }}>
+    <div className="lm-container grocery-workspace workspace-detail" style={{ maxWidth: 980 }}>
       <div className="lm-hero">
         <Link to="/lists" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", textDecoration: "none", marginBottom: 8 }}>
           <i className="bi bi-arrow-left" /> Back to lists
@@ -329,8 +329,8 @@ export default function ListDetail() {
 
       <DemoBanner />
 
-      <div className="lm-card lm-card--elevated anim-fade">
-        <div className="lm-card__header">
+      <div className="lm-card workspace-content anim-fade">
+        <div className="lm-card__header workspace-content-header">
           <span className="eyebrow" style={{ fontSize: 11 }}>Manage items</span>
           <div style={{ display: "flex", gap: 8 }}>
             <button
@@ -352,7 +352,7 @@ export default function ListDetail() {
           </div>
         </div>
 
-        <div className="lm-card__body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div className="lm-card__body workspace-content-body">
           {shoppingMode && items.length > 0 && (
             <div style={{ padding: 16, background: "var(--color-primary-soft)", borderRadius: "var(--radius-md)", border: "1px solid color-mix(in srgb, var(--color-primary) 20%, transparent)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -367,20 +367,20 @@ export default function ListDetail() {
 
           {!shoppingMode && canEdit && (
             <form onSubmit={onAdd}>
-              <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.6fr) 90px 170px auto", gap: 8 }}>
+              <div className="workspace-add-grid">
                 <ItemTypeahead
                   value={draft.name}
                   onChange={(v) => updateDraft({ name: v })}
                   onPick={applyProductToDraft}
                   onSubmitCustom={submitCustomName}
                   placeholder="Add an item or search the catalog…"
-                  autoFocus
                 />
                 <input
                   type="number"
                   min="1"
                   className="form-control"
                   placeholder="Qty"
+                  aria-label="Item quantity"
                   value={draft.quantity}
                   onChange={(e) => updateDraft({ quantity: e.target.value })}
                   style={{ height: 42, textAlign: "center" }}
@@ -388,6 +388,7 @@ export default function ListDetail() {
                 <input
                   type="date"
                   className="form-control"
+                  aria-label="Item expiry date"
                   value={draft.expiry}
                   onChange={(e) => updateDraft({ expiry: e.target.value })}
                   style={{ height: 42 }}
@@ -516,24 +517,25 @@ export default function ListDetail() {
             </form>
           )}
 
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <div style={{ position: "relative", flex: 1, minWidth: 200, maxWidth: 320 }}>
+          <div className="workspace-filters">
+            <div className="workspace-item-search">
               <input
                 type="text"
                 className="form-control"
                 placeholder="Search items…"
+                aria-label="Search items"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 style={{ height: 38, paddingLeft: 36, fontSize: 13.5 }}
               />
               <i className="bi bi-search" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none", fontSize: 13 }} />
             </div>
-            <select className="form-select" value={filterExp} onChange={(e) => setFilterExp(e.target.value)} style={{ height: 38, maxWidth: 160, fontSize: 13.5 }}>
+            <select aria-label="Filter by expiry" className="form-select" value={filterExp} onChange={(e) => setFilterExp(e.target.value)} style={{ height: 38, maxWidth: 160, fontSize: 13.5 }}>
               <option value="all">All</option>
               <option value="fresh">Fresh only</option>
               <option value="expired">Expired</option>
             </select>
-            <select className="form-select" value={sortKey} onChange={(e) => setSortKey(e.target.value)} style={{ height: 38, maxWidth: 170, fontSize: 13.5 }}>
+            <select aria-label="Sort items by" className="form-select" value={sortKey} onChange={(e) => setSortKey(e.target.value)} style={{ height: 38, maxWidth: 170, fontSize: 13.5 }}>
               <option value="name">Sort: Name</option>
               <option value="quantity">Sort: Quantity</option>
               <option value="expiry">Sort: Expiry</option>
@@ -555,17 +557,18 @@ export default function ListDetail() {
               <p className="lm-empty__desc">{items.length === 0 ? "Add your first item using the form above." : "No items match your filters."}</p>
             </div>
           ) : !shoppingMode ? (
-            <div className="flex flex-col" style={{ gap: 8 }}>
+            <div className="workspace-items">
               {filteredSorted.map((it) => {
                 const isEd = editingId === it.id;
                 return (
-                  <div key={it.id} className={"lm-item" + (it.purchased ? " is-purchased" : "")}>
+                  <div key={it.id} className={"lm-item" + (it.purchased ? " is-purchased" : "") + (isEd ? " is-editing" : "")}>
                     <button
                       type="button"
                       onClick={() => togglePurchased(it)}
                       className={"lm-item__check" + (it.purchased ? " is-checked" : "")}
                       disabled={!canEdit}
-                      aria-label={it.purchased ? "Mark unpurchased" : "Mark purchased"}
+                      aria-pressed={!!it.purchased}
+                      aria-label={`${it.purchased ? "Mark unpurchased" : "Mark purchased"}: ${it.name}`}
                     >
                       <i className="bi bi-check-lg" />
                     </button>
@@ -624,7 +627,7 @@ export default function ListDetail() {
                       )}
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div className="workspace-item-info">
                       {isEd ? (
                         <>
                           <div className="lm-item__qty-edit" title="Quantity">
@@ -641,6 +644,7 @@ export default function ListDetail() {
                           <input
                             type="date"
                             className="form-control"
+                            aria-label="Edit item expiry date"
                             value={edit.expiry || ""}
                             onChange={(e) => setEdit((s) => ({ ...s, expiry: e.target.value }))}
                             style={{ width: 160, height: 34, fontSize: 13 }}
@@ -676,7 +680,7 @@ export default function ListDetail() {
               })}
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+            <div className="workspace-shop-grid">
               {filteredSorted.map((it) => (
                 <div
                   key={it.id}

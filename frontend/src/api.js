@@ -1,5 +1,5 @@
 // src/api.js
-const rawBase = process.env.REACT_APP_API_BASE || "";
+const rawBase = (process.env.REACT_APP_API_BASE || "").trim();
 const API_BASE = rawBase.replace(/\/+$/, "");
 export { API_BASE };
 
@@ -73,7 +73,10 @@ async function request(path, { method = "GET", headers = {}, body } = {}) {
     throw err;
   }
 
-  return ct.includes("application/json") ? res.json() : res.text();
+  if (!ct.includes("application/json")) {
+    throw new Error("The API returned an unexpected response. Please try again later.");
+  }
+  return res.json();
 }
 
 // ---- Auth ----
@@ -95,6 +98,7 @@ export async function apiLogin(email, password) {
     const data = await res.json().catch(() => null);
     return data;
   }
+  throw new Error("The sign-in service returned an unexpected response. Please try again later.");
 }
 
 export const apiLogout = () => request("/auth/logout", { method: "POST" });
