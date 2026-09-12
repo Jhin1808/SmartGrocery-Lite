@@ -14,6 +14,7 @@ export default function OAuthCallback() {
   const { search, hash, pathname } = useLocation();
 
   useEffect(() => {
+    let active = true;
     (async () => {
       // Safari/ITP fallback: if backend included #token=..., store it so API can send Authorization header
       try {
@@ -34,15 +35,21 @@ export default function OAuthCallback() {
         }
       } catch {}
 
-      await refresh(); // will set user if backend just set the cookie
+      const user = await refresh();
+      if (!active) return;
+      if (!user) {
+        navigate("/login?auth_error=session_missing", { replace: true });
+        return;
+      }
       // Optional: support ?next=... after OAuth
       const p = new URLSearchParams(search);
-      const next = p.get("next") || "/lists";
+      const candidate = p.get("next") || "/lists";
+      const next = /^\/(?!\/)/.test(candidate) && !/[\\\s]/.test(candidate) ? candidate : "/lists";
       navigate(next, { replace: true });
     })();
+    return () => { active = false; };
   }, [refresh, navigate, search, hash, pathname]);
 
-  return null;
+  return <div className="lm-empty" role="status"><span className="lm-spinner" /><p>Finishing sign-in…</p></div>;
 }
-
 

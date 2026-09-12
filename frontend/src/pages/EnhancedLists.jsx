@@ -453,6 +453,7 @@ export default function EnhancedLists() {
 
   const [lists, setLists] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  const [listPickerOpen, setListPickerOpen] = useState(false);
   const [listQuery, setListQuery] = useState("");
   const [listSort, setListSort] = useState({ key: "name", dir: "asc" });
   const setSortKey = (key) => setListSort((s) => ({ ...s, key }));
@@ -488,7 +489,6 @@ export default function EnhancedLists() {
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [shoppingProgress, setShoppingProgress] = useState(0);
   const [removedIds, setRemovedIds] = useState(() => {
     try {
       const raw = localStorage.getItem("sg-removed-lists");
@@ -562,31 +562,18 @@ export default function EnhancedLists() {
       return c === cat || c.split(".")[0] === cat;
     }).length;
   };
-  const allPending = useMemo(
-    () => Object.values(itemsByList).reduce((sum, items) => sum + (items?.filter((i) => !i.purchased).length || 0), 0),
-    [itemsByList]
-  );
-  const totalAcrossLists = useMemo(
-    () => Object.values(itemsByList).reduce((sum, items) => sum + (items?.length || 0), 0),
-    [itemsByList]
-  );
-  const expiringSoonCount = useMemo(() => {
-    let n = 0;
-    Object.values(itemsByList).flat().forEach((it) => {
-      const d = daysUntil(it.expiry);
-      if (d !== null && d <= 3) n++;
-    });
-    return n;
-  }, [itemsByList]);
-
-  useEffect(() => {
-    if (selectedId && itemsByList[selectedId]) {
-      const items = itemsByList[selectedId];
-      const purchased = items.filter((item) => item.purchased).length;
-      const progress = items.length > 0 ? (purchased / items.length) * 100 : 0;
-      setShoppingProgress(progress);
-    }
-  }, [selectedId, itemsByList]);
+  const selectedItems = itemsByList[selectedId] || [];
+  const purchasedCount = selectedItems.filter((item) => item.purchased).length;
+  const expiringSoonCount = selectedItems.filter((item) => {
+    const days = daysUntil(item.expiry);
+    return days !== null && days >= 0 && days <= 3;
+  }).length;
+  const shoppingProgress = selectedItems.length ? purchasedCount / selectedItems.length * 100 : 0;
+  const selectList = (id) => {
+    setSelectedId(id);
+    setCategoryFilter(null);
+    setListPickerOpen(false);
+  };
 
   const setFilter = (listId, v) => setFilters((f) => ({ ...f, [listId]: v }));
   const toggleSort = (listId, key) => {
@@ -968,40 +955,25 @@ export default function EnhancedLists() {
   const shareListIsOwner = !!(shareList && me && shareList.owner_id === me.id) || (!shareList && isOwner);
 
   return (
-    <div className="lm-container" style={{ paddingTop: 24, paddingBottom: 60 }}>
-      <div className="lm-hero">
-        <h1 className="lm-hero__title">Your lists</h1>
-        <p className="lm-hero__subtitle">Plan, share, and check things off as you shop.</p>
-      </div>
-
+    <div className="lm-container grocery-workspace">
       <DemoBanner />
-
-      <div className="lm-stats" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 24 }}>
-        <div className="lm-stat lm-stat--brand">
-          <span className="lm-stat__label">Lists</span>
-          <span className="lm-stat__value">{visibleLists.length}</span>
-          <span className="lm-stat__sub">visible to you</span>
+      <div className="workspace-heading">
+        <div>
+          <p className="workspace-eyebrow">YOUR KITCHEN, ORGANIZED</p>
+          <h1>Shopping lists</h1>
         </div>
-        <div className="lm-stat">
-          <span className="lm-stat__label">Items</span>
-          <span className="lm-stat__value">{totalAcrossLists}</span>
-          <span className="lm-stat__sub">across all lists</span>
-        </div>
-        <div className="lm-stat lm-stat--accent">
-          <span className="lm-stat__label">To buy</span>
-          <span className="lm-stat__value">{allPending}</span>
-          <span className="lm-stat__sub">not yet purchased</span>
-        </div>
-        <div className="lm-stat">
-          <span className="lm-stat__label">Expiring soon</span>
-          <span className="lm-stat__value" style={{ color: expiringSoonCount > 0 ? "var(--accent-600)" : undefined }}>{expiringSoonCount}</span>
-          <span className="lm-stat__sub">within 3 days</span>
-        </div>
+        <span className="workspace-list-total">{visibleLists.length} {visibleLists.length === 1 ? "list" : "lists"}</span>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 320px) 1fr", gap: 20, alignItems: "start" }}
-           className="lm-grid-2">
-        <aside className="lm-card lm-card--elevated" style={{ position: "sticky", top: "calc(var(--nav-height) + 16px)" }}>
+      <button type="button" className="workspace-list-toggle" aria-expanded={listPickerOpen || !selectedId}
+        aria-controls="workspace-lists" onClick={() => setListPickerOpen((open) => !open)}>
+        <i className="bi bi-list-ul" aria-hidden="true" />
+        <span>{selectedList?.name || "Create your first list"}</span>
+        <i className={`bi ${listPickerOpen ? "bi-chevron-up" : "bi-chevron-down"}`} aria-hidden="true" />
+      </button>
+      <div className="workspace-grid">
+        <aside id="workspace-lists" aria-label="Your lists"
+          className={"lm-card workspace-sidebar" + (listPickerOpen || !selectedId ? " is-open" : "")}>
           <div className="lm-card__header">
             <span className="eyebrow" style={{ fontSize: 11 }}>
               <i className="bi bi-folder2-open" style={{ marginRight: 6 }} /> My lists
@@ -1014,6 +986,7 @@ export default function EnhancedLists() {
                 type="text"
                 className="form-control"
                 placeholder="New list…"
+                aria-label="New list name"
                 value={newListName}
                 onChange={(e) => setNewListName(e.target.value)}
                 style={{ height: 40 }}
@@ -1036,6 +1009,7 @@ export default function EnhancedLists() {
                 type="text"
                 className="form-control"
                 placeholder="Search lists"
+                aria-label="Search lists"
                 value={listQuery}
                 onChange={(e) => setListQuery(e.target.value)}
                 style={{ height: 38, paddingLeft: 38 }}
@@ -1044,7 +1018,7 @@ export default function EnhancedLists() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <select className="form-select" value={listSort.key} onChange={(e) => setSortKey(e.target.value)} style={{ height: 34, fontSize: 12.5, maxWidth: 130, padding: "0 30px 0 12px" }}>
+              <select aria-label="Sort lists by" className="form-select" value={listSort.key} onChange={(e) => setSortKey(e.target.value)} style={{ height: 34, fontSize: 12.5, maxWidth: 130, padding: "0 30px 0 12px" }}>
                 <option value="name">Name</option>
                 <option value="created">Created</option>
                 <option value="items">Items</option>
@@ -1060,7 +1034,7 @@ export default function EnhancedLists() {
               </label>
             </div>
 
-            <div style={{ maxHeight: 420, overflowY: "auto", margin: "0 -4px", padding: "0 4px" }}>
+            <div className="workspace-list-scroll">
               {visibleLists.length === 0 ? (
                 <div className="lm-empty" style={{ padding: "36px 12px" }}>
                   <div className="lm-empty__art"><i className="bi bi-basket" /></div>
@@ -1072,30 +1046,25 @@ export default function EnhancedLists() {
                   {visibleLists.map((list) => {
                     const pending = pendingItems(list.id);
                     const total = totalItems(list.id);
+                    const loaded = Array.isArray(itemsByList[list.id]);
                     const isListOwner = !!(me && list.owner_id === me.id);
                     return (
                       <div
                         key={list.id}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => setSelectedId(list.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setSelectedId(list.id);
-                          }
-                        }}
                         className={"lm-list__item" + (selectedId === list.id ? " is-active" : "")}
                       >
-                        <div className="lm-list__item-main">
-                          <div className="lm-list__item-title">
-                            {list.shared && <i className="bi bi-people-fill" style={{ fontSize: 12, color: "var(--color-primary)" }} />}
+                        <button type="button" className="lm-list__item-main workspace-list-select"
+                          onClick={() => selectList(list.id)} aria-pressed={selectedId === list.id}>
+                          <span className="workspace-list-icon" aria-hidden="true"><i className={`bi ${list.shared ? "bi-people" : "bi-basket2"}`} /></span>
+                          <span className="workspace-list-copy">
+                          <span className="lm-list__item-title">
                             <span className="truncate">{list.name}</span>
-                          </div>
-                          <span className="lm-list__item-sub">
-                            {total === 0 ? "Empty" : `${pending} pending · ${total} total`}
                           </span>
-                        </div>
+                          <span className="lm-list__item-sub">
+                            {!loaded ? (list.shared ? "Shared list" : "Personal list") : total === 0 ? "Empty list" : `${pending} to buy · ${total} items`}
+                          </span>
+                          </span>
+                        </button>
                         {(pending > 0 || isListOwner) && (
                           <div className="lm-list__item-actions">
                             {pending > 0 && <span className="lm-badge lm-badge--brand">{pending}</span>}
@@ -1121,14 +1090,14 @@ export default function EnhancedLists() {
           </div>
         </aside>
 
-        <section className="lm-card lm-card--elevated anim-fade" key={selectedId || "none"}>
-          <div className="lm-card__header" style={{ flexWrap: "wrap" }}>
+        <section className="lm-card workspace-content anim-fade" key={selectedId || "none"}>
+          <div className="lm-card__header workspace-content-header">
             <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: 1 }}>
               <span style={{ width: 36, height: 36, display: "grid", placeItems: "center", borderRadius: 10, background: "var(--color-primary-soft)", color: "var(--color-primary)" }}>
                 <i className="bi bi-basket3-fill" />
               </span>
               <div style={{ minWidth: 0 }}>
-                <h2 className="truncate" style={{ fontSize: 19, fontWeight: 700, margin: 0 }}>{selectedName}</h2>
+                <h2 className="workspace-list-title">{selectedName}</h2>
                 <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 2 }}>
                   {selectedId ? (
                     <>
@@ -1141,7 +1110,7 @@ export default function EnhancedLists() {
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <div className="workspace-list-actions">
               {selectedId && (
                 <span className="lm-badge lm-badge--brand">
                   {pendingItems(selectedId)} / {totalItems(selectedId)} to buy
@@ -1152,10 +1121,12 @@ export default function EnhancedLists() {
                 type="button"
                 onClick={() => setShoppingMode((v) => !v)}
                 className={"btn btn-sm " + (shoppingMode ? "btn-primary" : "btn-outline")}
+                aria-pressed={shoppingMode}
+                disabled={!selectedId}
                 title={shoppingMode ? "Exit shop mode" : "Enter shop mode"}
               >
                 <i className={`bi ${shoppingMode ? "bi-bag-check-fill" : "bi-bag"}`} />
-                {shoppingMode ? "Shopping" : "Shop"}
+                {shoppingMode ? "Shopping" : "Shop mode"}
               </button>
 
               {selectedId && !loading && isOwner && (
@@ -1181,12 +1152,19 @@ export default function EnhancedLists() {
             </div>
           </div>
 
-          <div className="lm-card__body" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {selectedId && !loading && (
+            <div className="workspace-summary" aria-label="List summary">
+              <span><i className="bi bi-basket2" aria-hidden="true" /><strong>{pendingItems(selectedId)}</strong> to buy</span>
+              <span><i className="bi bi-check2-circle" aria-hidden="true" /><strong>{purchasedCount}</strong> purchased</span>
+              {expiringSoonCount > 0 && <span className="workspace-expiring"><i className="bi bi-clock" aria-hidden="true" />{expiringSoonCount} expiring soon</span>}
+            </div>
+          )}
+          <div className="lm-card__body workspace-content-body">
             {!selectedId ? (
               <div className="lm-empty">
                 <div className="lm-empty__art"><i className="bi bi-arrow-left-circle" /></div>
                 <h3 className="lm-empty__title">Choose a list</h3>
-                <p className="lm-empty__desc">Select a list on the left to view and manage its items.</p>
+                <p className="lm-empty__desc">Choose a list or create one to start adding groceries.</p>
               </div>
             ) : (
               <>
@@ -1196,12 +1174,12 @@ export default function EnhancedLists() {
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 13.5 }}>Shopping progress</div>
                         <div style={{ fontSize: 12.5, color: "var(--text-secondary)" }}>
-                          {viewItems.filter((i) => i.purchased).length} of {viewItems.length} checked off
+                          {purchasedCount} of {selectedItems.length} checked off
                         </div>
                       </div>
                       <span className="lm-badge lm-badge--brand">{Math.round(shoppingProgress)}%</span>
                     </div>
-                    <div className="lm-progress" style={{ marginBottom: 10 }}>
+                    <div className="lm-progress" role="progressbar" aria-label="Shopping progress" aria-valuenow={Math.round(shoppingProgress)} aria-valuemin={0} aria-valuemax={100} style={{ marginBottom: 10 }}>
                       <div className="lm-progress__bar" style={{ width: `${shoppingProgress}%` }} />
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1217,8 +1195,8 @@ export default function EnhancedLists() {
                 )}
 
                 {!shoppingMode && (
-                  <form onSubmit={submitItem}>
-                    <div className="lm-add-form" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.6fr) 80px 160px auto", gap: 8 }}>
+                  <form onSubmit={submitItem} className="workspace-add">
+                    <div className="workspace-add-grid">
                       <div style={{ position: "relative" }}>
                         <ItemTypeahead
                           value={drafts[selectedId]?.name ?? ""}
@@ -1226,7 +1204,6 @@ export default function EnhancedLists() {
                           onPick={applyProductToDraft}
                           disabled={!canEdit}
                           placeholder="Add an item or search the catalog…"
-                          autoFocus
                         />
                       </div>
                       <input
@@ -1234,6 +1211,7 @@ export default function EnhancedLists() {
                         min="1"
                         className="form-control"
                         placeholder="Qty"
+                        aria-label="Item quantity"
                         value={drafts[selectedId]?.quantity ?? 1}
                         onChange={(e) => updateDraft(selectedId, { quantity: e.target.value })}
                         disabled={!canEdit}
@@ -1242,6 +1220,7 @@ export default function EnhancedLists() {
                       <input
                         type="date"
                         className="form-control"
+                        aria-label="Item expiry date"
                         value={drafts[selectedId]?.expiry ?? ""}
                         onChange={(e) => updateDraft(selectedId, { expiry: e.target.value })}
                         disabled={!canEdit}
@@ -1275,7 +1254,7 @@ export default function EnhancedLists() {
                         <button
                           type="submit"
                           className="btn btn-primary"
-                          disabled={!canEdit}
+                          disabled={!canEdit || !(drafts[selectedId]?.name || "").trim()}
                           style={{ height: 40 }}
                         >
                           <i className="bi bi-plus-lg" /> Add
@@ -1383,12 +1362,13 @@ export default function EnhancedLists() {
                   </form>
                 )}
 
-                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <div style={{ position: "relative", flex: 1, minWidth: 200, maxWidth: 320 }}>
+                <div className="workspace-filters">
+                  <div className="workspace-item-search">
                     <input
                       type="text"
                       className="form-control"
                       placeholder="Search items…"
+                      aria-label="Search items"
                       value={filters[selectedId] || ""}
                       onChange={(e) => setFilter(selectedId, e.target.value)}
                       style={{ height: 36, paddingLeft: 36, fontSize: 13.5 }}
@@ -1414,11 +1394,10 @@ export default function EnhancedLists() {
                 </div>
 
                 {FEATURE_CATALOG && (
-                  <div className="lm-cat-filters" role="tablist" aria-label="Filter by category">
+                  <div className="lm-cat-filters" role="group" aria-label="Filter by category">
                     <button
                       type="button"
-                      role="tab"
-                      aria-selected={!categoryFilter}
+                      aria-pressed={!categoryFilter}
                       className={"lm-cat-chip" + (!categoryFilter ? " is-active" : "")}
                       onClick={() => setCategoryFilter(null)}
                       style={{ "--cat-color": "#94a3b8" }}
@@ -1434,8 +1413,7 @@ export default function EnhancedLists() {
                         <button
                           key={cf.key}
                           type="button"
-                          role="tab"
-                          aria-selected={categoryFilter === cf.key}
+                          aria-pressed={categoryFilter === cf.key}
                           className={"lm-cat-chip" + (categoryFilter === cf.key ? " is-active" : "")}
                           onClick={() => setCategoryFilter(categoryFilter === cf.key ? null : cf.key)}
                           style={{ "--cat-color": categoryColor(cf.key) }}
@@ -1457,26 +1435,26 @@ export default function EnhancedLists() {
                 ) : viewItems.length === 0 ? (
                   <div className="lm-empty">
                     <div className="lm-empty__art"><i className="bi bi-bag" /></div>
-                    <h3 className="lm-empty__title">{shoppingMode ? "All done!" : "Nothing here yet"}</h3>
+                    <h3 className="lm-empty__title">{(filters[selectedId] || categoryFilter) ? "No matching items" : shoppingMode && selectedItems.length ? "All done!" : "Your list starts here"}</h3>
                     <p className="lm-empty__desc">
-                      {shoppingMode
-                        ? "No items left to buy in this list."
-                        : "Add your first item using the form above."}
+                      {(filters[selectedId] || categoryFilter)
+                        ? "Try a different search or category."
+                        : shoppingMode && selectedItems.length ? "No items left to buy in this list." : "Add your first item using the field above."}
                     </p>
                   </div>
                 ) : !shoppingMode ? (
-                  <div className="flex flex-col" style={{ gap: 8 }}>
+                  <div className="workspace-items">
                     {viewItems.map((item) => {
                       const isEd = editing.has(item.id);
                       const draft = editDrafts[item.id] || {};
                       return (
-                        <div key={item.id} className={"lm-item" + (item.purchased ? " is-purchased" : "")}>
+                        <div key={item.id} className={"lm-item" + (item.purchased ? " is-purchased" : "") + (isEd ? " is-editing" : "")}>
                           <button
                             type="button"
                             onClick={() => togglePurchased(item)}
                             className={"lm-item__check" + (item.purchased ? " is-checked" : "")}
                             disabled={!canEdit}
-                            aria-label={item.purchased ? "Mark unpurchased" : "Mark purchased"}
+                            aria-label={`${item.purchased ? "Mark unpurchased" : "Mark purchased"}: ${item.name}`}
                             aria-pressed={item.purchased}
                           >
                             <i className="bi bi-check-lg" />
@@ -1488,6 +1466,7 @@ export default function EnhancedLists() {
                                 <input
                                   type="text"
                                   className="form-control"
+                                  aria-label="Edit item name"
                                   value={draft.name}
                                   onChange={(e) => updateEditDraft(item.id, { name: e.target.value })}
                                   style={{ height: 34, fontSize: 13.5 }}
@@ -1559,13 +1538,14 @@ export default function EnhancedLists() {
                             )}
                           </div>
 
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                          <div className="workspace-item-info">
                             {isEd ? (
                               <>
                                 <input
                                   type="number"
                                   min="1"
                                   className="form-control"
+                                  aria-label="Edit item quantity"
                                   value={draft.quantity}
                                   onChange={(e) => updateEditDraft(item.id, { quantity: e.target.value })}
                                   style={{ width: 72, height: 34, textAlign: "center", fontSize: 13.5 }}
@@ -1573,6 +1553,7 @@ export default function EnhancedLists() {
                                 <input
                                   type="date"
                                   className="form-control"
+                                  aria-label="Edit item expiry date"
                                   value={draft.expiry || ""}
                                   onChange={(e) => updateEditDraft(item.id, { expiry: e.target.value })}
                                   style={{ width: 160, height: 34, fontSize: 13 }}
@@ -1604,14 +1585,16 @@ export default function EnhancedLists() {
                     })}
                   </div>
                 ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+                  <div className="workspace-shop-grid">
                     {viewItems.map((item) => (
                       <div
                         key={item.id}
                         className={"lm-shop-card" + (item.purchased ? " is-purchased" : "")}
                         onClick={() => togglePurchased(item)}
                         role="button"
-                        tabIndex={0}
+                        aria-pressed={!!item.purchased}
+                        aria-disabled={!canEdit}
+                        tabIndex={canEdit ? 0 : -1}
                         onKeyDown={(e) => {
                           if (e.key === " " || e.key === "Enter") {
                             e.preventDefault();
@@ -1692,18 +1675,6 @@ export default function EnhancedLists() {
         onRevoke={revoke}
       />
 
-      {selectedId && isOwner && !shareOpen && (
-        <button
-          type="button"
-          className="lm-fab"
-          onClick={() => openShare(selectedId)}
-          aria-label="Share this list"
-          title="Share"
-        >
-          <i className="bi bi-share-fill" />
-        </button>
-      )}
-
       <Modal
         open={renameOpen}
         onClose={() => setRenameOpen(false)}
@@ -1755,12 +1726,7 @@ export default function EnhancedLists() {
 
       <Toasts items={toasts} onDismiss={dismissToast} />
 
-      <style>{`
-        @media (max-width: 960px) {
-          .lm-grid-2 { grid-template-columns: 1fr !important; }
-          .lm-grid-2 > aside { position: static !important; }
-        }
-      `}</style>
+
     </div>
   );
 }

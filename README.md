@@ -8,6 +8,9 @@ This project was built to provide a more practical and collaborative grocery lis
 
 ## Features
 
+Deployment: see [the ToBuyLists domain migration guide](docs/tobuylists-migration.md)
+for frontend API, Google OAuth, cookie, and CORS settings.
+
 - User registration and login
 - Google authentication
 - Shared grocery lists across users

@@ -19,14 +19,17 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       if (isDemo()) {
-        setUser(demoGetUser());
-        return;
+        const demoUser = demoGetUser();
+        setUser(demoUser);
+        return demoUser;
       }
       const u = await apiMe();
       setUser(u);
+      return u;
     } catch {
       clearSessionCaches();
       setUser(null);
+      return null;
     } finally {
       setLoading(false);
     }

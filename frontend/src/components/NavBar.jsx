@@ -15,7 +15,7 @@ function Brand() {
           <circle cx="18" cy="20" r="1.4" />
         </svg>
       </span>
-      <span>SmartGrocery</span>
+      <span>ToBuyLists</span>
     </NavLink>
   );
 }
@@ -154,8 +154,6 @@ export default function NavBar() {
     ...(FEATURE_KROGER ? [{ to: "/stores", icon: "bi-shop", label: "Stores" }] : []),
     ...(FEATURE_RECIPES ? [{ to: "/recipes", icon: "bi-journal-text", label: "Recipes" }] : []),
     ...(FEATURE_TEMPLATES ? [{ to: "/templates", icon: "bi-collection", label: "Templates" }] : []),
-    { to: "/account", icon: "bi-person", label: "Account" },
-    { to: "/help", icon: "bi-question-circle", label: "Help" },
   ];
 
   return (
@@ -171,7 +169,7 @@ export default function NavBar() {
                 className={({ isActive }) => "lm-nav__link" + (isActive ? " active" : "")}
               >
                 <i className={`bi ${l.icon}`} aria-hidden="true" />
-                {l.label}
+                <span>{l.label}</span>
               </NavLink>
             ))}
           </nav>

@@ -113,3 +113,27 @@ test("keeps sidebar share buttons visible in normal flow instead of overlay posi
   expect(shareRule).not.toMatch(/opacity:\s*0\s*;/);
   expect(shareRule).not.toMatch(/pointer-events:\s*none/);
 });
+
+test("shopping progress counts purchased items even when they are hidden", async () => {
+  apiSafe.safeGetLists.mockResolvedValue([{ id: 7, name: "Groceries", owner_id: 1 }]);
+  apiSafe.safeGetItems.mockResolvedValue([
+    { id: 1, name: "Milk", quantity: 1, purchased: false },
+    { id: 2, name: "Bread", quantity: 1, purchased: true },
+  ]);
+  render(<EnhancedLists />);
+  await screen.findByText("Milk");
+  fireEvent.click(screen.getByRole("button", { name: /shop mode/i }));
+  expect(screen.getByText("1 of 2 checked off")).toBeInTheDocument();
+  expect(screen.getByRole("progressbar", { name: /shopping progress/i })).toHaveAttribute("aria-valuenow", "50");
+  expect(screen.queryByText("Bread")).not.toBeInTheDocument();
+});
+
+test("purchase failure restores the item instead of losing it from the list", async () => {
+  apiSafe.safeGetLists.mockResolvedValue([{ id: 7, name: "Groceries", owner_id: 1 }]);
+  apiSafe.safeGetItems.mockResolvedValue([{ id: 1, name: "Milk", quantity: 1, purchased: false }]);
+  apiSafe.safeUpdateItem.mockRejectedValue(new Error("Could not save"));
+  render(<EnhancedLists />);
+  fireEvent.click(await screen.findByRole("button", { name: "Mark purchased: Milk" }));
+  await screen.findByText("Could not save");
+  expect(screen.getByRole("button", { name: "Mark purchased: Milk" })).toHaveAttribute("aria-pressed", "false");
+});
