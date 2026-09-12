@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const r = await fetch('https://api.smartgrocery.online/tasks/run-reminders', {
+    const r = await fetch('https://api.tobuylists.com/tasks/run-reminders', {
       method: 'POST',
       headers: { 'x-api-key': secret },
     });

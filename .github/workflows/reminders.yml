@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Call backend reminder task
         env:
-          API_URL: https://api.smartgrocery.online
+          API_URL: https://api.tobuylists.com
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           if [ -z "$CRON_SECRET" ]; then

@@ -1,6 +1,11 @@
 // src/api.js
-const rawBase = process.env.REACT_APP_API_BASE || "";
-const API_BASE = rawBase.replace(/\/+$/, "");
+const PRODUCTION_API_BASE = "https://api.tobuylists.com";
+const LEGACY_API_BASE = "https://api.smartgrocery.online";
+const configuredBase = (process.env.REACT_APP_API_BASE || "").trim().replace(/\/+$/, "");
+const API_BASE =
+  configuredBase === LEGACY_API_BASE
+    ? PRODUCTION_API_BASE
+    : configuredBase || (process.env.NODE_ENV === "production" ? PRODUCTION_API_BASE : "");
 export { API_BASE };
 
 export const AUTH_FALLBACK_STORAGE_KEY =
