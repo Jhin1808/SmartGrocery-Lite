@@ -145,7 +145,7 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
         try:
             r = httpx.post(
                 "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-                data={"secret": secret, "response": token, "remoteip": ip},
+                data={"secret": secret, "response": token},
                 timeout=10.0,
             )
             data = r.json()
