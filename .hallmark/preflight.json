@@ -1,0 +1,15 @@
+{
+  "framework": "React 19 / Create React App / Bootstrap 5",
+  "base": "origin/main 9d2e532",
+  "branch": "design/hallmark-live",
+  "approvedDirection": "warm editorial neighborhood market",
+  "preserve": [
+    "authentication",
+    "list and sharing permissions",
+    "catalog and barcode",
+    "Kroger stores and prices",
+    "recipes",
+    "templates"
+  ],
+  "date": "2026-09-30"
+}

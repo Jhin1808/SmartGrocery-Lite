@@ -6,6 +6,7 @@ import logging
 from typing import Optional
 
 import httpx
+from fastapi import HTTPException
 
 from app.config import MEALDB_BASE_URL
 
@@ -21,7 +22,7 @@ async def _get(client: httpx.AsyncClient, path: str, params: Optional[dict] = No
         return r.json()
     except Exception as e:
         log.warning("TheMealDB %s failed: %s", path, e)
-        return None
+        raise HTTPException(503, "Recipe service is temporarily unavailable. Please try again.") from e
 
 
 async def search_by_name(client: httpx.AsyncClient, q: str) -> list[dict]:

@@ -12,10 +12,8 @@ function StatusRow({ krogerConfigured, connected }) {
   if (!krogerConfigured) {
     return (
       <Alert variant="warning" className="mb-3">
-        <strong>Kroger not configured on the server.</strong> The site owner
-        hasn't set <code>KROGER_CLIENT_ID</code> / <code>KROGER_CLIENT_SECRET</code>{" "}
-        yet. Catalog search and barcode lookups still work via Open Food Facts, but
-        real store prices are disabled.
+        <strong>Store prices are temporarily unavailable.</strong> You can still
+        add groceries and scan barcodes. Try connecting a store again later.
       </Alert>
     );
   }
@@ -157,8 +155,9 @@ export default function Stores() {
   }
 
   return (
-    <Container className="py-4" style={{ maxWidth: 720 }}>
-      <h2 className="mb-3">Stores</h2>
+    <Container className="py-4 market-stores" style={{ maxWidth: 960 }}>
+      <p className="workspace-eyebrow">BEFORE THE NEXT SHOP</p>
+      <h1 className="mb-3">Your neighborhood store.</h1>
       <p className="text-muted">
         Connect a Kroger-family store to enable real prices, aisle info, and
         in-store stock on your list items. You can disconnect at any time.
@@ -177,7 +176,7 @@ export default function Stores() {
 
       {status?.configured && !status?.connected_store && (
         <Form onSubmit={onSearch} className="mb-3">
-          <Form.Group className="mb-2">
+          <Form.Group className="mb-2" controlId="store-zip">
             <Form.Label>ZIP / Postal code</Form.Label>
             <Form.Control
               type="text"
@@ -210,8 +209,8 @@ export default function Stores() {
 
       <hr className="my-4" />
       <p className="text-muted small mb-0">
-        We use the Kroger Public API (free, official). Only the store you connect
-        can be queried; nothing is shared with third parties.
+        Store locations, availability and prices come from Kroger. Your ZIP code
+        is sent to Kroger to find nearby stores. Prices can change before checkout.
       </p>
     </Container>
   );

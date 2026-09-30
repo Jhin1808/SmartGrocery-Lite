@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../pages/AuthContext";
 import { isDemo } from "../demo";
 import { FEATURE_KROGER, FEATURE_RECIPES, FEATURE_TEMPLATES } from "../api";
-import ThemeToggle from "./ThemeToggle";
+
 
 function Brand() {
   return (
@@ -29,14 +29,7 @@ function Avatar({ user, size = 32 }) {
     .slice(0, 2)
     .join("")
     .toUpperCase() || "U";
-  const palette = [
-    "linear-gradient(135deg, #14b8a6, #0f766e)",
-    "linear-gradient(135deg, #f59e0b, #d97706)",
-    "linear-gradient(135deg, #8b5cf6, #6d28d9)",
-    "linear-gradient(135deg, #f43f5e, #be123c)",
-    "linear-gradient(135deg, #0ea5e9, #0369a1)",
-  ];
-  const idx = (label.charCodeAt(0) || 0) % palette.length;
+
   const sizeClass = size <= 28 ? "lm-avatar--sm" : size >= 64 ? "lm-avatar--lg" : "lm-avatar--md";
 
   if (user?.picture) {
@@ -53,7 +46,7 @@ function Avatar({ user, size = 32 }) {
   return (
     <span
       className={`lm-avatar ${sizeClass}`}
-      style={{ width: size, height: size, background: palette[idx] }}
+      style={{ width: size, height: size, background: "var(--color-accent)" }}
     >
       {initials}
     </span>
@@ -150,7 +143,8 @@ export default function NavBar() {
   };
 
   const links = [
-    { to: "/lists", icon: "bi-list-check", label: "Lists" },
+    { to: "/lists", icon: "bi-list-check", label: "Grocery lists" },
+    { to: "/fridge", icon: "bi-box2", label: "My fridge" },
     ...(FEATURE_KROGER ? [{ to: "/stores", icon: "bi-shop", label: "Stores" }] : []),
     ...(FEATURE_RECIPES ? [{ to: "/recipes", icon: "bi-journal-text", label: "Recipes" }] : []),
     ...(FEATURE_TEMPLATES ? [{ to: "/templates", icon: "bi-collection", label: "Templates" }] : []),
@@ -178,7 +172,7 @@ export default function NavBar() {
         <span className="lm-nav__spacer" />
 
         <div className="lm-nav__actions">
-          <ThemeToggle />
+
           {user ? (
             <UserMenu user={user} onLogout={onLogout} />
           ) : (

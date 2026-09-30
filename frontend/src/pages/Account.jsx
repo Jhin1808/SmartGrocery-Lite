@@ -42,24 +42,17 @@ function Toast({ toast, onClose }) {
 function Avatar({ user, url, size = 80 }) {
   const label = (user?.name || user?.email || "U").trim();
   const initials = label.split(/\s+/).map((p) => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "U";
-  const palette = [
-    "linear-gradient(135deg, #14b8a6, #0f766e)",
-    "linear-gradient(135deg, #f59e0b, #d97706)",
-    "linear-gradient(135deg, #8b5cf6, #6d28d9)",
-    "linear-gradient(135deg, #f43f5e, #be123c)",
-    "linear-gradient(135deg, #0ea5e9, #0369a1)",
-  ];
-  const idx = (label.charCodeAt(0) || 0) % palette.length;
+
 
   if (url) {
     return (
-      <span className="lm-avatar lm-avatar--lg" style={{ width: size, height: size, background: palette[idx] }}>
+      <span className="lm-avatar lm-avatar--lg" style={{ width: size, height: size, background: "var(--color-accent)" }}>
         <img src={url} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
       </span>
     );
   }
   return (
-    <span className="lm-avatar lm-avatar--lg" style={{ width: size, height: size, background: palette[idx] }}>
+    <span className="lm-avatar lm-avatar--lg" style={{ width: size, height: size, background: "var(--color-accent)" }}>
       {initials}
     </span>
   );
@@ -71,18 +64,18 @@ export default function Account() {
   const [activeTab, setActiveTab] = useState("profile");
 
   const [name, setName] = useState("");
-  const [picture, setPicture] = useState("");
+
   const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
     setName(user?.name || "");
-    setPicture(user?.picture || "");
+
   }, [user]);
 
   const savedAvatarSrc = useMemo(() => sanitizeImageUrl(user?.picture), [user?.picture]);
 
-  const dirtyProfile = name !== (user?.name || "") || picture !== (user?.picture || "");
-  const clearPicture = () => setPicture("");
+  const dirtyProfile = name !== (user?.name || "");
+
 
   const [toast, setToast] = useState(null);
   const showToast = (variant, msg) => setToast({ variant, msg });
@@ -92,7 +85,7 @@ export default function Account() {
     if (!dirtyProfile) return;
     setSavingProfile(true);
     try {
-      await apiUpdateMe({ name, picture });
+      await apiUpdateMe({ name });
       await refresh();
       showToast("success", "Profile updated");
     } catch (err) {
@@ -127,7 +120,7 @@ export default function Account() {
   };
 
   return (
-    <div className="lm-container" style={{ paddingTop: 24, paddingBottom: 60, maxWidth: 820 }}>
+    <div className="lm-container market-account" style={{ paddingTop: 40, paddingBottom: 60, maxWidth: 820 }}>
       <div className="lm-hero">
         <h1 className="lm-hero__title">Account</h1>
         <p className="lm-hero__subtitle">Manage your profile, security, and preferences.</p>
@@ -193,25 +186,7 @@ export default function Account() {
                   />
                   <span className="form-help">Contact support to change your email.</span>
                 </div>
-                <div className="form-field" style={{ gridColumn: "1 / -1" }}>
-                  <label className="form-label" htmlFor="accPicture">Avatar URL</label>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input
-                      id="accPicture"
-                      type="url"
-                      className="form-control"
-                      placeholder="https://example.com/photo.jpg"
-                      value={picture}
-                      onChange={(e) => setPicture(e.target.value)}
-                    />
-                    {picture && (
-                      <button type="button" className="btn btn-ghost-danger" onClick={clearPicture} title="Remove picture">
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                  <span className="form-help">Provide a direct link to an image. Leave blank to use your initials.</span>
-                </div>
+
               </div>
 
               <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
@@ -222,7 +197,7 @@ export default function Account() {
                   type="button"
                   className="btn btn-secondary"
                   disabled={!dirtyProfile || savingProfile}
-                  onClick={() => { setName(user?.name || ""); setPicture(user?.picture || ""); }}
+                  onClick={() => { setName(user?.name || ""); }}
                 >
                   Reset
                 </button>

@@ -227,3 +227,8 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Local design preview tooling and isolated data
+.tools/
+backend/.hallmark-*.db
+frontend/hallmark-*.png

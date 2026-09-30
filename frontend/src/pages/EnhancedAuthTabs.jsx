@@ -17,26 +17,11 @@ const AUTH_ERRORS = {
   session_missing: "Google sign-in finished, but your session could not be saved. Please try again. If this continues, contact support.",
 };
 
-function BrandMark({ size = 32 }) {
-  return (
-    <span
-      className="lm-mark"
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.45) }}
-      aria-hidden="true"
-    >
-      <svg viewBox="0 0 24 24" width={Math.round(size * 0.55)} height={Math.round(size * 0.55)} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 3h2l2.4 12.3a2 2 0 0 0 2 1.7h8.5a2 2 0 0 0 2-1.6L21 8H6" />
-        <circle cx="9" cy="20" r="1.4" />
-        <circle cx="18" cy="20" r="1.4" />
-      </svg>
-    </span>
-  );
-}
-
-function PasswordField({ value, onChange, placeholder, show, onToggle, disabled, autoComplete, name }) {
+function PasswordField({ value, onChange, placeholder, show, onToggle, disabled, autoComplete, name, id }) {
   return (
     <div className="password-input">
       <input
+        id={id}
         type={show ? "text" : "password"}
         className="form-control"
         placeholder={placeholder}
@@ -90,63 +75,14 @@ function StrengthMeter({ password }) {
 }
 
 function AuthAside() {
-  return (
-    <aside className="auth-aside" aria-hidden="true">
-      <div className="flex items-center gap-3" style={{ color: "var(--neutral-50)" }}>
-        <BrandMark size={40} />
-        <span style={{ fontWeight: 800, fontSize: 18, letterSpacing: "-0.02em" }}>ToBuyLists</span>
-      </div>
-
-      <div className="lm-cta" style={{ flex: 1, justifyContent: "center" }}>
-        <span className="lm-cta__eyebrow">
-          <i className="bi bi-stars" /> New • Real-time sharing
-        </span>
-        <h1 className="lm-cta__headline">
-          Grocery lists that <em>actually</em> get done.
-        </h1>
-        <p className="lm-cta__sub">
-          Plan together, share instantly, and check items off as you walk the aisles.
-          ToBuyLists keeps your household in sync — no more duplicate buys or forgotten staples.
-        </p>
-
-        <div className="flex flex-col" style={{ gap: 12, marginTop: 12 }}>
-          <div className="lm-feature">
-            <span className="lm-feature__icon"><i className="bi bi-list-check" /></span>
-            <div>
-              <p className="lm-feature__title">Smart lists</p>
-              <p className="lm-feature__desc">Group items by aisle, mark favourites, track expiry dates.</p>
-            </div>
-          </div>
-          <div className="lm-feature">
-            <span className="lm-feature__icon lm-feature__icon--accent"><i className="bi bi-people-fill" /></span>
-            <div>
-              <p className="lm-feature__title">Live sharing</p>
-              <p className="lm-feature__desc">Invite your partner, roommates or family in a single tap.</p>
-            </div>
-          </div>
-          <div className="lm-feature">
-            <span className="lm-feature__icon lm-feature__icon--violet"><i className="bi bi-bag-check-fill" /></span>
-            <div>
-              <p className="lm-feature__title">Shop mode</p>
-              <p className="lm-feature__desc">Tap to check off, see live progress, never miss an item again.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="lm-trust">
-        <div className="lm-trust__avatars">
-          <span className="lm-avatar">A</span>
-          <span className="lm-avatar">M</span>
-          <span className="lm-avatar">S</span>
-          <span className="lm-avatar">+</span>
-        </div>
-        <div className="lm-trust__text">
-          Trusted by <strong>thousands of households</strong> to plan their week.
-        </div>
-      </div>
-    </aside>
-  );
+  return <aside className="auth-aside market-auth-story">
+    <Link to="/" className="brand">ToBuyLists</Link>
+    <div><p className="intro-note">A place for your everyday groceries.</p>
+    <h1>Good food.<br />A little less guesswork.</h1>
+    <p>Keep a shared list, check what’s in the fridge, and decide what’s for dinner.</p></div>
+    <img src="/images/market.jpg" alt="Fresh vegetables at the market" />
+    <p>For the people you share a kitchen with.</p>
+  </aside>;
 }
 
 function GoogleButton({ onClick, disabled, children }) {
@@ -179,7 +115,7 @@ export default function EnhancedAuthTabs() {
     }
   };
 
-  const [activeTab, setActiveTab] = useState("login");
+  const [activeTab, setActiveTab] = useState(new URLSearchParams(search).get("mode") === "register" ? "register" : "login");
   const [showLoginPwd, setShowLoginPwd] = useState(false);
   const [showRegPwd, setShowRegPwd] = useState(false);
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
@@ -296,7 +232,7 @@ export default function EnhancedAuthTabs() {
       <section className="auth-panel anim-fade">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
           <div className="lm-md-hide" style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-            <BrandMark size={32} />
+            <i className="bi bi-basket2" aria-hidden="true" />
             <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em" }}>ToBuyLists</span>
           </div>
           <div className="lm-tabs" role="tablist">
@@ -322,7 +258,7 @@ export default function EnhancedAuthTabs() {
         </div>
 
         <div style={{ marginBottom: 28 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.03em", margin: 0 }}>
+          <h1>
             {activeTab === "login" ? "Welcome back" : "Get started"}
           </h1>
           <p style={{ fontSize: 14.5, color: "var(--text-secondary)", margin: "8px 0 0" }}>
@@ -362,6 +298,7 @@ export default function EnhancedAuthTabs() {
                   <Link to="/reset" style={{ fontSize: 12.5, fontWeight: 600 }}>Forgot?</Link>
                 </div>
                 <PasswordField
+                  id="login-pwd"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="Enter your password"
@@ -453,6 +390,7 @@ export default function EnhancedAuthTabs() {
               <div className="form-field">
                 <label className="form-label" htmlFor="reg-pwd">Password</label>
                 <PasswordField
+                  id="reg-pwd"
                   value={registerPassword}
                   onChange={(e) => setRegisterPassword(e.target.value)}
                   placeholder="At least 8 characters"
@@ -468,6 +406,7 @@ export default function EnhancedAuthTabs() {
               <div className="form-field">
                 <label className="form-label" htmlFor="reg-confirm">Confirm password</label>
                 <PasswordField
+                  id="reg-confirm"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repeat your password"

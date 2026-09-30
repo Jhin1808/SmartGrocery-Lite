@@ -310,3 +310,10 @@ export const apiCloneTemplate = (slug, { list_id, list_name } = {}) =>
     method: "POST",
     body: { list_id, list_name },
   });
+
+// Fridge inventory and ingredient-aware meal planning.
+export const apiFridge = () => request("/fridge");
+export const apiSaveFood = (payload, id) => request(`/fridge${id ? `/${id}` : ""}`, {method: id ? "PUT" : "POST", body: payload});
+export const apiRemoveFood = (id) => request(`/fridge/${id}`, {method: "DELETE"});
+export const apiFridgeMeals = (ingredient) => request(`/fridge/meals/suggestions?ingredient=${encodeURIComponent(ingredient)}`);
+export const apiMissingToList = (meal, list) => request(`/fridge/meals/${meal}/to-list/${list}`, {method: "POST"});

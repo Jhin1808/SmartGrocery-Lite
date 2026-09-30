@@ -272,3 +272,13 @@ class ListTemplateItem(Base):
     sort_index = Column(Integer, nullable=False, server_default="100")
 
     template = relationship("ListTemplate", back_populates="items")
+
+
+class FridgeItem(Base):
+    __tablename__ = "fridge_item"
+    id = Column(Integer, primary_key=True)
+    owner_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(120), nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)
+    unit = Column(String(30), nullable=False, default="items")
+    expiry = Column(Date, nullable=True)

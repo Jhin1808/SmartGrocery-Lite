@@ -95,9 +95,9 @@ function TemplateCard({ tpl, onClick, onClone }) {
         aria-label={`Preview ${tpl.name}`}
       >
         <div className="lm-template-card__media" aria-hidden="true">
-          <span className="lm-template-card__emoji">{tpl.emoji || "🛒"}</span>
+
           <span className="lm-template-card__count">
-            <i className="bi bi-basket" /> {tpl.item_count}
+            {tpl.item_count} ingredients
           </span>
         </div>
         <div className="lm-template-card__body">
@@ -435,7 +435,7 @@ export default function Templates() {
       <div className="lm-hero">
         <h1 className="lm-hero__title">List Templates</h1>
         <p className="lm-hero__subtitle">
-          Curated starter lists. Pick one, add it to a new or existing list, and you're off to the races.
+          Start with a useful list for the weekly shop, a meal, or a new kitchen. Make it your own.
         </p>
       </div>
 

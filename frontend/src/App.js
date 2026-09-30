@@ -2,6 +2,8 @@ import React, { Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./pages/AuthContext";
 
+const Landing = React.lazy(() => import("./pages/Landing"));
+const Fridge = React.lazy(() => import("./pages/Fridge"));
 const AuthTabs = React.lazy(() => import("./pages/EnhancedAuthTabs"));
 const Lists = React.lazy(() => import("./pages/EnhancedLists"));
 const ListDetail = React.lazy(() => import("./pages/ListDetail"));
@@ -31,20 +33,29 @@ function PublicOnly({ children }) {
 
 function AppShell() {
   const { user } = useAuth();
+  const { pathname } = useLocation();
 
   useEffect(() => {
     document.documentElement.setAttribute("data-bs-theme", "light");
+    document.documentElement.setAttribute("data-theme", "light");
   }, []);
+
+  useEffect(() => {
+    const titles = {"/": "Groceries for shared kitchens", "/login": "Sign in", "/lists": "Grocery lists", "/fridge": "My fridge", "/stores": "Stores", "/recipes": "Recipes", "/templates": "List templates", "/account": "Account"};
+    document.title = `${titles[pathname] || "Your kitchen"} · ToBuyLists`;
+  }, [pathname]);
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">Skip to content</a>
       <Suspense fallback={null}>
         {user && <NavBar />}
       </Suspense>
-      <main className={"app-main" + (user ? " app-main--nav" : "")}>
+      <main id="main-content" tabIndex={-1} className={"app-main" + (user ? " app-main--nav" : "")}>
         <Suspense fallback={null}>
           <Routes>
-            <Route path="/" element={<Navigate to={user ? "/lists" : "/login"} replace />} />
+            <Route path="/" element={user ? <Navigate to="/lists" replace /> : <Landing />} />
+            <Route path="/fridge" element={<RequireAuth><Fridge /></RequireAuth>} />
 
             <Route path="/login" element={<PublicOnly><AuthTabs /></PublicOnly>} />
             <Route path="/oauth/callback" element={<OAuthCallback />} />

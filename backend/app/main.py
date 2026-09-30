@@ -18,6 +18,7 @@ from app.routers.stores import router as stores_router
 from app.routers.auth_kroger import router as auth_kroger_router
 from app.routers.recipes import router as recipes_router
 from app.routers.templates import router as templates_router
+from app.routers.fridge import router as fridge_router
 from app.routers.auth_google import router as google_router
 from app.routers.me import router as me_router
 from app.routers.tasks import router as tasks_router
@@ -131,6 +132,7 @@ app.include_router(auth_kroger_router)
 app.include_router(recipes_router)
 # List Templates (M5)
 app.include_router(templates_router)
+app.include_router(fridge_router)
 # Removed startup connectivity check to avoid opening a DB connection at import time.
 @app.get("/")
 def root():

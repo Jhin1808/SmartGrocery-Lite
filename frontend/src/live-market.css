@@ -1,0 +1,78 @@
+/* Market theme: additive adapters for the existing application. */
+:root { --font-sans: "IBM Plex Sans", sans-serif; --font-display: "Fraunces", Georgia, serif;
+ --bg: var(--color-paper); --surface: var(--color-sheet); --surface-sunken: var(--color-paper);
+ --text: var(--color-ink); --text-secondary: var(--color-ink-2); --border: var(--color-rule);
+ --brand-600: var(--color-accent); --brand-700: oklch(30% .06 151); --brand-50: oklch(94% .02 151);
+ --color-primary: var(--brand-600); --color-primary-hover: var(--brand-700); --color-primary-soft: var(--brand-50);
+ --radius-lg: 8px; --radius-xl: 12px; --shadow-md: none; --shadow-lg: none; }
+.app-main--nav { --font-display: "Fraunces", Georgia, serif; background: var(--color-paper); }
+body, .app-shell { background: var(--color-paper); font-family: var(--font-sans); }
+.lm-nav { border-bottom: 1px solid var(--color-rule); box-shadow: none; background: var(--color-paper); }
+.lm-nav__brand { font: 600 1.5rem var(--font-display); }
+.lm-nav__brand-mark, .lm-mark { background: var(--color-accent); box-shadow: none; }
+.lm-avatar { background: var(--color-accent) !important; }
+.lm-card, .workspace-content, .workspace-sidebar { border-radius: 8px; box-shadow: none; }
+.workspace-heading h1, .workspace-list-title { font-family: var(--font-display); font-weight: 500; }
+.workspace-heading h1 { font-size: clamp(2rem, 4vw, 3rem); }
+.workspace-content { border-top: 3px solid var(--color-accent); }
+.btn { min-height: 44px; border-radius: 5px; box-shadow: none; }
+.form-control, .form-select { min-height: 44px; border-radius: 5px; }
+.anim-fade { animation: none; }
+.auth-shell { background: var(--color-paper); }
+.market-auth-story { background: var(--color-paper); color: var(--color-ink); border-right: 1px solid var(--color-rule); padding: 48px; }
+.market-auth-story h1 { font: 400 clamp(2.5rem, 4vw, 4rem)/1.1 var(--font-display); margin: 24px 0; }
+.market-auth-story p { color: var(--color-ink-2); max-width: 38ch; }
+.market-auth-story img { width: 100%; max-height: 260px; object-fit: cover; border-radius: 100px 100px 4px 4px; margin: 24px 0; }
+.auth-panel { background: var(--color-sheet); }
+.fridge-page { max-width: 1200px; margin: auto; padding: 40px 24px 64px; }
+.fridge-page h1 { font-size: clamp(2.5rem, 5vw, 3.5rem); font-weight: 400; }
+.fridge-intro { max-width: 58ch; color: var(--color-ink-2); margin-bottom: 32px; }
+.fridge-layout { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(0, 1.5fr); gap: 40px; }
+.fridge-section { border-top: 2px solid var(--color-accent); padding-top: 24px; }
+.fridge-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0; }
+.fridge-form > :first-child { grid-column: 1 / -1; }
+.fridge-form label { display: grid; gap: 6px; font-size: .875rem; }
+.fridge-form input, .fridge-form select { width: 100%; }
+.food-row { display: flex; gap: 16px; align-items: center; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid var(--color-rule); }
+.food-row small { display: block; color: var(--color-ink-2); margin-top: 4px; }
+.food-row button { border: 0; background: transparent; min-width: 44px; min-height: 44px; color: var(--color-ink-2); }
+.food-row .food-expired { color: #963c2c; }
+.fridge-empty { padding: 24px 0; color: var(--color-ink-2); }
+.meal-controls { display: flex; gap: 12px; flex-wrap: wrap; margin: 24px 0; }
+.meal-controls select { flex: 1; min-width: 160px; }
+.fridge-meal { padding: 24px 0; border-bottom: 1px solid var(--color-rule); }
+.fridge-meal h3 { margin: 0 0 12px; font-weight: 500; }
+.fridge-meal p { font-size: .9375rem; }
+.fridge-meal summary { cursor: pointer; min-height: 44px; padding: 10px 0; }
+.fridge-meal footer { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+@media(max-width: 900px) { .lm-nav__inner { flex-wrap: wrap; } .lm-nav__links { order: 3; width: 100%; overflow-x: auto; } .lm-nav__link { flex-shrink: 0; } .fridge-layout { grid-template-columns: 1fr; } .market-auth-story { display: none; } }
+@media(prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; scroll-behavior: auto !important; } }
+
+.lm-nav { backdrop-filter: none; -webkit-backdrop-filter: none; }
+.lm-avatar { color: var(--color-sheet) !important; }
+.btn-primary, .btn-primary:hover, .btn-primary:active { background-image: none !important; box-shadow: none !important; }
+.market-stores { padding-top: 40px !important; padding-bottom: 64px !important; }
+.market-stores h1 { font-weight: 400; }
+.market-stores form { max-width: 520px; border-top: 2px solid var(--color-accent); padding-top: 24px; }
+
+.market-auth-story::before, .market-auth-story::after { content: none; }
+.market-auth-story h1 { font-weight: 400; letter-spacing: -.045em; }
+.auth-panel h1 { font: 400 2.5rem/1.15 var(--font-display); }
+.auth-panel .btn-demo { background: var(--color-paper-2); color: var(--color-ink); }
+.lm-hero__title { font: 400 clamp(2rem, 4vw, 3rem)/1.15 var(--font-display); }
+.lm-template-card::before { content: none; }
+.lm-template-card:hover { transform: none; box-shadow: none; }
+.lm-template-card__media { height: auto; min-height: 44px; width: 100%; background: var(--color-paper); padding: 16px 20px; justify-content: flex-start; }
+.lm-template-card__count { position: static; background: none; color: var(--color-ink-2); font-size: .875rem; font-weight: 400; padding: 0; backdrop-filter: none; text-transform: none; letter-spacing: 0; }
+.lm-template-card__preview-btn { white-space: normal; width: 100%; }
+.lm-template-card__body { padding: 20px; }
+.lm-template-card__title { font: 500 1.5rem/1.2 var(--font-display); }
+.lm-template-card__desc { display: block; font-size: .9375rem; line-height: 1.5; min-height: 4.5em; }
+.lm-template-card__actions { padding: 16px 20px; }
+.lm-templates-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+@media(max-width: 960px) { .lm-templates-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media(max-width: 600px) { .lm-templates-grid { grid-template-columns: 1fr; } .market-account form > div:first-child { grid-template-columns: 1fr !important; } }
+
+.auth-panel .btn-accent { color: var(--color-ink); background: var(--color-paper-2); border: 1px solid var(--color-rule); }
+.auth-panel .btn-accent:hover { background: var(--color-sheet); box-shadow: none; }
