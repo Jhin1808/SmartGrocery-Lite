@@ -16,7 +16,8 @@ from app.security import (
     decode_reset_token,
 )
 from app.security_cookies import set_login_cookie, clear_login_cookie
-from app.config import env_flag, get_frontend_url
+from app.config import env_flag, get_frontend_url, is_production_like
+from app.email_security import relay_secret
 from app.rate_limit import allow as allow_rate
 from app.deps import get_current_user_any as get_current_user
 
@@ -106,8 +107,9 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
     ) or _flag_true(os.getenv("DISABLE_RATE_LIMITS"))
 
     # Rate limit by IP and by email (process-local; for multi-instance use a shared store like Redis)
-    ip = request.headers.get("x-forwarded-for") or request.client.host or "?"
-    ip = (ip.split(",")[0]).strip()
+    # The client can forge X-Forwarded-For. ASGI proxy configuration must
+    # normalize trusted proxy headers before request.client is used here.
+    ip = request.client.host if request.client else "?"
     if not skip_rate_limits:
         if not allow_rate(
             ip,
@@ -156,9 +158,9 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
             ):
                 return out
         # Generate numeric reset code and store hashed
-        code_len = int(os.getenv("RESET_CODE_LENGTH", "6"))
+        code_len = max(6, min(12, int(os.getenv("RESET_CODE_LENGTH", "6"))))
         code = "".join(secrets.choice("0123456789") for _ in range(code_len))
-        mins = int(os.getenv("RESET_CODE_EXPIRE_MINUTES", "15"))
+        mins = max(1, min(60, int(os.getenv("RESET_CODE_EXPIRE_MINUTES", "15"))))
         rec = PasswordResetCode(
             user_id=user.id,
             code_hash=PH.hash(code),
@@ -168,7 +170,8 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
         db.commit()
 
         # Expose code for dev only
-        if (os.getenv("EXPOSE_RESET_CODE", "").lower() in ("1", "true", "yes", "dev")):
+        if (not is_production_like()
+                and os.getenv("EXPOSE_RESET_CODE", "").lower() in ("1", "true", "yes", "dev")):
             out["dev_code"] = code
 
         # Ensure contact in Resend audience if configured (best-effort)
@@ -193,8 +196,7 @@ def reset_password(payload: ResetPassword, request: Request, db: Session = Depen
     from app.security import PH
 
     # Basic rate limiting to slow brute force
-    ip = request.headers.get("x-forwarded-for") or request.client.host or "?"
-    ip = (ip.split(",")[0]).strip()
+    ip = request.client.host if request.client else "?"
     if not allow_rate(ip, "reset-ip", max_requests=int(os.getenv("RESET_LIMIT_PER_IP", "20")), window_seconds=3600):
         raise HTTPException(status_code=429, detail="Too many requests, try again later")
 
@@ -299,25 +301,16 @@ def _send_reset_code_email(to: str, code: str, minutes: int) -> dict:
     vercel_url = os.getenv("VERCEL_SEND_RESET_URL")
     if vercel_url:
         import httpx
-        headers = {"x-api-key": (os.getenv("EMAIL_TEST_SECRET") or os.getenv("CRON_SECRET") or "")}
-        payload = {"to": to, "code": code, "minutes": minutes, "from": frm}
+        headers = {"x-api-key": relay_secret()}
+        payload = {"to": to, "code": code, "minutes": minutes}
         r = httpx.post(vercel_url, json=payload, headers=headers, timeout=10.0)
         try:
             r.raise_for_status()
         except httpx.HTTPStatusError as e:
-            body = None
-            try:
-                body = e.response.json()
-            except Exception:
-                body = e.response.text
-            logging.getLogger("app.email").error("Vercel send failed %s body=%s", e.response.status_code, body)
+            logging.getLogger("app.email").error("Vercel send failed status=%s", e.response.status_code)
             raise
-        try:
-            data = r.json()
-        except Exception:
-            data = {"text": r.text}
         logging.getLogger("app.email").info("Vercel relay sent reset code to %s", to)
-        return {"provider": "vercel", "status": r.status_code, "response": data}
+        return {"provider": "vercel", "status": r.status_code}
 
     # Try Resend first
     rk = os.getenv("RESEND_API_KEY")
@@ -385,13 +378,7 @@ def _send_reset_code_email(to: str, code: str, minutes: int) -> dict:
         try:
             r.raise_for_status()
         except httpx.HTTPStatusError as e:
-            # Log provider response for debugging
-            body = None
-            try:
-                body = e.response.json()
-            except Exception:
-                body = e.response.text
-            logging.getLogger("app.email").error("Resend error status=%s body=%s", e.response.status_code, body)
+            logging.getLogger("app.email").error("Resend error status=%s", e.response.status_code)
             raise
         # Success
         try:

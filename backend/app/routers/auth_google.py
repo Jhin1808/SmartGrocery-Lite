@@ -86,7 +86,9 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
         return _login_error("google_failed")
 
     userinfo = token.get("userinfo")
-    if not userinfo or "email" not in userinfo:
+    if (not userinfo or not userinfo.get("email")
+            or not isinstance(userinfo.get("sub"), str) or not userinfo["sub"]
+            or userinfo.get("email_verified") is not True):
         return _login_error("google_failed")
 
     email = userinfo["email"]
@@ -95,6 +97,8 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
     pic   = userinfo.get("picture")
 
     user = db.query(User).filter((User.google_sub == sub) | (User.email == email)).first()
+    if user and user.google_sub and user.google_sub != sub:
+        return _login_error("google_failed")
     if not user:
         user = User(email=email, google_sub=sub, name=name, picture=pic)
         db.add(user); db.commit(); db.refresh(user)

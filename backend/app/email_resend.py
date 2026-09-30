@@ -1,5 +1,6 @@
 import os
 import logging
+from app.email_security import relay_secret
 
 
 def _headers() -> dict:
@@ -26,7 +27,7 @@ def ensure_contact(email: str, name: str | None = None) -> bool:
     vercel_upsert = os.getenv("VERCEL_RESEND_UPSERT_URL")
     if vercel_upsert:
         import httpx
-        headers = {"x-api-key": (os.getenv("EMAIL_TEST_SECRET") or os.getenv("CRON_SECRET") or "")}
+        headers = {"x-api-key": relay_secret()}
         payload = {"email": email, "name": name}
         r = httpx.post(vercel_upsert, json=payload, headers=headers, timeout=10.0)
         if r.status_code in (200, 201):
@@ -35,12 +36,7 @@ def ensure_contact(email: str, name: str | None = None) -> bool:
         if r.status_code == 409:
             logging.getLogger("app.email").info("Vercel contact already exists: %s", email)
             return True
-        body = None
-        try:
-            body = r.json()
-        except Exception:
-            body = r.text
-        logging.getLogger("app.email").error("Vercel upsert failed %s body=%s", r.status_code, body)
+        logging.getLogger("app.email").error("Vercel upsert failed status=%s", r.status_code)
         r.raise_for_status()
         return False
 
@@ -68,13 +64,7 @@ def ensure_contact(email: str, name: str | None = None) -> bool:
         if r.status_code == 409:
             logging.getLogger("app.email").info("Resend contact already exists: %s", email)
             return True
-        # Log body for visibility
-        body = None
-        try:
-            body = r.json()
-        except Exception:
-            body = r.text
-        logging.getLogger("app.email").error("Resend contact upsert failed %s body=%s", r.status_code, body)
+        logging.getLogger("app.email").error("Resend contact upsert failed status=%s", r.status_code)
         r.raise_for_status()
     except Exception:
         raise

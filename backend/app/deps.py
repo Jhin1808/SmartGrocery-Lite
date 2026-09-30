@@ -19,10 +19,12 @@ def _user_from_token(token: str, db: Session) -> User:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     try:
         payload = decode_token(token)
-        sub = payload.get("sub")
+        if payload.get("purpose") not in (None, "access"):
+            raise ValueError("Not an access token")
+        sub = int(payload["sub"])
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
-    user = db.get(User, int(sub)) if sub else None
+    user = db.get(User, sub)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
     return user
@@ -52,17 +54,13 @@ def get_current_user_any(
 ) -> User:
     """Accept either Authorization: Bearer or HttpOnly cookie.
 
-    - Prefer a valid Bearer token when present (helps Safari/iOS where
+    - Prefer a Bearer token when present (helps Safari/iOS where
       cross-site cookies may be blocked).
-    - Otherwise, fall back to the cookie.
+    - Reject invalid Bearer credentials; use a cookie only without a Bearer header.
     """
     # Try Authorization header first
     if creds and (creds.scheme or "").lower() == "bearer":
-        try:
-            return _user_from_token(creds.credentials, db)
-        except HTTPException:
-            # Fall through to cookie
-            pass
+        return _user_from_token(creds.credentials, db)
     # Cookie fallback
     token = request.cookies.get(COOKIE_NAME)
     return _user_from_token(token, db)
