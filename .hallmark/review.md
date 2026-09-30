@@ -36,3 +36,9 @@ Live catalog checks found a separate existing issue: generic OFF results filled 
 The design branch now prioritizes connected-store products, replaces same-code generic duplicates, reads variant prices/inventory/fulfillment, and accepts the single-object product-detail response. Kroger cache keys are versioned to avoid retaining earlier unpriced payloads after rollout. Ten targeted catalog/Kroger tests pass. These fixes have not been deployed; production price display is still unverified after the fix.
 
 The live test account and its connected store remain available for follow-up. No purchase or user grocery list was created.
+
+## Simplified recipe kitchen
+
+The fridge page now centers on recipes: a grouped common-ingredient checklist saves automatically, one field adds other foods, and one recipe search accepts either the saved checklist or a dish name. Quantity and date forms are removed from this screen. Existing expired inventory is excluded and remains visible in a collapsed cleanup section. Recipe results show available/missing ingredients and retain the permission-checked add-missing-to-list action.
+
+Verification: all 19 frontend tests pass; all five fridge backend tests pass; the production frontend build succeeds. Browser checks saved chicken, rice and mushrooms, returned 11 real checklist-based recipes, and found Spicy Arrabiata Penne by name. The 390px mobile layout has no horizontal overflow. Desktop and mobile screenshots were inspected.

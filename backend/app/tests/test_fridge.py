@@ -63,3 +63,23 @@ def test_missing_ingredients_respects_list_edit_permissions(client, test_user):
         db.add(gl); db.commit(); db.refresh(gl)
         list_id = gl.id
     assert client.post(f"/fridge/meals/123/to-list/{list_id}").status_code == 403
+
+
+def test_recipe_search_by_name_without_inventory(client):
+    async def name_search(_client, q):
+        assert q == "Dinner"
+        return [{"external_id": "123"}]
+    with patch("app.catalog.meal_client.search_by_name", name_search), patch("app.catalog.meal_client.lookup", lookup):
+        r = client.get("/fridge/meals/suggestions?q=Dinner")
+        assert r.status_code == 200
+        assert r.json()[0]["have"] == []
+        assert len(r.json()[0]["missing"]) == 3
+
+
+def test_recipe_suggestions_use_checklist_without_dropdown(client):
+    client.post("/fridge", json={"name": "Eggs"})
+    with patch("app.catalog.meal_client.search_by_ingredient", search), patch("app.catalog.meal_client.lookup", lookup):
+        r = client.get("/fridge/meals/suggestions")
+        assert r.status_code == 200
+        assert len(r.json()) == 1
+        assert r.json()[0]["have"][0]["name"] == "Eggs"

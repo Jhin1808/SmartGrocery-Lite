@@ -40,3 +40,7 @@ This implementation is based on `origin/main`, on `design/hallmark-live`. The ea
 My fridge is a personal, backend-persisted inventory. TheMealDB suggestions exclude past use-by items, compare conservative ingredient names, and list available and missing ingredients. Quantities must be checked by the cook. Adding missing ingredients enforces list edit permissions and skips ingredients already on the list. No AI service is used.
 
 The new Alembic migration adds the inventory table and applies the deployed Supabase access restrictions. Deploy the backend migration before enabling the frontend route in production. Never merge or deploy from this task without a separate request.
+
+## Recipe kitchen simplification
+
+`/fridge` is a recipe worksheet: check common ingredients, add another food in one field, then find recipes using that checklist or a dish name. A compact paper surface and grouped checkboxes keep the work visible without inventory management forms. Saved foods remain personal and backend-persisted; expired foods do not count toward recipe matches. Recipe cards retain ingredient details, source links, and adding missing foods to an editable grocery list.

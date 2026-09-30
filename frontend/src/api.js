@@ -315,5 +315,10 @@ export const apiCloneTemplate = (slug, { list_id, list_name } = {}) =>
 export const apiFridge = () => request("/fridge");
 export const apiSaveFood = (payload, id) => request(`/fridge${id ? `/${id}` : ""}`, {method: id ? "PUT" : "POST", body: payload});
 export const apiRemoveFood = (id) => request(`/fridge/${id}`, {method: "DELETE"});
-export const apiFridgeMeals = (ingredient) => request(`/fridge/meals/suggestions?ingredient=${encodeURIComponent(ingredient)}`);
+export const apiFridgeMeals = (ingredient = "", q = "") => {
+  const params = new URLSearchParams();
+  if (ingredient) params.set("ingredient", ingredient);
+  if (q) params.set("q", q);
+  return request(`/fridge/meals/suggestions?${params}`);
+};
 export const apiMissingToList = (meal, list) => request(`/fridge/meals/${meal}/to-list/${list}`, {method: "POST"});

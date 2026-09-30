@@ -3,95 +3,105 @@ import { isDemo } from "../demo";
 import { Link } from "react-router-dom";
 import { apiFridge, apiSaveFood, apiRemoveFood, apiFridgeMeals, apiGetLists, apiMissingToList } from "../api";
 
-const empty = { name: "", quantity: 1, unit: "items", expiry: "" };
+const groups = [
+  {name: "Vegetables", foods: ["Tomato", "Onion", "Potato", "Carrot", "Spinach", "Garlic"]},
+  {name: "Protein & dairy", foods: ["Chicken", "Eggs", "Beef", "Salmon", "Milk", "Cheese"]},
+  {name: "Pantry", foods: ["Rice", "Pasta", "Bread", "Lentils"]},
+];
+const key = name => {
+  const value = name.trim().toLowerCase();
+  return ({tomatoes:"tomato",potatoes:"potato",onions:"onion",eggs:"egg",carrots:"carrot"})[value] || value;
+};
 const today = () => new Date().toLocaleDateString("en-CA");
+const fresh = food => !food.expiry || food.expiry >= today();
 
 export default function Fridge() {
   const [foods, setFoods] = useState([]);
-  const [draft, setDraft] = useState(empty);
-  const [editing, setEditing] = useState(null);
+  const [food, setFood] = useState("");
+  const [query, setQuery] = useState("");
   const [lists, setLists] = useState([]);
   const [list, setList] = useState("");
-  const [ingredient, setIngredient] = useState("");
   const [meals, setMeals] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [finding, setFinding] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const usable = foods.filter(f => !f.expiry || f.expiry >= today());
+  const usable = foods.filter(fresh);
+  const locked = busy || finding;
+  const common = new Set(groups.flatMap(g => g.foods.map(key)));
+  const extras = usable.filter(f => !common.has(key(f.name)));
+  const expired = foods.filter(f => !fresh(f));
   useEffect(() => {
     if (isDemo()) { setLoading(false); return; }
     let active = true;
     Promise.all([apiFridge(), apiGetLists()]).then(([f, l]) => {
-      if (active) { setFoods(f); setLists(l); }
+      if (active) { setFoods(f); setLists(l.filter(l => l.role !== "viewer")); }
     }).catch(e => { if (active) setError(e.message); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
-  async function save(e) {
-    e.preventDefault(); setBusy(true); setError("");
+  async function toggle(name) {
+    setBusy(true); setError(""); setNotice("");
     try {
-      await apiSaveFood({ ...draft, quantity: Number(draft.quantity), expiry: draft.expiry || null }, editing);
-      setFoods(await apiFridge()); setDraft(empty); setEditing(null); setMeals(null); setNotice("Fridge updated.");
-    } catch(e) { setError(e.message); } finally { setBusy(false); }
+      const selected = usable.filter(f => key(f.name) === key(name));
+      if (selected.length) {
+        for (const item of selected) await apiRemoveFood(item.id);
+        setFoods(f => f.filter(i => !selected.some(s => s.id === i.id)));
+      } else {
+        const saved = await apiSaveFood({name, quantity:1, unit:"items", expiry:null});
+        setFoods(f => [...f, saved]);
+      }
+      setMeals(null); return true;
+    } catch(e) { setError(e.message); setFoods(await apiFridge().catch(() => foods)); return false; }
+    finally { setBusy(false); }
   }
-  async function remove(id) {
+  async function addFood(e) {
+    e.preventDefault();
+    const name = food.trim();
+    if (!name) return;
+    if (usable.some(f => key(f.name) === key(name))) { setNotice("That ingredient is already checked."); return; }
+    if (await toggle(name)) setFood("");
+  }
+  async function removeExpired(id) {
     setBusy(true); setError("");
-    try { await apiRemoveFood(id); setFoods(f => f.filter(i => i.id !== id)); setIngredient(""); setEditing(null); setDraft(empty); setMeals(null); setNotice("Food removed from your fridge."); }
+    try { await apiRemoveFood(id); setFoods(f => f.filter(i => i.id !== id)); }
     catch(e) { setError(e.message); } finally { setBusy(false); }
   }
   async function find(e) {
-    e.preventDefault(); setFinding(true); setError(""); setMeals(null);
-    try { setMeals(await apiFridgeMeals(ingredient)); }
+    e.preventDefault(); setFinding(true); setError(""); setNotice(""); setMeals(null);
+    try { setMeals(await apiFridgeMeals("", query.trim())); }
     catch(e) { setError(e.message); } finally { setFinding(false); }
   }
   async function addMissing(id) {
     setBusy(true); setError("");
-    try { const r = await apiMissingToList(id, list); setNotice(`${r.added} missing ingredients added. Ingredients already on the list were skipped.`); }
+    try { const r = await apiMissingToList(id, list); setNotice(`${r.added} ingredients added to your grocery list. Duplicates skipped.`); }
     catch(e) { setError(e.message); } finally { setBusy(false); }
   }
-  if (isDemo()) return <div className="fridge-page"><h1>Inside your fridge.</h1><p>Fridge inventory is saved to your account. Exit the demo from the account menu, then sign in to add your own food and find meals.</p></div>;
-  return <div className="fridge-page">
-    <p className="workspace-eyebrow">MAKE THE MOST OF WHAT YOU HAVE</p>
-    <h1>Inside your fridge.</h1>
-    <p className="fridge-intro">A quick stocktake before the next shop. Keep food here, use up the ingredients you have, and find something good for dinner.</p>
+  if (isDemo()) return <div className="recipe-kitchen"><h1>Cook with what you have.</h1><p>Exit the demo from the account menu and sign in to save your ingredients and find recipes.</p></div>;
+  return <div className="recipe-kitchen">
+    <header><p className="workspace-eyebrow">FROM YOUR FRIDGE TO DINNER</p><h1>Cook with what you have.</h1><p>Check your ingredients, add anything else, and find a recipe.</p></header>
     {error && <div className="lm-alert lm-alert--danger" role="alert">{error}</div>}
-    {notice && <p role="status">{notice}</p>}
-    {loading ? <p role="status">Opening your fridge…</p> : <div className="fridge-layout">
-      <section className="fridge-section" aria-labelledby="food-heading">
-        <h2 id="food-heading">What’s on hand</h2>
-        <p>Your own inventory, saved to your account.</p>
-        <form className="fridge-form" onSubmit={save}>
-          <label>Food<input className="form-control" required maxLength={120} placeholder="e.g. Chicken, tomatoes, eggs" value={draft.name} onChange={e => setDraft({...draft, name: e.target.value})} /></label>
-          <label>Quantity<input className="form-control" type="number" min="1" max="9999" required value={draft.quantity} onChange={e => setDraft({...draft, quantity: e.target.value})} /></label>
-          <label>Unit<select className="form-select" value={draft.unit} onChange={e => setDraft({...draft, unit: e.target.value})}>{["items", "g", "kg", "ml", "litres", "packs", "bunches"].map(u => <option key={u}>{u}</option>)}</select></label>
-          <label>Use-by date (optional)<input className="form-control" type="date" value={draft.expiry} onChange={e => setDraft({...draft, expiry: e.target.value})} /></label>
-          <button className="btn btn-primary" disabled={busy || finding}>{busy ? "Saving…" : editing ? "Save food" : "Add food"}</button>
-          {editing && <button type="button" className="btn btn-secondary" onClick={() => {setEditing(null);setDraft(empty);}}>Cancel edit</button>}
-        </form>
-        {!foods.length && <p className="fridge-empty">Start with a few things you already have. The ingredients for your next meal might be here.</p>}
-        {[...foods].sort((a,b) => (a.expiry || "9999").localeCompare(b.expiry || "9999")).map(f => <div className="food-row" key={f.id}>
-          <div><strong>{f.name}</strong><small>{f.quantity} {f.unit}</small>{f.expiry && <small className={f.expiry < today() ? "food-expired" : ""}>{f.expiry < today() ? "Past use-by · " : "Use by "}{f.expiry}</small>}</div>
-          <div><button aria-label={`Edit ${f.name}`} disabled={busy || finding} onClick={() => {setEditing(f.id);setDraft({...f, expiry:f.expiry || ""});}}>Edit</button><button aria-label={`Remove ${f.name}`} disabled={busy || finding} onClick={() => remove(f.id)}><i className="bi bi-x-lg" aria-hidden="true" /></button></div>
-        </div>)}
+    {notice && <p className="kitchen-notice" role="status">{notice}</p>}
+    {loading ? <p role="status">Loading your ingredients…</p> : <>
+      <section className="ingredient-sheet" aria-labelledby="ingredients-heading">
+        <div className="ingredient-heading"><h2 id="ingredients-heading">What do you have?</h2><span>{usable.length} selected · saved automatically</span></div>
+        <div className="ingredient-groups">{groups.map(g => <fieldset key={g.name}><legend>{g.name}</legend><div className="common-foods">{g.foods.map(name => <label className="ingredient-check" key={name}><input type="checkbox" checked={usable.some(f => key(f.name) === key(name))} disabled={locked} onChange={() => toggle(name)} /><span>{name}</span></label>)}</div></fieldset>)}</div>
+        <form className="ingredient-add" onSubmit={addFood}><label className="visually-hidden" htmlFor="other-food">Add another ingredient</label><input id="other-food" className="form-control" placeholder="Something else? e.g. mushrooms" maxLength={120} value={food} disabled={locked} onChange={e => setFood(e.target.value)} /><button className="btn btn-secondary" disabled={locked || !food.trim()}>Add ingredient</button></form>
+        {extras.length > 0 && <div className="extra-ingredients" aria-label="Other ingredients">{extras.map(f => <label className="ingredient-check" key={f.id}><input type="checkbox" checked disabled={locked} onChange={() => toggle(f.name)} /><span>{f.name}</span></label>)}</div>}
+        {expired.length > 0 && <details className="past-ingredients"><summary>{expired.length} past use-by · excluded from recipes</summary>{expired.map(f => <div key={f.id}>{f.name} <button type="button" disabled={locked} onClick={() => removeExpired(f.id)}>Remove</button></div>)}</details>}
       </section>
-      <section className="fridge-section" aria-labelledby="meal-heading">
-        <h2 id="meal-heading">What’s for dinner?</h2>
-        <p>Choose an ingredient to use first. Recipes come from TheMealDB.</p>
-        <form className="meal-controls" onSubmit={find}>
-          <select aria-label="Ingredient to cook with" className="form-select" required value={ingredient} onChange={e => setIngredient(e.target.value)}><option value="">Choose something in your fridge</option>{usable.map(f => <option key={f.id} value={f.name}>{f.name}</option>)}</select>
-          <button className="btn btn-primary" disabled={finding || !usable.length}>{finding ? "Finding meals…" : "Find meals"}</button>
-        </form>
-        <p className="form-help">Matches use ingredient names, not quantities. Check measures and use-by dates before cooking. Past use-by food is excluded.</p>
-        {!usable.length && <p className="fridge-empty">Add food above to start finding meals.</p>}
-        {meals && !meals.length && <p role="status">No meals found for that ingredient. Try a simple name such as chicken, potato or tomato.</p>}
-        {meals?.length > 0 && <label className="form-field">Grocery list for missing ingredients<select className="form-select" value={list} onChange={e => setList(e.target.value)}><option value="">Choose a list</option>{lists.filter(l => l.role !== "viewer").map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select>{!lists.length && <Link to="/lists">Create a grocery list</Link>}</label>}
-        {meals?.map(m => <article className="fridge-meal" key={m.external_id}>
-          <h3>{m.title}</h3><p><strong>{m.have.length} on hand</strong> · {m.missing.length} to pick up</p>
-          <details><summary>Check ingredients</summary><p><strong>On hand:</strong> {m.have.map(i => i.original).join(", ") || "None"}</p><p><strong>Missing:</strong> {m.missing.map(i => i.original).join(", ") || "You have every ingredient. Check quantities."}</p></details>
-          <footer><button className="btn btn-secondary" disabled={!list || busy || !m.missing.length} onClick={() => addMissing(m.external_id)}>Add missing to list</button>{m.source_url && /^https?:\/\//.test(m.source_url) && <a href={m.source_url} target="_blank" rel="noreferrer">Read recipe ↗</a>}</footer>
-        </article>)}
+      <section className="recipe-finder" aria-labelledby="recipes-heading">
+        <h2 id="recipes-heading">Find something to cook.</h2>
+        <form className="recipe-search" onSubmit={find}><label className="visually-hidden" htmlFor="recipe-query">Search recipes</label><input id="recipe-query" className="form-control" placeholder="Search a recipe, or leave blank to use your ingredients" maxLength={120} value={query} disabled={locked} onChange={e => setQuery(e.target.value)} /><button className="btn btn-primary" disabled={locked || (!usable.length && !query.trim())}>{finding ? "Finding recipes…" : "Find recipes"}</button></form>
+        <p className="recipe-hint">Check quantities before cooking. Recipes from TheMealDB.</p>
+        {meals && !meals.length && <p role="status">No recipes found. Try another ingredient or search for a dish by name.</p>}
+        {meals?.length > 0 && <div className="recipe-results-heading"><p>{meals.length} recipe ideas</p><label>Missing ingredients go to<select className="form-select" value={list} onChange={e => setList(e.target.value)}><option value="">Choose a grocery list</option>{lists.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>{!lists.length && <Link to="/lists">Create a grocery list</Link>}</div>}
+        <div className="kitchen-recipes">{meals?.map(m => <article className="kitchen-recipe" key={m.external_id}>
+          <h3>{m.title}</h3><p><strong>{m.have.length} ingredients on hand</strong> · {m.missing.length} missing</p>
+          <details><summary>Ingredients</summary><p><strong>You have:</strong> {m.have.map(i => i.original).join(", ") || "None checked"}</p><p><strong>You need:</strong> {m.missing.map(i => i.original).join(", ") || "You have them all. Check quantities."}</p></details>
+          <footer>{m.source_url && /^https?:\/\//.test(m.source_url) && <a href={m.source_url} target="_blank" rel="noreferrer">Read recipe ↗</a>}<button className="btn btn-secondary" disabled={!list || locked || !m.missing.length} onClick={() => addMissing(m.external_id)}>Add missing to list</button></footer>
+        </article>)}</div>
       </section>
-    </div>}
+    </>}
   </div>;
 }

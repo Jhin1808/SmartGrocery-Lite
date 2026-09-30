@@ -79,15 +79,34 @@ def ingredient_key(name):
 
 
 @router.get("/meals/suggestions")
-async def meal_suggestions(ingredient: str, request: Request, db: Session = Depends(get_db), user: User = Depends(get_current_user_any)):
+async def meal_suggestions(request: Request, ingredient: str = "", q: str = "", db: Session = Depends(get_db), user: User = Depends(get_current_user_any)):
     import asyncio
     from app.catalog import meal_client
-    foods = get_fridge(db, user)
-    available = {ingredient_key(f.name) for f in foods if not f.expiry or f.expiry >= date.today()}
-    if ingredient_key(ingredient) not in available:
-        raise HTTPException(422, "Choose an ingredient in your fridge that has not expired.")
-    summaries = await meal_client.search_by_ingredient(request.app.state.http, ingredient)
-    details = await asyncio.gather(*(meal_client.lookup(request.app.state.http, r['external_id']) for r in summaries[:8]))
+    foods = [f for f in get_fridge(db, user) if not f.expiry or f.expiry >= date.today()]
+    available = {ingredient_key(f.name) for f in foods}
+    client = request.app.state.http
+    if q.strip():
+        if len(q) > 120:
+            raise HTTPException(422, "Recipe search is too long.")
+        summaries = await meal_client.search_by_name(client, q.strip())
+    elif ingredient:
+        if ingredient_key(ingredient) not in available:
+            raise HTTPException(422, "Choose an ingredient in your fridge that has not expired.")
+        summaries = await meal_client.search_by_ingredient(client, ingredient)
+    else:
+        if not foods:
+            return []
+        # A bounded search across selected foods; rank by the whole checklist.
+        batches = await asyncio.gather(*(meal_client.search_by_ingredient(client, f.name) for f in foods[:3]))
+        summaries = []
+        seen = set()
+        # Interleave providers' results so the first food cannot fill the limit.
+        for row in range(4):
+            for batch in batches:
+                if row < len(batch) and batch[row]['external_id'] not in seen:
+                    summaries.append(batch[row])
+                    seen.add(batch[row]['external_id'])
+    details = await asyncio.gather(*(meal_client.lookup(client, r['external_id']) for r in summaries[:12]))
     results = []
     for meal in details:
         if meal:
