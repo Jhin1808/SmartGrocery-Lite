@@ -631,7 +631,7 @@ export default function ListDetail() {
                       {isEd ? (
                         <>
                           <div className="lm-item__qty-edit" title="Quantity">
-                            <i className="bi bi-123" />
+
                             <input
                               type="number"
                               min="1"
@@ -653,7 +653,7 @@ export default function ListDetail() {
                       ) : (
                         <>
                           <span className="lm-item__qty" title={`Quantity: ${it.quantity}`}>
-                            <i className="bi bi-123" />
+
                             <span className="lm-item__qty-label">Qty</span>
                             <span className="lm-item__qty-value">{it.quantity}</span>
                           </span>
@@ -728,7 +728,7 @@ export default function ListDetail() {
                         />
                       </div>
                       <div className="lm-shop-card__sub" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <span><i className="bi bi-123" /> Qty {it.quantity}</span>
+                        <span>Qty {it.quantity}</span>
                         {it.expiry && <span><i className="bi bi-calendar3" /> {it.expiry}</span>}
                       </div>
                     </div>

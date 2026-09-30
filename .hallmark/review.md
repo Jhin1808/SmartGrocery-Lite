@@ -42,3 +42,7 @@ The live test account and its connected store remain available for follow-up. No
 The fridge page now centers on recipes: a grouped common-ingredient checklist saves automatically, one field adds other foods, and one recipe search accepts either the saved checklist or a dish name. Quantity and date forms are removed from this screen. Existing expired inventory is excluded and remains visible in a collapsed cleanup section. Recipe results show available/missing ingredients and retain the permission-checked add-missing-to-list action.
 
 Verification: all 19 frontend tests pass; all five fridge backend tests pass; the production frontend build succeeds. Browser checks saved chicken, rice and mushrooms, returned 11 real checklist-based recipes, and found Spicy Arrabiata Penne by name. The 390px mobile layout has no horizontal overflow. Desktop and mobile screenshots were inspected.
+
+## Demo and shopping readability fixes
+
+Demo Stores and Templates render a clear account-required notice before mounting account-only API consumers. Regression tests verify that neither feature sends authenticated API calls in demo mode. Demo entry copy describes the available sample list/shopping features. Shopping quantity decorations are removed. Shopping cards give product text a full-width column, use normal word wrapping, and move expiry badges below the main content. Mobile browser verification shows Chicken breast intact with Qty 2 and no clipped badge. All 21 frontend tests pass; the production build succeeds.

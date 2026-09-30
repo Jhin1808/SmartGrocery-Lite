@@ -117,3 +117,13 @@ body, .app-shell { background: var(--color-paper); font-family: var(--font-sans)
 .recipe-kitchen header h1 { margin: 0 0 12px; }
 .recipe-kitchen header > p:last-child { margin: 0; }
 @media(min-width: 800px) { .common-foods { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; } }
+
+/* Shopping labels get their own full-width row, rather than squeezed text. */
+.lm-shop-card { display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: start; gap: 12px; padding: 16px; }
+.lm-shop-card__main { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 10px !important; }
+.lm-shop-card__main > div { width: 100%; }
+.lm-shop-card__name, .workspace-shop-grid .lm-shop-card__name { display: block; white-space: normal; overflow-wrap: break-word; word-break: normal; hyphens: none; line-height: 1.4; }
+.lm-shop-card__brand { display: block; max-width: 100%; white-space: normal; overflow-wrap: break-word; word-break: normal; }
+.lm-shop-card__pills { flex-wrap: wrap; min-width: 0; }
+.lm-shop-card > :last-child:not(.lm-shop-card__main) { grid-column: 2; justify-self: start; max-width: 100%; white-space: normal; }
+.lm-shop-card__sub > span { white-space: nowrap; }

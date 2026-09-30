@@ -1,3 +1,5 @@
+import { isDemo } from "../demo";
+import DemoFeatureNotice from "../components/DemoFeatureNotice";
 import { useEffect, useState } from "react";
 import { Container, Spinner, Alert, Form, Button, ListGroup, Badge } from "react-bootstrap";
 import {
@@ -86,6 +88,11 @@ function StoreResults({ results, onConnect, connecting }) {
 }
 
 export default function Stores() {
+  if (isDemo()) return <DemoFeatureNotice feature="stores" />;
+  return <StoresAccount />;
+}
+
+function StoresAccount() {
   const [status, setStatus] = useState(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [zip, setZip] = useState("");

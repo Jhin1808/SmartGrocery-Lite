@@ -1637,7 +1637,7 @@ export default function EnhancedLists() {
                               />
                             </div>
                             <div className="lm-shop-card__sub" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                              <span><i className="bi bi-123" /> Qty {item.quantity}</span>
+                              <span>Qty {item.quantity}</span>
                               {item.expiry && <span><i className="bi bi-calendar3" /> {item.expiry}</span>}
                             </div>
                           </div>

@@ -1,3 +1,5 @@
+import { isDemo } from "../demo";
+import DemoFeatureNotice from "../components/DemoFeatureNotice";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -323,6 +325,11 @@ function CloneDialog({ tpl, onClose, lists, onDone }) {
 
 
 export default function Templates() {
+  if (isDemo()) return <DemoFeatureNotice feature="templates" />;
+  return <TemplatesAccount />;
+}
+
+function TemplatesAccount() {
   const { user } = useAuth();
   const [templates, setTemplates] = useState([]);
   const [categories, setCategories] = useState([]);
