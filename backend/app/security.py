@@ -33,10 +33,10 @@ def create_access_token(subject: str | int, expires_minutes: int | None = None) 
     exp = datetime.now(timezone.utc) + timedelta(
         minutes=expires_minutes or ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    return jwt.encode({"sub": str(subject), "exp": exp}, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode({"sub": str(subject), "exp": exp, "purpose": "access"}, SECRET_KEY, algorithm=ALGORITHM)
 
 def decode_token(token: str) -> dict:
-    return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"require": ["sub", "exp"]})
 
 
 def create_purpose_token(subject: str | int, purpose: str, expires_minutes: int) -> str:

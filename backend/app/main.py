@@ -20,10 +20,9 @@ from app.routers.templates import router as templates_router
 from app.routers.auth_google import router as google_router
 from app.routers.me import router as me_router
 from app.routers.tasks import router as tasks_router
-try:
+email_test_router = None
+if os.getenv("ENABLE_EMAIL_ADMIN_ROUTES") == "1":
     from app.routers.email_test import router as email_test_router
-except Exception:
-    email_test_router = None
 ALLOWED_ORIGINS = get_frontend_origins()
 SESSION_SECRET = load_secret(
     "SESSION_SECRET",
@@ -95,14 +94,6 @@ def _origin_value(value: str | None) -> str | None:
     if not parsed.scheme or not parsed.netloc:
         return None
     return f"{parsed.scheme.lower()}://{parsed.netloc.lower()}"
-def _request_origin(request: Request) -> str | None:
-    forwarded_proto = request.headers.get("x-forwarded-proto")
-    forwarded_host = request.headers.get("x-forwarded-host")
-    scheme = (forwarded_proto or request.url.scheme or "http").split(",", 1)[0].strip()
-    host = (forwarded_host or request.headers.get("host") or "").split(",", 1)[0].strip()
-    if not host:
-        return None
-    return f"{scheme.lower()}://{host.lower()}"
 def _allowed_request_origin(request: Request) -> bool:
     source = _origin_value(request.headers.get("origin"))
     if not source:
@@ -110,16 +101,16 @@ def _allowed_request_origin(request: Request) -> bool:
     if not source:
         return False
     allowed = {o.lower() for o in ALLOWED_ORIGINS}
-    current = _request_origin(request)
-    if current:
-        allowed.add(current)
+    # Trust deployment configuration, never client-controlled forwarding headers.
+    backend = _origin_value(os.getenv("BACKEND_URL"))
+    if backend:
+        allowed.add(backend)
     return source.lower() in allowed
 @app.middleware("http")
 async def reject_cross_site_cookie_mutations(request: Request, call_next):
     unsafe_method = request.method.upper() not in {"GET", "HEAD", "OPTIONS", "TRACE"}
     has_cookie_auth = COOKIE_NAME in request.cookies
-    has_bearer_auth = (request.headers.get("authorization") or "").lower().startswith("bearer ")
-    if unsafe_method and has_cookie_auth and not has_bearer_auth:
+    if unsafe_method and has_cookie_auth:
         if not _allowed_request_origin(request):
             return JSONResponse({"detail": "CSRF origin check failed"}, status_code=403)
     return await call_next(request)
