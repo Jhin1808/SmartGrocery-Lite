@@ -1,38 +1,55 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { apiForgotPassword, apiResetPassword } from "../api";
+import { apiForgotPassword, apiPasswordResetConfig, apiResetPassword } from "../api";
 
-function Turnstile({ onVerify }) {
-  const [ready, setReady] = useState(false);
-  const siteKey = process.env.REACT_APP_TURNSTILE_SITE_KEY || "";
+function Turnstile({ siteKey, onVerify, onError }) {
+  const mount = useRef(null);
 
   useEffect(() => {
     if (!siteKey) return;
-    if (window.turnstile) { setReady(true); return; }
-    const s = document.createElement("script");
-    s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-    s.async = true;
-    s.defer = true;
-    s.onload = () => setReady(true);
-    document.body.appendChild(s);
-  }, [siteKey]);
+    let active = true;
+    let widgetId;
+    const error = () => {
+      if (active) {
+        onVerify("");
+        onError("Verification could not load. Please refresh and try again.");
+      }
+    };
+    const render = () => {
+      if (!active || !mount.current || !window.turnstile) return error();
+      try {
+        widgetId = window.turnstile.render(mount.current, {
+          sitekey: siteKey,
+          callback: (value) => { onVerify(value); onError(""); },
+          "error-callback": error,
+          "expired-callback": () => onVerify(""),
+        });
+      } catch {
+        error();
+      }
+    };
+    let script = document.querySelector('script[data-turnstile-script="true"]');
+    if (window.turnstile) render();
+    else {
+      if (!script) {
+        script = document.createElement("script");
+        script.dataset.turnstileScript = "true";
+        script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+        script.async = true;
+        document.head.appendChild(script);
+      }
+      script.addEventListener("load", render);
+      script.addEventListener("error", error);
+    }
+    return () => {
+      active = false;
+      script?.removeEventListener("load", render);
+      script?.removeEventListener("error", error);
+      if (widgetId !== undefined) window.turnstile?.remove(widgetId);
+    };
+  }, [siteKey, onVerify, onError]);
 
-  useEffect(() => {
-    if (!ready || !siteKey) return;
-    const el = document.getElementById("cf-turnstile");
-    if (!el) return;
-    const ts = window.turnstile;
-    if (!ts) return;
-    ts.render("#cf-turnstile", {
-      sitekey: siteKey,
-      callback: (token) => onVerify?.(token),
-      "error-callback": () => onVerify?.(""),
-      "expired-callback": () => onVerify?.(""),
-    });
-  }, [ready, siteKey, onVerify]);
-
-  if (!siteKey) return null;
-  return <div style={{ display: "flex", justifyContent: "center" }}><div id="cf-turnstile" /></div>;
+  return <div style={{ display: "flex", justifyContent: "center" }}><div ref={mount} aria-label="Human verification" /></div>;
 }
 
 function Brand() {
@@ -87,8 +104,12 @@ export default function ResetPassword() {
   const [email, setEmail] = useState(initialEmail);
   const [reqBusy, setReqBusy] = useState(false);
   const [reqMsg, setReqMsg] = useState("");
+  const [reqErr, setReqErr] = useState("");
   const [devCode, setDevCode] = useState("");
   const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaError, setCaptchaError] = useState("");
+  const [captchaAttempt, setCaptchaAttempt] = useState(0);
+  const [captchaConfig, setCaptchaConfig] = useState({ loading: true, required: false, siteKey: "", error: "" });
 
   const [pw1, setPw1] = useState("");
   const [pw2, setPw2] = useState("");
@@ -103,6 +124,23 @@ export default function ResetPassword() {
   }, [initialEmail]);
 
   useEffect(() => {
+    if (token) return;
+    let active = true;
+    apiPasswordResetConfig().then((config) => {
+      if (!active) return;
+      const required = Boolean(config?.captcha_required);
+      const siteKey = config?.site_key || "";
+      setCaptchaConfig({
+        loading: false, required, siteKey,
+        error: required && !siteKey ? "Verification is temporarily unavailable. Please try again later." : "",
+      });
+    }).catch(() => {
+      if (active) setCaptchaConfig({ loading: false, required: false, siteKey: "", error: "Verification is temporarily unavailable. Please try again later." });
+    });
+    return () => { active = false; };
+  }, [token]);
+
+  useEffect(() => {
     const prev = document.title;
     document.title = token ? "Reset password · SmartGrocery" : "Forgot password · SmartGrocery";
     return () => { document.title = prev; };
@@ -115,17 +153,23 @@ export default function ResetPassword() {
   const submitRequest = async (e) => {
     e.preventDefault();
     if (!email.trim().includes("@")) return;
+    if (captchaConfig.loading || captchaConfig.error || captchaError || (captchaConfig.required && !captchaToken)) return;
     setReqBusy(true);
     setReqMsg("");
+    setReqErr("");
     setDevCode("");
     try {
       const res = await apiForgotPassword(email.trim(), captchaToken || undefined);
-      setReqMsg("If that email exists, we sent a reset code.");
+      setReqMsg("If that email exists, check your inbox for a reset code. It may take a few minutes.");
       if (res?.dev_code) setDevCode(res.dev_code);
-    } catch {
-      setReqMsg("If that email exists, we sent a reset code.");
+    } catch (error) {
+      setReqErr(error.status === 429 ? "Too many requests. Please try again later."
+        : /captcha/i.test(error.message || "") ? "Verification failed or expired. Please try again."
+        : "Could not request a reset code. Please try again later.");
     } finally {
       setReqBusy(false);
+      setCaptchaToken("");
+      setCaptchaAttempt((attempt) => attempt + 1);
     }
   };
 
@@ -188,7 +232,16 @@ export default function ResetPassword() {
                 />
               </div>
 
-              <Turnstile onVerify={setCaptchaToken} />
+              {captchaConfig.required && captchaConfig.siteKey && (
+                <Turnstile key={captchaAttempt} siteKey={captchaConfig.siteKey} onVerify={setCaptchaToken} onError={setCaptchaError} />
+              )}
+
+              {(captchaConfig.error || captchaError || reqErr) && (
+                <div className="lm-alert lm-alert--danger" role="alert">
+                  <i className="bi bi-exclamation-circle lm-alert__icon" />
+                  <span>{captchaConfig.error || captchaError || reqErr}</span>
+                </div>
+              )}
 
               {reqMsg && (
                 <div className="lm-alert lm-alert--info">
@@ -207,7 +260,8 @@ export default function ResetPassword() {
               <button
                 type="submit"
                 className="btn btn-primary btn-lg btn-block"
-                disabled={reqBusy || !email.trim().includes("@")}
+                disabled={reqBusy || captchaConfig.loading || Boolean(captchaConfig.error || captchaError) ||
+                  !email.trim().includes("@") || (captchaConfig.required && !captchaToken)}
               >
                 {reqBusy ? <><span className="lm-spinner" /> Sending…</> : "Send reset code"}
               </button>

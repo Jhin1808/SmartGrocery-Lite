@@ -23,6 +23,12 @@ function RequireAuth({ children }) {
   return children;
 }
 
+function PublicOnly({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  return user ? <Navigate to="/lists" replace /> : children;
+}
+
 function AppShell() {
   const { user } = useAuth();
 
@@ -40,7 +46,7 @@ function AppShell() {
           <Routes>
             <Route path="/" element={<Navigate to={user ? "/lists" : "/login"} replace />} />
 
-            <Route path="/login" element={<AuthTabs />} />
+            <Route path="/login" element={<PublicOnly><AuthTabs /></PublicOnly>} />
             <Route path="/oauth/callback" element={<OAuthCallback />} />
             <Route path="/reset" element={<ResetPassword />} />
             <Route path="/terms" element={<Terms />} />
