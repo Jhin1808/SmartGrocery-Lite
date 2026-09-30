@@ -1,3 +1,4 @@
+import { createFridgeClient } from "./fridgeClient";
 // src/api.js
 const PRODUCTION_API_BASE = "https://api.tobuylists.com";
 const LEGACY_API_BASE = "https://api.smartgrocery.online";
@@ -311,14 +312,11 @@ export const apiCloneTemplate = (slug, { list_id, list_name } = {}) =>
     body: { list_id, list_name },
   });
 
-// Fridge inventory and ingredient-aware meal planning.
-export const apiFridge = () => request("/fridge");
-export const apiSaveFood = (payload, id) => request(`/fridge${id ? `/${id}` : ""}`, {method: id ? "PUT" : "POST", body: payload});
-export const apiRemoveFood = (id) => request(`/fridge/${id}`, {method: "DELETE"});
-export const apiFridgeMeals = (ingredient = "", q = "") => {
-  const params = new URLSearchParams();
-  if (ingredient) params.set("ingredient", ingredient);
-  if (q) params.set("q", q);
-  return request(`/fridge/meals/suggestions?${params}`);
-};
-export const apiMissingToList = (meal, list) => request(`/fridge/meals/${meal}/to-list/${list}`, {method: "POST"});
+// Fridge inventory and compatibility with deployments predating its routes.
+const fridgeClient = createFridgeClient({request, me:apiMe, search:apiRecipeSearch, detail:apiRecipeDetail, items:apiGetItems, addItem:apiAddItem, base:API_BASE});
+export const apiFridge = fridgeClient.read;
+export const apiSaveFood = fridgeClient.save;
+export const apiRemoveFood = fridgeClient.remove;
+export const apiFridgeMeals = fridgeClient.meals;
+export const apiMissingToList = fridgeClient.missingToList;
+export const fridgeUsesBrowserStorage = fridgeClient.browserOnly;
