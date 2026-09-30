@@ -8,6 +8,7 @@ from starlette.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 from urllib.parse import urlparse
 from app.database import engine
+from app.access_log import install_access_log_redaction
 from app.config import load_secret, CATALOG_TIMEOUT_SECONDS, get_frontend_origins
 from app.security_cookies import COOKIE_NAME
 from app.routers.lists import router as lists_router
@@ -20,6 +21,7 @@ from app.routers.templates import router as templates_router
 from app.routers.auth_google import router as google_router
 from app.routers.me import router as me_router
 from app.routers.tasks import router as tasks_router
+install_access_log_redaction()
 email_test_router = None
 if os.getenv("ENABLE_EMAIL_ADMIN_ROUTES") == "1":
     from app.routers.email_test import router as email_test_router
