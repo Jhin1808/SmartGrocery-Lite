@@ -43,7 +43,9 @@ export function AuthProvider({ children }) {
     }
     try {
       const path = window?.location?.pathname || "";
-      const skip = ["/login", "/oauth/callback", "/reset", "/terms"];
+      // The OAuth callback establishes its own session; other public pages
+      // still need /me so a direct visit to /login recognizes an active cookie.
+      const skip = ["/oauth/callback"];
       if (skip.some((p) => path.startsWith(p))) {
         setLoading(false);
         return;

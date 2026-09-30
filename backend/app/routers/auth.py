@@ -4,6 +4,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.database import get_db
 from app.models import User, PasswordResetCode, UsedResetToken
@@ -93,6 +94,21 @@ class ResetPassword(BaseModel):
     new_password: str = Field(..., min_length=8, max_length=128)
 
 
+@router.get("/password-reset-config")
+def password_reset_config():
+    """Public widget configuration; the verification secret never leaves the API."""
+    import os
+    required = bool((os.getenv("TURNSTILE_SECRET") or "").strip())
+    return {
+        "captcha_required": required,
+        "site_key": (os.getenv("TURNSTILE_SITE_KEY") or "").strip() if required else None,
+    }
+
+
+def _user_by_email(db: Session, email: str) -> User | None:
+    return db.query(User).filter(func.lower(User.email) == email.strip().lower()).first()
+
+
 @router.post("/forgot-password")
 def forgot_password(payload: ForgotPassword, request: Request, db: Session = Depends(get_db)):
     # Always respond OK to avoid user enumeration; include reset_url for dev convenience if user exists.
@@ -145,7 +161,7 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
     from datetime import datetime, timedelta, timezone
     from app.security import PH
 
-    user = db.query(User).filter(User.email == payload.email).first()
+    user = _user_by_email(db, str(payload.email))
     out = {"ok": True}
     if user:
         # per-email limit
@@ -174,12 +190,6 @@ def forgot_password(payload: ForgotPassword, request: Request, db: Session = Dep
                 and os.getenv("EXPOSE_RESET_CODE", "").lower() in ("1", "true", "yes", "dev")):
             out["dev_code"] = code
 
-        # Ensure contact in Resend audience if configured (best-effort)
-        try:
-            from app.email_resend import ensure_contact as _ensure
-            _ensure(user.email, getattr(user, "name", None))
-        except Exception:
-            pass
         # Send code email
         try:
             _send_reset_code_email(to=user.email, code=code, minutes=mins)
@@ -204,7 +214,7 @@ def reset_password(payload: ResetPassword, request: Request, db: Session = Depen
     if (payload.code or "").strip():
         if not payload.email:
             raise HTTPException(status_code=400, detail="Email is required with code")
-        user = db.query(User).filter(User.email == payload.email).first()
+        user = _user_by_email(db, str(payload.email))
         # Avoid user enumeration
         if not user:
             raise HTTPException(status_code=400, detail="Invalid or expired code")
