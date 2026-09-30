@@ -124,12 +124,13 @@ async def search(
             seen_codes.add(p["code"])
         out.append(p)
 
+    store_products = []
     # Kroger (only if configured, user opted in, and has a connected store)
     if use_kroger and kroger_configured():
         store = _get_connected_store(db, current_user.id)
         if store:
             kroger_params = {"q": q, "page": page, "page_size": page_size, "location_id": store.location_id}
-            kkey = _cache_key("kroger", "search", kroger_params)
+            kkey = _cache_key("kroger-v2", "search", kroger_params)
             kc = _cache_get(db, kkey)
             if kc is not None:
                 kroger_results = kc
@@ -139,16 +140,21 @@ async def search(
                 )
                 _cache_put(db, kkey, "kroger", "search", kroger_results)
 
+            store_codes = set()
             for p in kroger_results:
-                if p.get("code") and p["code"] in seen_codes:
-                    continue
-                if p.get("code"):
-                    seen_codes.add(p["code"])
                 if category and (p.get("canonical") or "").split(".")[0] != category:
                     continue
-                out.append(p)
+                code = p.get("code")
+                if code and code in store_codes:
+                    continue
+                if code:
+                    store_codes.add(code)
+                store_products.append(p)
+            # Store-scoped products carry prices; do not truncate them behind
+            # a full page of generic OFF products or keep an unpriced duplicate.
+            out = [p for p in out if not p.get("code") or p["code"] not in store_codes]
 
-    return out[: max(1, min(50, page_size))]
+    return (store_products + out)[: max(1, min(50, page_size))]
 
 
 @router.get("/barcode/{ean}", response_model=Optional[CatalogProductRead])
@@ -183,7 +189,7 @@ async def barcode(
         store = _get_connected_store(db, current_user.id)
         if store:
             kroger_params = {"ean": ean, "location_id": store.location_id}
-            kkey = _cache_key("kroger", "barcode", kroger_params)
+            kkey = _cache_key("kroger-v2", "barcode", kroger_params)
             kc = _cache_get(db, kkey)
             if kc is not None:
                 return kc if kc else None

@@ -232,3 +232,4 @@ __marimo__/
 .tools/
 backend/.hallmark-*.db
 frontend/hallmark-*.png
+frontend/hallmark-*.jpg

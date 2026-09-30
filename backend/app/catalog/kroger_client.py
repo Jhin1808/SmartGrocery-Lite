@@ -138,10 +138,17 @@ def _normalize_product(item: dict, taxonomy: Taxonomy, location_id: Optional[str
         if entry:
             canonical = entry["canonical"]
             display = entry["display"]
+    # Prices, fulfillment and inventory belong to the sellable item variant.
+    variants = item.get("items") or []
+    variant = variants[0] if variants else item
+    if isinstance(variant, list):
+        variant = variant[0] if variant else {}
+    if not isinstance(variant, dict):
+        variant = {}
     # Pricing block
     price_regular = None
     price_promo = None
-    price_block = item.get("price") if location_id else (item.get("nationalPrice") or item.get("price"))
+    price_block = variant.get("price") if location_id else (variant.get("nationalPrice") or variant.get("price"))
     if isinstance(price_block, dict):
         try:
             if price_block.get("regular") is not None:
@@ -160,9 +167,9 @@ def _normalize_product(item: dict, taxonomy: Taxonomy, location_id: Optional[str
             aisle = al["description"]
             break
     # Fulfillment
-    fulfillment = item.get("fulfillment") if location_id else None
+    fulfillment = variant.get("fulfillment") if location_id else None
     stock_level = None
-    inv = item.get("inventory")
+    inv = variant.get("inventory")
     if isinstance(inv, dict) and inv.get("stockLevel"):
         stock_level = inv["stockLevel"]
 
@@ -224,7 +231,8 @@ async def get_product(
     if not items:
         return None
     taxonomy = get_cached_taxonomy()
-    return _normalize_product(items[0], taxonomy, location_id)
+    product = items if isinstance(items, dict) else items[0]
+    return _normalize_product(product, taxonomy, location_id)
 
 
 async def list_chains(client: httpx.AsyncClient) -> list[dict]:
