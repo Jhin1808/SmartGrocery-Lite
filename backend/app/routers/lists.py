@@ -272,7 +272,7 @@ def update_item(
         item.name = payload.name or item.name
     if payload.quantity is not None:
         item.quantity = payload.quantity
-    if payload.expiry is not None:
+    if "expiry" in payload.model_fields_set:
         item.expiry = payload.expiry
     if payload.description is not None:
         # allow clearing description with empty string
