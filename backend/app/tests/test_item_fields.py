@@ -155,3 +155,38 @@ def test_item_store_id_must_belong_to_current_user(client, test_user):
     )
     assert r.status_code == 200, r.text
     assert r.json()["store_id"] is None
+
+def test_expiry_can_be_cleared_updated_and_preserved(client):
+    response = client.post("/lists/", json={"name": "Expiry test"})
+    assert response.status_code == 201
+    list_id = response.json()["id"]
+
+    response = client.post(
+        f"/lists/{list_id}/items",
+        json={"name": "Milk", "expiry": "2026-11-01"},
+    )
+    assert response.status_code == 201
+    item_id = response.json()["id"]
+    item_url = f"/lists/items/{item_id}"
+
+    # An explicit null clears the date.
+    response = client.patch(item_url, json={"expiry": None})
+    assert response.status_code == 200
+    assert response.json()["expiry"] is None
+
+    # A new date replaces the cleared value.
+    response = client.patch(item_url, json={"expiry": "2026-12-01"})
+    assert response.status_code == 200
+    assert response.json()["expiry"] == "2026-12-01"
+
+    # Omitting expiry preserves the date.
+    response = client.patch(item_url, json={"quantity": 3})
+    assert response.status_code == 200
+    assert response.json()["expiry"] == "2026-12-01"
+
+    # Verify the saved result through a separate request.
+    response = client.get(f"/lists/{list_id}/items")
+    assert response.status_code == 200
+    item = next(i for i in response.json() if i["id"] == item_id)
+    assert item["expiry"] == "2026-12-01"
+    assert item["quantity"] == 3
