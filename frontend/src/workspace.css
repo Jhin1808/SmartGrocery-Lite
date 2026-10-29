@@ -1,7 +1,7 @@
 /* Signed-in workspace: a quiet list rail and a readable shopping surface. */
 .app-main--nav {
   --font-display: var(--font-sans);
-  background: #f3f6f8;
+  background: var(--bg);
   font-size: 1rem;
 }
 [data-theme="dark"] .app-main--nav { background: var(--bg); }
@@ -27,7 +27,7 @@
 .workspace-eyebrow { color: var(--text-secondary); font-size: .75rem; font-weight: 700; letter-spacing: .1em; margin: 0 0 8px; }
 .workspace-list-total { color: var(--text-secondary); font-size: .875rem; margin-left: auto; }
 .workspace-grid { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 24px; align-items: start; }
-.workspace-sidebar { position: sticky; top: calc(var(--nav-height) + 20px); box-shadow: none; border-radius: 16px; }
+.workspace-sidebar { position: sticky; top: calc(var(--nav-height) + 20px); box-shadow: none; border-radius: 8px; }
 .workspace-sidebar .lm-card__header { padding: 18px; }
 .workspace-sidebar .lm-card__body { padding: 14px; }
 .workspace-sidebar .eyebrow { font-size: .875rem !important; }
@@ -42,7 +42,7 @@
 .workspace-sidebar .lm-list__item-actions { gap: 4px; }
 .workspace-sidebar .lm-list__item-share { width: 40px; height: 44px; opacity: 1; }
 .workspace-list-toggle { display: none; }
-.workspace-content { min-width: 0; border-radius: 18px; box-shadow: 0 4px 24px rgb(15 23 42 / 3%); }
+.workspace-content { min-width: 0; border-radius: 8px; box-shadow: none; }
 .workspace-content-header { padding: 24px; gap: 16px; flex-wrap: wrap; }
 .workspace-content-header > div:first-child { flex-basis: 220px !important; }
 .workspace-content-header > div:first-child > span { flex-shrink: 0; }

@@ -62,7 +62,7 @@ function Brand() {
           <circle cx="18" cy="20" r="1.4" />
         </svg>
       </span>
-      <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em" }}>SmartGrocery</span>
+      <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em" }}>ToBuyLists</span>
     </div>
   );
 }
@@ -142,7 +142,7 @@ export default function ResetPassword() {
 
   useEffect(() => {
     const prev = document.title;
-    document.title = token ? "Reset password · SmartGrocery" : "Forgot password · SmartGrocery";
+    document.title = token ? "Reset password · ToBuyLists" : "Forgot password · ToBuyLists";
     return () => { document.title = prev; };
   }, [token]);
 
@@ -195,7 +195,7 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="auth-shell">
+    <div className="auth-shell auth-shell--single">
       <div className="auth-aside" aria-hidden="true" style={{ display: "none" }} />
 
       <section className="auth-panel anim-fade" style={{ maxWidth: 460 }}>

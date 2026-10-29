@@ -4,7 +4,7 @@ const SECTIONS = [
   {
     id: "use",
     title: "1. Use of the service",
-    body: "You may use SmartGrocery only for lawful purposes and in accordance with these Terms. You are responsible for your account and for any activity that occurs under your credentials.",
+    body: "You may use ToBuyLists only for lawful purposes and in accordance with these Terms. You are responsible for your account and for any activity that occurs under your credentials.",
   },
   {
     id: "data",
@@ -107,7 +107,7 @@ export default function Terms() {
 
           <div className="lm-alert lm-alert--info" style={{ marginTop: 32 }}>
             <i className="bi bi-info-circle lm-alert__icon" />
-            <span>By continuing to use SmartGrocery, you agree to these terms. Need a copy? Email us and we'll send a PDF.</span>
+            <span>By continuing to use ToBuyLists, you agree to these terms. Need a copy? Email us and we'll send a PDF.</span>
           </div>
         </article>
       </div>

@@ -33,10 +33,11 @@ function BrandMark({ size = 32 }) {
   );
 }
 
-function PasswordField({ value, onChange, placeholder, show, onToggle, disabled, autoComplete, name }) {
+function PasswordField({ id, value, onChange, placeholder, show, onToggle, disabled, autoComplete, name }) {
   return (
     <div className="password-input">
       <input
+        id={id}
         type={show ? "text" : "password"}
         className="form-control"
         placeholder={placeholder}
@@ -52,7 +53,8 @@ function PasswordField({ value, onChange, placeholder, show, onToggle, disabled,
         className="password-input__toggle"
         onClick={onToggle}
         aria-label={show ? "Hide password" : "Show password"}
-        tabIndex={-1}
+        aria-controls={id}
+        aria-pressed={show}
       >
         <i className={`bi ${show ? "bi-eye-slash" : "bi-eye"}`} />
       </button>
@@ -91,60 +93,30 @@ function StrengthMeter({ password }) {
 
 function AuthAside() {
   return (
-    <aside className="auth-aside" aria-hidden="true">
-      <div className="flex items-center gap-3" style={{ color: "var(--neutral-50)" }}>
-        <BrandMark size={40} />
-        <span style={{ fontWeight: 800, fontSize: 18, letterSpacing: "-0.02em" }}>ToBuyLists</span>
+    <aside className="auth-aside" aria-label="About ToBuyLists">
+      <div className="auth-wordmark">
+        <BrandMark size={36} />
+        <span>ToBuyLists</span>
       </div>
-
-      <div className="lm-cta" style={{ flex: 1, justifyContent: "center" }}>
-        <span className="lm-cta__eyebrow">
-          <i className="bi bi-stars" /> New • Real-time sharing
-        </span>
-        <h1 className="lm-cta__headline">
-          Grocery lists that <em>actually</em> get done.
-        </h1>
-        <p className="lm-cta__sub">
-          Plan together, share instantly, and check items off as you walk the aisles.
-          ToBuyLists keeps your household in sync — no more duplicate buys or forgotten staples.
-        </p>
-
-        <div className="flex flex-col" style={{ gap: 12, marginTop: 12 }}>
-          <div className="lm-feature">
-            <span className="lm-feature__icon"><i className="bi bi-list-check" /></span>
-            <div>
-              <p className="lm-feature__title">Smart lists</p>
-              <p className="lm-feature__desc">Group items by aisle, mark favourites, track expiry dates.</p>
-            </div>
+      <div className="auth-story">
+        <h2>One list.<br />Fewer forgotten groceries.</h2>
+        <p>A place for the milk you’re out of, the dinner you’re planning,
+          and the things someone else said they’d pick up.</p>
+        <div className="auth-shopping-note" aria-label="Example grocery list">
+          <div className="auth-note-heading">
+            <h3>This week’s groceries</h3>
+            <span>Sample list</span>
           </div>
-          <div className="lm-feature">
-            <span className="lm-feature__icon lm-feature__icon--accent"><i className="bi bi-people-fill" /></span>
-            <div>
-              <p className="lm-feature__title">Live sharing</p>
-              <p className="lm-feature__desc">Invite your partner, roommates or family in a single tap.</p>
-            </div>
-          </div>
-          <div className="lm-feature">
-            <span className="lm-feature__icon lm-feature__icon--violet"><i className="bi bi-bag-check-fill" /></span>
-            <div>
-              <p className="lm-feature__title">Shop mode</p>
-              <p className="lm-feature__desc">Tap to check off, see live progress, never miss an item again.</p>
-            </div>
-          </div>
+          <ul>
+            <li className="auth-note-done"><i className="bi bi-check2" aria-hidden="true" /><span>Sourdough bread</span><span>1 loaf</span></li>
+            <li><i className="bi bi-square" aria-hidden="true" /><span>Whole milk</span><span>2 bottles</span></li>
+            <li><i className="bi bi-square" aria-hidden="true" /><span>Baby spinach</span><span>1 bag</span></li>
+            <li><i className="bi bi-square" aria-hidden="true" /><span>Free-range eggs</span><span>12 eggs</span></li>
+          </ul>
+          <p><i className="bi bi-people" aria-hidden="true" /> Share a list with your household.</p>
         </div>
       </div>
-
-      <div className="lm-trust">
-        <div className="lm-trust__avatars">
-          <span className="lm-avatar">A</span>
-          <span className="lm-avatar">M</span>
-          <span className="lm-avatar">S</span>
-          <span className="lm-avatar">+</span>
-        </div>
-        <div className="lm-trust__text">
-          Trusted by <strong>thousands of households</strong> to plan their week.
-        </div>
-      </div>
+      <p className="auth-aside-footer">Plan together. Pick things up. Put dinner on.</p>
     </aside>
   );
 }
@@ -168,13 +140,16 @@ export default function EnhancedAuthTabs() {
   const navigate = useNavigate();
   const { search } = useLocation();
   const [demoLoading, setDemoLoading] = useState(false);
+  const [demoError, setDemoError] = useState("");
 
   const tryDemo = async () => {
     setDemoLoading(true);
+    setDemoError("");
     try {
       await loginAsDemo();
       navigate("/lists", { replace: true });
     } catch {
+      setDemoError("The demo couldn’t open. Please try again.");
       setDemoLoading(false);
     }
   };
@@ -186,7 +161,6 @@ export default function EnhancedAuthTabs() {
 
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
 
@@ -293,17 +267,16 @@ export default function EnhancedAuthTabs() {
     <div className="auth-shell">
       <AuthAside />
 
-      <section className="auth-panel anim-fade">
+      <section className="auth-panel" aria-label="Your account">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
-          <div className="lm-md-hide" style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+          <div className="auth-mobile-brand">
             <BrandMark size={32} />
             <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em" }}>ToBuyLists</span>
           </div>
-          <div className="lm-tabs" role="tablist">
+          <div className="lm-tabs" role="group" aria-label="Account action">
             <button
               type="button"
-              role="tab"
-              aria-selected={activeTab === "login"}
+              aria-pressed={activeTab === "login"}
               className={"lm-tab" + (activeTab === "login" ? " is-active" : "")}
               onClick={() => setActiveTab("login")}
             >
@@ -311,8 +284,7 @@ export default function EnhancedAuthTabs() {
             </button>
             <button
               type="button"
-              role="tab"
-              aria-selected={activeTab === "register"}
+              aria-pressed={activeTab === "register"}
               className={"lm-tab" + (activeTab === "register" ? " is-active" : "")}
               onClick={() => setActiveTab("register")}
             >
@@ -328,12 +300,14 @@ export default function EnhancedAuthTabs() {
           <p style={{ fontSize: 14.5, color: "var(--text-secondary)", margin: "8px 0 0" }}>
             {activeTab === "login"
               ? "Sign in to access your lists and pick up where you left off."
-              : "Create a free account — no credit card required."}
+              : "Create an account to start your household’s grocery list."}
           </p>
         </div>
 
+        {demoError && <div className="lm-alert lm-alert--danger" role="alert">{demoError}</div>}
+
         {activeTab === "login" ? (
-          <form onSubmit={handleLogin} className="anim-fade" noValidate>
+          <form onSubmit={handleLogin}>
             <div className="flex flex-col" style={{ gap: 16 }}>
               <GoogleButton onClick={handleSocialLogin} disabled={loginLoading}>
                 Continue with Google
@@ -359,9 +333,10 @@ export default function EnhancedAuthTabs() {
               <div className="form-field">
                 <div className="flex items-center justify-between">
                   <label className="form-label" htmlFor="login-pwd">Password</label>
-                  <Link to="/reset" style={{ fontSize: 12.5, fontWeight: 600 }}>Forgot?</Link>
+                  <Link to="/reset" style={{ fontSize: 12.5, fontWeight: 600 }}>Forgot password?</Link>
                 </div>
                 <PasswordField
+                  id="login-pwd"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="Enter your password"
@@ -373,16 +348,6 @@ export default function EnhancedAuthTabs() {
                 />
               </div>
 
-              <label className="form-check" style={{ marginTop: 4 }}>
-                <input
-                  type="checkbox"
-                  className="form-check-input"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  disabled={loginLoading}
-                />
-                <span style={{ fontSize: 13.5 }}>Keep me signed in</span>
-              </label>
 
               {loginError && (
                 <div className="lm-alert lm-alert--danger" role="alert">
@@ -403,31 +368,22 @@ export default function EnhancedAuthTabs() {
 
               <button
                 type="button"
-                className="btn btn-accent btn-lg btn-block"
+                className="btn btn-secondary btn-block auth-demo-button"
                 onClick={tryDemo}
                 disabled={demoLoading || loginLoading}
               >
-                {demoLoading ? <><span className="lm-spinner" /> Loading demo…</> : <><i className="bi bi-magic" /> Try the demo</>}
+                {demoLoading ? <><span className="lm-spinner" /> Loading demo…</> : <>Try the demo <i className="bi bi-arrow-right" aria-hidden="true" /></>}
               </button>
 
               <p style={{ textAlign: "center", fontSize: 12, color: "var(--text-muted)", margin: 0, marginTop: -4 }}>
-                No signup, no backend — explore every page with sample data.
+                Explore with sample groceries. No account needed.
               </p>
 
-              <p style={{ textAlign: "center", fontSize: 13, color: "var(--text-muted)", margin: 0 }}>
-                New here?{" "}
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("register")}
-                  style={{ background: "none", border: 0, color: "var(--color-primary)", fontWeight: 600, cursor: "pointer", padding: 0, fontSize: 13 }}
-                >
-                  Create an account
-                </button>
-              </p>
+
             </div>
           </form>
         ) : (
-          <form onSubmit={handleRegister} className="anim-fade" noValidate>
+          <form onSubmit={handleRegister}>
             <div className="flex flex-col" style={{ gap: 16 }}>
               <GoogleButton onClick={handleSocialLogin} disabled={registerLoading}>
                 Continue with Google
@@ -453,6 +409,7 @@ export default function EnhancedAuthTabs() {
               <div className="form-field">
                 <label className="form-label" htmlFor="reg-pwd">Password</label>
                 <PasswordField
+                  id="reg-pwd"
                   value={registerPassword}
                   onChange={(e) => setRegisterPassword(e.target.value)}
                   placeholder="At least 8 characters"
@@ -468,6 +425,7 @@ export default function EnhancedAuthTabs() {
               <div className="form-field">
                 <label className="form-label" htmlFor="reg-confirm">Confirm password</label>
                 <PasswordField
+                  id="reg-confirm"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repeat your password"
@@ -519,27 +477,18 @@ export default function EnhancedAuthTabs() {
 
               <button
                 type="button"
-                className="btn btn-accent btn-lg btn-block"
+                className="btn btn-secondary btn-block auth-demo-button"
                 onClick={tryDemo}
                 disabled={demoLoading || registerLoading}
               >
-                {demoLoading ? <><span className="lm-spinner" /> Loading demo…</> : <><i className="bi bi-magic" /> Try the demo</>}
+                {demoLoading ? <><span className="lm-spinner" /> Loading demo…</> : <>Try the demo <i className="bi bi-arrow-right" aria-hidden="true" /></>}
               </button>
 
               <p style={{ textAlign: "center", fontSize: 12, color: "var(--text-muted)", margin: 0, marginTop: -4 }}>
-                No signup, no backend — explore every page with sample data.
+                Explore with sample groceries. No account needed.
               </p>
 
-              <p style={{ textAlign: "center", fontSize: 13, color: "var(--text-muted)", margin: 0 }}>
-                Already have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("login")}
-                  style={{ background: "none", border: 0, color: "var(--color-primary)", fontWeight: 600, cursor: "pointer", padding: 0, fontSize: 13 }}
-                >
-                  Sign in
-                </button>
-              </p>
+
             </div>
           </form>
         )}

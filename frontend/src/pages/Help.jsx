@@ -68,7 +68,7 @@ export default function Help() {
         </span>
         <h1 className="lm-hero__title font-display" style={{ fontSize: 38 }}>How can we help?</h1>
         <p className="lm-hero__subtitle" style={{ margin: "0 auto" }}>
-          Quick answers to the most common questions about using SmartGrocery.
+          Quick answers to the most common questions about using ToBuyLists.
         </p>
 
         <div style={{ position: "relative", width: "100%", maxWidth: 480, margin: "20px auto 0" }}>

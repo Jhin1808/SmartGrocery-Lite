@@ -1,0 +1,76 @@
+/* The entry page borrows its rhythm from a household shopping list. */
+.auth-shell {
+  background: var(--surface);
+  grid-template-columns: minmax(0, 1fr);
+}
+.auth-aside {
+  background: #edf0e7;
+  color: #263c32;
+  padding: clamp(32px, 5vw, 80px);
+}
+.auth-aside::before, .auth-aside::after { content: none; }
+.auth-wordmark { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; letter-spacing: -.03em; }
+.auth-shell .lm-mark {
+  background: #315c48;
+  box-shadow: none;
+  border-radius: 8px;
+  color: #fff;
+}
+.auth-story { width: 100%; max-width: 520px; margin: 56px 0; }
+.auth-story h2 {
+  font-family: var(--font-display);
+  font-size: clamp(36px, 4vw, 56px);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -.035em;
+  text-wrap: balance;
+  color: inherit;
+  margin: 0 0 24px;
+}
+.auth-story > p { max-width: 42ch; font-size: 16px; line-height: 1.65; margin: 0 0 36px; color: #43594b; }
+.auth-shopping-note {
+  background: #fffdf7;
+  padding: 26px 28px 18px;
+  border: 1px solid #d4daca;
+  box-shadow: 0 8px 20px -12px rgb(38 60 50 / 22%);
+}
+.auth-note-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; border-bottom: 1px solid #cdd4c7; padding-bottom: 16px; }
+.auth-note-heading h3 { font-family: var(--font-display); font-weight: 500; font-size: 22px; color: #263c32; margin: 0; }
+.auth-note-heading > span { font-size: 12px; color: #58644f; white-space: nowrap; }
+.auth-shopping-note ul { list-style: none; padding: 0; margin: 0; }
+.auth-shopping-note li { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 15px 0; border-bottom: 1px solid #e4e6dc; font-size: 15px; }
+.auth-shopping-note li > span:last-child { color: #58644f; font-size: 13px; font-variant-numeric: tabular-nums; }
+.auth-shopping-note .auth-note-done > span:nth-child(2) { text-decoration: line-through; color: #58644f; }
+.auth-shopping-note > p { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #43594b; margin: 18px 0 0; }
+.auth-aside-footer { color: #43594b; font-size: 14px; margin: 0; }
+.auth-panel { max-width: 480px; padding: 48px 32px; }
+.auth-panel > div:first-child { flex-wrap: wrap; gap: 24px; }
+.auth-mobile-brand { display: inline-flex; align-items: center; gap: 10px; }
+.auth-panel .lm-tabs { background: transparent; padding: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; gap: 24px; }
+.auth-panel .lm-tab { padding: 12px 0; min-height: 44px; background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; box-shadow: none; color: var(--text-secondary); }
+.auth-panel .lm-tab.is-active { color: #315c48; border-bottom-color: #315c48; background: none; box-shadow: none; }
+.auth-panel .btn { min-height: 46px; border-radius: 6px; box-shadow: none; transform: none; }
+.auth-panel .btn-primary { background: #315c48; border-color: #315c48; color: #fff; }
+.auth-panel .btn-primary:hover { background: #264a39; border-color: #264a39; box-shadow: none; }
+.auth-panel .btn:disabled { opacity: 1; background: #e8ece8; border-color: #d4dbd4; color: #596659; cursor: not-allowed; }
+.auth-panel .auth-demo-button { background: transparent; border-color: #cdd4cd; color: #315c48; }
+.auth-panel .auth-demo-button:hover { background: #f0f3ec; border-color: #315c48; }
+.auth-panel .form-control { min-height: 46px; border-radius: 6px; font-size: 16px; caret-color: #315c48; }
+.auth-panel .form-control::placeholder { color: #6b726b; }
+.auth-panel a { color: #315c48; text-decoration: underline; text-underline-offset: 3px; }
+.auth-panel :focus-visible { outline: 2px solid #315c48; outline-offset: 3px; }
+.auth-panel .password-input__toggle { width: 44px; min-height: 44px; }
+.auth-panel .lm-alert--danger, .auth-panel .form-error { color: #a53127; }
+.auth-shell ::selection { color: #263c32; background: #d7e2cd; }
+@media (min-width: 960px) {
+  .auth-shell { grid-template-columns: minmax(0, 1.15fr) minmax(400px, 1fr); }
+  .auth-aside { display: flex; }
+  .auth-mobile-brand { display: none; }
+  .auth-shell--single { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 480px) {
+  .auth-panel { padding: 28px 24px 40px; }
+  .auth-panel > div:first-child { flex-direction: column; align-items: stretch !important; }
+  .auth-panel .lm-tabs { width: 100%; }
+  .auth-panel .lm-tab { flex: 1; }
+}

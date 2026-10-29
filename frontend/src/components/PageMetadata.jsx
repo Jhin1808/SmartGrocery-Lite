@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 const ORIGIN = "https://www.tobuylists.com";
-const DESCRIPTION = "Create and share grocery lists with your household. Organize shopping, track expiry dates, and plan meals together with SmartGrocery Lite.";
+const DESCRIPTION = "Create and share grocery lists with your household. Organize shopping, track expiry dates, and plan meals together with ToBuyLists.";
 
 export default function PageMetadata() {
   const { pathname } = useLocation();
@@ -11,10 +11,10 @@ export default function PageMetadata() {
     const isTerms = pathname === "/terms";
     const isPublic = ["/", "/login", "/terms"].includes(pathname);
     const title = isTerms
-      ? "Terms of Service | SmartGrocery Lite"
-      : "Shared Grocery Lists & Expiry Reminders | SmartGrocery Lite";
+      ? "Terms of Service | ToBuyLists"
+      : "Shared Grocery Lists & Expiry Reminders | ToBuyLists";
     const description = isTerms
-      ? "Read the SmartGrocery Lite terms of service, including account responsibilities, data ownership, service availability, and contact information."
+      ? "Read the ToBuyLists terms of service, including account responsibilities, data ownership, service availability, and contact information."
       : DESCRIPTION;
     const canonical = `${ORIGIN}${pathname === "/" ? "/login" : pathname}`;
 

@@ -254,7 +254,7 @@ function ShareSheet({
                 <span style={{ marginLeft: 6 }}>{isNativeShare ? "Share to…" : "Copy link"}</span>
               </button>
               <a
-                href={shareLink ? `mailto:?subject=${encodeURIComponent(`Join my "${listName}" list`)}&body=${encodeURIComponent(`Hey! I'm sharing my SmartGrocery list with you: ${shareLink}`)}` : "#"}
+                href={shareLink ? `mailto:?subject=${encodeURIComponent(`Join my "${listName}" list`)}&body=${encodeURIComponent(`Hey! I'm sharing my ToBuyLists list with you: ${shareLink}`)}` : "#"}
                 onClick={(e) => { if (!shareLink) e.preventDefault(); }}
                 className="btn btn-outline btn-lg"
                 style={{ width: "100%", textDecoration: "none" }}
@@ -895,7 +895,7 @@ export default function EnhancedLists() {
       try {
         await navigator.share({
           title: shareListName,
-          text: `Join my "${shareListName}" list on SmartGrocery`,
+          text: `Join my "${shareListName}" list on ToBuyLists`,
           url: shareLink,
         });
       } catch (err) {
@@ -959,7 +959,6 @@ export default function EnhancedLists() {
       <DemoBanner />
       <div className="workspace-heading">
         <div>
-          <p className="workspace-eyebrow">YOUR KITCHEN, ORGANIZED</p>
           <h1>Shopping lists</h1>
         </div>
         <span className="workspace-list-total">{visibleLists.length} {visibleLists.length === 1 ? "list" : "lists"}</span>

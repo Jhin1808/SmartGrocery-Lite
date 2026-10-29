@@ -3,7 +3,20 @@
    A warm, modern, premium UI layer on top of Bootstrap.
    ========================================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap');
+@font-face {
+  font-family: 'Public Sans';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/public-sans-latin-wght-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('./fonts/newsreader-latin-standard-normal.woff2') format('woff2');
+}
 
 /* ---------- 1. Design Tokens -------------------------------------------- */
 :root {
@@ -108,8 +121,8 @@
   --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 
   /* Typography */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-display: 'Fraunces', 'Inter', Georgia, serif;
+  --font-sans: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Newsreader', Georgia, serif;
   --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
 
   /* Sizing */
@@ -1081,26 +1094,12 @@ textarea.form-control { resize: vertical; min-height: 60px; line-height: 1.5; }
   overflow: hidden;
 }
 
-.lm-shop-card::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--color-primary);
-  transform: scaleY(0);
-  transition: transform var(--t-base) var(--ease-out);
-}
-
 .lm-shop-card:hover { border-color: var(--color-primary); transform: translateY(-1px); box-shadow: var(--shadow-md); }
-.lm-shop-card:hover::before { transform: scaleY(1); }
 
 .lm-shop-card.is-purchased {
   background: var(--color-primary-soft);
   border-color: color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
-.lm-shop-card.is-purchased::before { transform: scaleY(1); }
 .lm-shop-card.is-purchased .lm-shop-card__name { text-decoration: line-through; color: var(--text-muted); }
 
 .lm-shop-card__check {
@@ -1857,72 +1856,6 @@ textarea.form-control { resize: vertical; min-height: 60px; line-height: 1.5; }
 .lm-topic__title { font-size: 15px; font-weight: 700; color: var(--text); margin: 0; letter-spacing: -0.01em; }
 .lm-topic__desc { font-size: 13.5px; color: var(--text-secondary); margin: 0; line-height: 1.55; }
 
-/* ---------- 28. CTA card (auth aside) --------------------------------- */
-.lm-cta {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.lm-cta__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 999px;
-  color: var(--brand-200);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  width: fit-content;
-}
-.lm-cta__eyebrow i { color: var(--accent-300); }
-.lm-cta__headline {
-  font-family: var(--font-display);
-  font-size: 44px;
-  line-height: 1.16;
-  letter-spacing: 0;
-  font-weight: 600;
-  color: var(--neutral-50);
-  margin: 0;
-  overflow: visible;
-}
-.lm-cta__headline em {
-  display: inline-block;
-  font-style: italic;
-  background: linear-gradient(120deg, var(--brand-200), var(--accent-300));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  padding-right: 0.04em;
-  padding-bottom: 0.08em;
-}
-.lm-cta__sub { font-size: 15px; color: rgba(245, 245, 244, 0.7); line-height: 1.55; margin: 0; max-width: 460px; }
-
-@media (max-width: 1100px) { .lm-cta__headline { font-size: 36px; } }
-
-/* ---------- 29. Quote / Trust badge (auth aside) --------------------- */
-.lm-trust {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px;
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-.lm-trust__avatars { display: inline-flex; }
-.lm-trust__avatars .lm-avatar { width: 32px; height: 32px; border: 2px solid var(--neutral-900); margin-left: -10px; font-size: 12px; }
-.lm-trust__avatars .lm-avatar:first-child { margin-left: 0; }
-.lm-trust__avatars .lm-avatar:nth-child(1) { background: linear-gradient(135deg, #14b8a6, #0f766e); }
-.lm-trust__avatars .lm-avatar:nth-child(2) { background: linear-gradient(135deg, #f59e0b, #d97706); }
-.lm-trust__avatars .lm-avatar:nth-child(3) { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
-.lm-trust__avatars .lm-avatar:nth-child(4) { background: linear-gradient(135deg, #f43f5e, #be123c); }
-.lm-trust__text { font-size: 13px; color: rgba(245, 245, 244, 0.85); font-weight: 500; }
-.lm-trust__text strong { color: var(--neutral-50); font-weight: 700; }
-
 /* ---------- 30. Spinner ------------------------------------------------ */
 .lm-spinner {
   display: inline-block;
@@ -2108,7 +2041,6 @@ textarea.form-control { resize: vertical; min-height: 60px; line-height: 1.5; }
   :root { --nav-height: 60px; }
   h1 { font-size: 2rem; }
   h2 { font-size: 1.5rem; }
-  .lm-cta__headline { font-size: 32px; }
   .auth-panel { padding: var(--space-8) var(--space-5); }
 
   /* Stack the share invite form on small screens. */
