@@ -26,10 +26,6 @@ def update_me(
         # store None when blank
         current.name = (data["name"] or None)
 
-    if "picture" in data:
-        # store None when blank
-        current.picture = (data["picture"] or None)
-
     db.commit()
     db.refresh(current)
     return current

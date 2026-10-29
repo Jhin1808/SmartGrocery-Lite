@@ -376,7 +376,7 @@ export default function EnhancedAuthTabs() {
               </button>
 
               <p style={{ textAlign: "center", fontSize: 12, color: "var(--text-muted)", margin: 0, marginTop: -4 }}>
-                Explore with sample groceries. No account needed.
+                Create a simple list. Add or remove groceries. No account needed.
               </p>
 
 
@@ -485,7 +485,7 @@ export default function EnhancedAuthTabs() {
               </button>
 
               <p style={{ textAlign: "center", fontSize: 12, color: "var(--text-muted)", margin: 0, marginTop: -4 }}>
-                Explore with sample groceries. No account needed.
+                Create a simple list. Add or remove groceries. No account needed.
               </p>
 
 

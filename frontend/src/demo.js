@@ -3,12 +3,6 @@
 
 const KEY = "sg-demo";
 
-const addDays = (d) => {
-  const x = new Date();
-  x.setDate(x.getDate() + d);
-  return x.toISOString().slice(0, 10);
-};
-
 const SAMPLE_USER = {
   id: 1,
   name: "Alex Morgan",
@@ -18,36 +12,7 @@ const SAMPLE_USER = {
 
 function makeItems(listId) {
   const map = {
-    1: [
-      { name: "Whole milk", quantity: 2, expiry: addDays(5) },
-      { name: "Sourdough bread", quantity: 1, expiry: addDays(3) },
-      { name: "Free-range eggs", quantity: 12, expiry: addDays(14) },
-      { name: "Greek yogurt", quantity: 4, expiry: addDays(7), description: "Fage 2%" },
-      { name: "Butter", quantity: 1, expiry: addDays(21) },
-      { name: "Cheddar cheese", quantity: 1, expiry: addDays(28) },
-      { name: "Orange juice", quantity: 1, expiry: addDays(10), description: "No pulp" },
-    ],
-    2: [
-      { name: "Bananas", quantity: 6, expiry: addDays(4) },
-      { name: "Honeycrisp apples", quantity: 8, expiry: addDays(12) },
-      { name: "Avocados", quantity: 3, expiry: addDays(2) },
-      { name: "Baby spinach", quantity: 1, expiry: addDays(3) },
-      { name: "Cherry tomatoes", quantity: 1, expiry: addDays(6) },
-      { name: "Blueberries", quantity: 1, expiry: addDays(5) },
-    ],
-    3: [
-      { name: "Chicken breast", quantity: 2, expiry: addDays(2) },
-      { name: "Salmon fillet", quantity: 1, expiry: addDays(1) },
-      { name: "Pasta", quantity: 3, expiry: addDays(180) },
-      { name: "Olive oil", quantity: 1, expiry: addDays(365) },
-      { name: "Garlic", quantity: 1, expiry: addDays(14) },
-    ],
-    4: [
-      { name: "Toilet paper", quantity: 12 },
-      { name: "Dish soap", quantity: 1 },
-      { name: "Laundry detergent", quantity: 1 },
-      { name: "Hand soap", quantity: 2 },
-    ],
+    1: [{ name: "Milk", quantity: 1 }, { name: "Bread", quantity: 1 }, { name: "Eggs", quantity: 1 }],
   };
   return (map[listId] || []).map((it, i) => ({
     id: listId * 1000 + i + 1,
@@ -67,36 +32,10 @@ const SAMPLE_LISTS = [
     role: "owner",
     owner_id: 1,
   },
-  {
-    id: 2,
-    name: "Fresh produce",
-    hidden: false,
-    shared: false,
-    role: "owner",
-    owner_id: 1,
-  },
-  {
-    id: 3,
-    name: "Meal prep",
-    hidden: false,
-    shared: true,
-    role: "editor",
-    owner_id: 1,
-  },
-  {
-    id: 4,
-    name: "Household",
-    hidden: true,
-    shared: false,
-    role: "owner",
-    owner_id: 1,
-  },
+
 ];
 
-const SAMPLE_SHARES = [
-  { id: 1, email: "sam@example.com", role: "editor" },
-  { id: 2, email: "jordan@example.com", role: "viewer" },
-];
+const SAMPLE_SHARES = [];
 
 let state = null;
 const subscribers = new Set();

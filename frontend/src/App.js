@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "./pages/AuthContext";
 import PageMetadata from "./components/PageMetadata";
 
 const AuthTabs = React.lazy(() => import("./pages/EnhancedAuthTabs"));
+const DemoLists = React.lazy(() => import("./pages/DemoLists"));
 const Lists = React.lazy(() => import("./pages/EnhancedLists"));
 const ListDetail = React.lazy(() => import("./pages/ListDetail"));
 const Account = React.lazy(() => import("./pages/Account"));
@@ -31,11 +32,25 @@ function PublicOnly({ children }) {
 }
 
 function AppShell() {
-  const { user } = useAuth();
+  const { user, isDemo: demoMode } = useAuth();
 
   useEffect(() => {
     document.documentElement.setAttribute("data-bs-theme", "light");
   }, []);
+
+  if (user && demoMode) {
+    return (
+      <div className="app-shell">
+        <PageMetadata />
+        <Suspense fallback={<p role="status">Loading your demo list…</p>}>
+          <Routes>
+            <Route path="/lists" element={<DemoLists />} />
+            <Route path="*" element={<Navigate to="/lists" replace />} />
+          </Routes>
+        </Suspense>
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell">

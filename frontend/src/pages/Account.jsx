@@ -71,18 +71,15 @@ export default function Account() {
   const [activeTab, setActiveTab] = useState("profile");
 
   const [name, setName] = useState("");
-  const [picture, setPicture] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
     setName(user?.name || "");
-    setPicture(user?.picture || "");
   }, [user]);
 
   const savedAvatarSrc = useMemo(() => sanitizeImageUrl(user?.picture), [user?.picture]);
 
-  const dirtyProfile = name !== (user?.name || "") || picture !== (user?.picture || "");
-  const clearPicture = () => setPicture("");
+  const dirtyProfile = name !== (user?.name || "");
 
   const [toast, setToast] = useState(null);
   const showToast = (variant, msg) => setToast({ variant, msg });
@@ -92,7 +89,7 @@ export default function Account() {
     if (!dirtyProfile) return;
     setSavingProfile(true);
     try {
-      await apiUpdateMe({ name, picture });
+      await apiUpdateMe({ name });
       await refresh();
       showToast("success", "Profile updated");
     } catch (err) {
@@ -168,7 +165,7 @@ export default function Account() {
         <div className="lm-card__body">
           {activeTab === "profile" ? (
             <form onSubmit={saveProfile} className="anim-fade">
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div className="account-form-grid">
                 <div className="form-field">
                   <label className="form-label" htmlFor="accName">Display name</label>
                   <input
@@ -193,25 +190,7 @@ export default function Account() {
                   />
                   <span className="form-help">Contact support to change your email.</span>
                 </div>
-                <div className="form-field" style={{ gridColumn: "1 / -1" }}>
-                  <label className="form-label" htmlFor="accPicture">Avatar URL</label>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input
-                      id="accPicture"
-                      type="url"
-                      className="form-control"
-                      placeholder="https://example.com/photo.jpg"
-                      value={picture}
-                      onChange={(e) => setPicture(e.target.value)}
-                    />
-                    {picture && (
-                      <button type="button" className="btn btn-ghost-danger" onClick={clearPicture} title="Remove picture">
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                  <span className="form-help">Provide a direct link to an image. Leave blank to use your initials.</span>
-                </div>
+
               </div>
 
               <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
@@ -222,7 +201,7 @@ export default function Account() {
                   type="button"
                   className="btn btn-secondary"
                   disabled={!dirtyProfile || savingProfile}
-                  onClick={() => { setName(user?.name || ""); setPicture(user?.picture || ""); }}
+                  onClick={() => { setName(user?.name || ""); }}
                 >
                   Reset
                 </button>
@@ -235,7 +214,7 @@ export default function Account() {
                 <span>If you signed in with Google and never set a password, you can leave "Current password" empty to create one.</span>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div className="account-form-grid">
                 <div className="form-field">
                   <label className="form-label" htmlFor="curPwd">Current password</label>
                   <div className="password-input">
@@ -248,7 +227,7 @@ export default function Account() {
                       onChange={(e) => setCurrentPwd(e.target.value)}
                       autoComplete="current-password"
                     />
-                    <button type="button" className="password-input__toggle" onClick={() => setShowCurrent((v) => !v)} tabIndex={-1} aria-label={showCurrent ? "Hide" : "Show"}>
+                    <button type="button" className="password-input__toggle" onClick={() => setShowCurrent((v) => !v)} aria-label={showCurrent ? "Hide" : "Show"}>
                       <i className={`bi ${showCurrent ? "bi-eye-slash" : "bi-eye"}`} />
                     </button>
                   </div>
@@ -268,7 +247,7 @@ export default function Account() {
                       minLength={8}
                       required
                     />
-                    <button type="button" className="password-input__toggle" onClick={() => setShowNew((v) => !v)} tabIndex={-1} aria-label={showNew ? "Hide" : "Show"}>
+                    <button type="button" className="password-input__toggle" onClick={() => setShowNew((v) => !v)} aria-label={showNew ? "Hide" : "Show"}>
                       <i className={`bi ${showNew ? "bi-eye-slash" : "bi-eye"}`} />
                     </button>
                   </div>
@@ -285,7 +264,7 @@ export default function Account() {
                       onChange={(e) => setConfirmPwd(e.target.value)}
                       autoComplete="new-password"
                     />
-                    <button type="button" className="password-input__toggle" onClick={() => setShowConfirm((v) => !v)} tabIndex={-1} aria-label={showConfirm ? "Hide" : "Show"}>
+                    <button type="button" className="password-input__toggle" onClick={() => setShowConfirm((v) => !v)} aria-label={showConfirm ? "Hide" : "Show"}>
                       <i className={`bi ${showConfirm ? "bi-eye-slash" : "bi-eye"}`} />
                     </button>
                   </div>

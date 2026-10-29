@@ -3343,3 +3343,9 @@ textarea.form-control { resize: vertical; min-height: 60px; line-height: 1.5; }
   .lm-templates-cats { width: 100%; overflow-x: auto; flex-wrap: nowrap; }
   .lm-template-card__media { height: 72px; font-size: 40px; }
 }
+
+/* Account forms stay readable on narrow screens. */
+.account-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 540px) {
+  .account-form-grid { grid-template-columns: minmax(0, 1fr); }
+}
