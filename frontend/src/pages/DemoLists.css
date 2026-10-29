@@ -21,7 +21,17 @@
 .simple-demo-picker label { font-size: 12px; }
 .simple-demo-items { list-style: none; margin: 20px 0 0; padding: 0; }
 .simple-demo-items li { display: flex; gap: 16px; justify-content: space-between; align-items: center; border-bottom: 1px solid #e0e4d9; min-height: 64px; padding: 6px 0; }
-.simple-demo-items li > span { min-width: 0; overflow-wrap: anywhere; }
+/* The checkbox is a paper-list bullet; the entire label is its touch target. */
+.simple-demo .simple-demo-item-toggle { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; min-height: 48px; margin: 0; cursor: pointer; font-size: 16px; font-weight: 400; }
+.simple-demo .simple-demo-check { appearance: none; flex: 0 0 18px; width: 18px; height: 18px; min-height: 18px; padding: 0; margin: 0; border: 1px solid #60735c; border-radius: 50%; background: transparent; display: grid; place-content: center; cursor: pointer; }
+.simple-demo-check::after { content: ""; width: 4px; height: 4px; background: #43594b; border-radius: 50%; }
+.simple-demo .simple-demo-check:checked { background: #315c48; border-color: #315c48; }
+.simple-demo-check:checked::after { width: 8px; height: 5px; background: transparent; border: solid #fff; border-width: 0 0 2px 2px; border-radius: 0; transform: translateY(-1px) rotate(-45deg); }
+.simple-demo-item-name { min-width: 0; overflow-wrap: anywhere; }
+.simple-demo .is-bought .simple-demo-item-name { text-decoration: line-through; text-decoration-thickness: 1.5px; color: #52614f; }
+.simple-demo-item-state { font-size: 12px; color: #52614f; margin-left: auto; }
+.simple-demo-instruction { font-size: 13px; color: #52614f; margin-bottom: 8px; }
+.simple-demo-add { margin-top: 24px; }
 .simple-demo .simple-demo-remove { background: transparent; color: #854632; border-color: transparent; padding: 10px 8px; text-decoration: underline; text-underline-offset: 4px; }
 .simple-demo .simple-demo-remove:hover { background: #f4e9df; }
 .simple-demo-count, .simple-demo-status { font-size: 13px; color: #52614f; margin: 20px 0 0; }

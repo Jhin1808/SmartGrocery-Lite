@@ -117,7 +117,7 @@ export function demoAddItem(listId, patch) {
     description: patch.description || "",
     purchased: false,
   };
-  s.itemsByList[listId] = [item, ...(s.itemsByList[listId] || [])];
+  s.itemsByList[listId] = [...(s.itemsByList[listId] || []), item];
   emit();
   return clone(item);
 }

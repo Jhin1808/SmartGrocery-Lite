@@ -39,3 +39,32 @@ test("does not create blank lists or items, and exits without a backend call", a
   expect(mockLogout).toHaveBeenCalledTimes(1);
   expect(mockNavigate).toHaveBeenCalledWith("/login", { replace: true });
 });
+
+test("crosses groceries off and restores them with a second click, retaining state between lists", () => {
+  render(<DemoLists />);
+  const milk = screen.getByRole("checkbox", { name: "Milk" });
+  expect(milk).not.toBeChecked();
+  fireEvent.click(milk);
+  expect(milk).toBeChecked();
+  expect(screen.getByText("Milk").closest("li")).toHaveClass("is-bought");
+  expect(screen.getByRole("status")).toHaveTextContent("Milk crossed off as bought");
+  expect(screen.getByText("2 to buy · 1 bought")).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Create a grocery list"), { target: { value: "Dinner" } });
+  fireEvent.click(screen.getByRole("button", { name: "Create list" }));
+  fireEvent.change(screen.getByLabelText("Switch list"), { target: { value: "1" } });
+  const savedMilk = screen.getByRole("checkbox", { name: /Milk/ });
+  expect(savedMilk).toBeChecked();
+  fireEvent.click(savedMilk);
+  expect(savedMilk).not.toBeChecked();
+  expect(screen.getByText("3 to buy · 0 bought")).toBeInTheDocument();
+});
+
+test("new groceries appear after the existing entries and start unchecked", () => {
+  render(<DemoLists />);
+  fireEvent.change(screen.getByLabelText("Add a grocery"), { target: { value: "Apples" } });
+  fireEvent.submit(screen.getByLabelText("Add a grocery").closest("form"));
+  expect(screen.getAllByRole("checkbox").map((input) => input.closest("label").querySelector('.simple-demo-item-name').textContent))
+    .toEqual(["Milk", "Bread", "Eggs", "Apples"]);
+  expect(screen.getByRole("checkbox", { name: "Apples" })).not.toBeChecked();
+  expect(screen.getByRole("status")).toHaveTextContent("Added Apples");
+});

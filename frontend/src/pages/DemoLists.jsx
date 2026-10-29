@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
-import { demoAddItem, demoCreateList, demoDeleteItem, demoGetItems, demoGetLists } from "../demo";
+import { demoAddItem, demoCreateList, demoDeleteItem, demoGetItems, demoGetLists, demoUpdateItem } from "../demo";
 import "./DemoLists.css";
 
 export default function DemoLists() {
@@ -14,6 +14,7 @@ export default function DemoLists() {
   const [items, setItems] = useState(() => demoGetItems(selectedId));
   const [notice, setNotice] = useState("");
   const itemInput = useRef(null);
+  const boughtCount = items.filter((item) => item.purchased).length;
   const selectedList = lists.find((list) => list.id === selectedId);
 
   function createList(event) {
@@ -53,7 +54,7 @@ export default function DemoLists() {
       </header>
       <main className="simple-demo-main">
         <h1>A little list goes a long way.</h1>
-        <p className="simple-demo-intro">Try the basics: create a list, add groceries, and remove what you don’t need.</p>
+        <p className="simple-demo-intro">Write your groceries down, then tap each one to cross it off as you shop.</p>
         <p className="simple-demo-note">Demo only. Your changes are temporary and reset when you refresh or leave.</p>
 
         <form className="simple-demo-create" onSubmit={createList}>
@@ -80,6 +81,28 @@ export default function DemoLists() {
           </div>
           {selectedList ? (
             <>
+              <p className="simple-demo-instruction">Tap a bullet or item to cross it off. Tap again to undo.</p>
+              {items.length ? (
+                <ul className="simple-demo-items">
+                  {items.map((item) => <li key={item.id} className={item.purchased ? "is-bought" : ""}>
+                    <label className="simple-demo-item-toggle">
+                      <input type="checkbox" className="simple-demo-check" checked={Boolean(item.purchased)}
+                        onChange={(event) => {
+                          const purchased = event.target.checked;
+                          demoUpdateItem(item.id, { purchased });
+                          setItems(demoGetItems(selectedId));
+                          setNotice(purchased ? `${item.name} crossed off as bought.` : `${item.name} is back on your list.`);
+                        }} />
+                      <span className="simple-demo-item-name">{item.name}</span>
+                      <span className="simple-demo-item-state">{item.purchased ? "Bought" : ""}</span>
+                    </label>
+                    <button type="button" className="simple-demo-remove" aria-label={`Remove ${item.name}`} onClick={() => {
+                      demoDeleteItem(item.id); setItems(demoGetItems(selectedId)); setNotice(`Removed ${item.name}.`);
+                      itemInput.current?.focus();
+                    }}>Remove</button>
+                  </li>)}
+                </ul>
+              ) : <p className="simple-demo-empty">Your list is ready. Add the first thing you need below.</p>}
               <form onSubmit={addItem} className="simple-demo-add">
                 <label htmlFor="demo-item-name">Add a grocery</label>
                 <div className="simple-demo-input-row">
@@ -88,18 +111,7 @@ export default function DemoLists() {
                   <button type="submit" disabled={!itemName.trim()}>Add item</button>
                 </div>
               </form>
-              {items.length ? (
-                <ul className="simple-demo-items">
-                  {items.map((item) => <li key={item.id}>
-                    <span>{item.name}</span>
-                    <button type="button" className="simple-demo-remove" aria-label={`Remove ${item.name}`} onClick={() => {
-                      demoDeleteItem(item.id); setItems(demoGetItems(selectedId)); setNotice(`Removed ${item.name}.`);
-                      itemInput.current?.focus();
-                    }}>Remove</button>
-                  </li>)}
-                </ul>
-              ) : <p className="simple-demo-empty">Your list is ready. Add the first thing you need above.</p>}
-              <p className="simple-demo-count">{items.length} {items.length === 1 ? "item" : "items"}</p>
+              <p className="simple-demo-count">{items.length - boughtCount} to buy · {boughtCount} bought</p>
             </>
           ) : <p className="simple-demo-empty">Give your list a name above to get started.</p>}
         </section>

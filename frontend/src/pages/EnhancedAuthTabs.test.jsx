@@ -33,9 +33,21 @@ test("password labels identify inputs and visibility controls remain keyboard ac
 test("demo failure offers recovery instead of silently doing nothing", async () => {
   useAuth.mockReturnValue({ refresh: jest.fn(), loginAsDemo: jest.fn().mockRejectedValue(new Error("failed")) });
   render(<EnhancedAuthTabs />);
-  fireEvent.click(screen.getByRole("button", { name: "Try the demo" }));
+  fireEvent.click(screen.getByRole("button", { name: "Try demo mode" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Please try again");
-  expect(screen.getByRole("button", { name: "Try the demo" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Try demo mode" })).toBeEnabled();
   expect(screen.queryByText("Keep me signed in")).not.toBeInTheDocument();
   expect(screen.queryByText(/thousands of households/)).not.toBeInTheDocument();
+});
+
+
+test("the account-free demo entry appears before credentials on both account views", () => {
+  render(<EnhancedAuthTabs />);
+  const demo = screen.getByRole("button", { name: "Try demo mode" });
+  expect(demo.compareDocumentPosition(screen.getByLabelText("Email")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.getByText(/No sign-in or account needed/)).toBeInTheDocument();
+  expect(screen.getByText("Demo lists reset when you refresh or leave.")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+  expect(screen.getAllByRole("button", { name: "Try demo mode" })).toHaveLength(1);
+  expect(demo.compareDocumentPosition(screen.getByLabelText("Email")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });

@@ -268,11 +268,25 @@ export default function EnhancedAuthTabs() {
       <AuthAside />
 
       <section className="auth-panel" aria-label="Your account">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
-          <div className="auth-mobile-brand">
-            <BrandMark size={32} />
-            <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em" }}>ToBuyLists</span>
-          </div>
+        <div className="auth-mobile-brand">
+          <BrandMark size={32} />
+          <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em" }}>ToBuyLists</span>
+        </div>
+
+        <section className="auth-demo-entry" aria-labelledby="auth-demo-title">
+          <h2 id="auth-demo-title">Need a quick grocery list?</h2>
+          <p id="auth-demo-description">Try demo mode to add groceries and cross them off as you shop. No sign-in or account needed.</p>
+          <button type="button" className="btn btn-primary btn-block" onClick={tryDemo}
+            disabled={demoLoading || loginLoading || registerLoading}
+            aria-describedby="auth-demo-description auth-demo-reset">
+            {demoLoading ? <><span className="lm-spinner" /> Opening your list…</> : <>Try demo mode <i className="bi bi-arrow-right" aria-hidden="true" /></>}
+          </button>
+          <p id="auth-demo-reset" className="auth-demo-reset">Demo lists reset when you refresh or leave.</p>
+          {demoError && <div className="lm-alert lm-alert--danger" role="alert">{demoError}</div>}
+        </section>
+
+        <p className="auth-account-intro">Want to keep your lists? Sign in or create an account.</p>
+        <div className="auth-account-actions">
           <div className="lm-tabs" role="group" aria-label="Account action">
             <button
               type="button"
@@ -303,8 +317,6 @@ export default function EnhancedAuthTabs() {
               : "Create an account to start your household’s grocery list."}
           </p>
         </div>
-
-        {demoError && <div className="lm-alert lm-alert--danger" role="alert">{demoError}</div>}
 
         {activeTab === "login" ? (
           <form onSubmit={handleLogin}>
@@ -363,21 +375,6 @@ export default function EnhancedAuthTabs() {
               >
                 {loginLoading ? <><span className="lm-spinner" /> Signing in…</> : "Sign in"}
               </button>
-
-              <div className="lm-divider" style={{ marginTop: 4 }}>or just explore</div>
-
-              <button
-                type="button"
-                className="btn btn-secondary btn-block auth-demo-button"
-                onClick={tryDemo}
-                disabled={demoLoading || loginLoading}
-              >
-                {demoLoading ? <><span className="lm-spinner" /> Loading demo…</> : <>Try the demo <i className="bi bi-arrow-right" aria-hidden="true" /></>}
-              </button>
-
-              <p style={{ textAlign: "center", fontSize: 12, color: "var(--text-muted)", margin: 0, marginTop: -4 }}>
-                Create a simple list. Add or remove groceries. No account needed.
-              </p>
 
 
             </div>
@@ -472,21 +469,6 @@ export default function EnhancedAuthTabs() {
               >
                 {registerLoading ? <><span className="lm-spinner" /> Creating account…</> : "Create account"}
               </button>
-
-              <div className="lm-divider" style={{ marginTop: 4 }}>or just explore</div>
-
-              <button
-                type="button"
-                className="btn btn-secondary btn-block auth-demo-button"
-                onClick={tryDemo}
-                disabled={demoLoading || registerLoading}
-              >
-                {demoLoading ? <><span className="lm-spinner" /> Loading demo…</> : <>Try the demo <i className="bi bi-arrow-right" aria-hidden="true" /></>}
-              </button>
-
-              <p style={{ textAlign: "center", fontSize: 12, color: "var(--text-muted)", margin: 0, marginTop: -4 }}>
-                Create a simple list. Add or remove groceries. No account needed.
-              </p>
 
 
             </div>
