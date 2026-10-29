@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./pages/AuthContext";
+import PageMetadata from "./components/PageMetadata";
 
 const AuthTabs = React.lazy(() => import("./pages/EnhancedAuthTabs"));
 const Lists = React.lazy(() => import("./pages/EnhancedLists"));
@@ -38,6 +39,7 @@ function AppShell() {
 
   return (
     <div className="app-shell">
+      <PageMetadata />
       <Suspense fallback={null}>
         {user && <NavBar />}
       </Suspense>

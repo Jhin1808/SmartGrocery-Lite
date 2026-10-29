@@ -39,6 +39,14 @@
     { "source": "/terms", "destination": "/index.html" }
   ],
   "headers": [
+    {"source": "/lists/:path*", "headers": [{"key": "X-Robots-Tag", "value": "noindex, follow"}]},
+    {"source": "/account", "headers": [{"key": "X-Robots-Tag", "value": "noindex, follow"}]},
+    {"source": "/help", "headers": [{"key": "X-Robots-Tag", "value": "noindex, follow"}]},
+    {"source": "/stores", "headers": [{"key": "X-Robots-Tag", "value": "noindex, follow"}]},
+    {"source": "/recipes", "headers": [{"key": "X-Robots-Tag", "value": "noindex, follow"}]},
+    {"source": "/templates", "headers": [{"key": "X-Robots-Tag", "value": "noindex, follow"}]},
+    {"source": "/reset", "headers": [{"key": "X-Robots-Tag", "value": "noindex, follow"}]},
+    {"source": "/oauth/:path*", "headers": [{"key": "X-Robots-Tag", "value": "noindex, follow"}]},
     {
       "source": "/(.*)",
       "headers": [
