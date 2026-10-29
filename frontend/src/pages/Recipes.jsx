@@ -6,7 +6,7 @@ import {
   apiRecipeAddToList,
   FEATURE_RECIPES,
 } from "../api";
-import { safeGetLists } from "../apiSafe";
+import { safeCreateList, safeGetLists } from "../apiSafe";
 import { useAuth } from "./AuthContext";
 import { isDemo, subscribeDemo } from "../demo";
 
@@ -106,11 +106,14 @@ function RecipeCard({ recipe, onClick }) {
   );
 }
 
-function RecipeDetail({ recipeId, onClose, lists, onAdded }) {
+export function RecipeDetail({ recipeId, onClose, lists, onAdded, onListCreated }) {
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [targetListId, setTargetListId] = useState(lists[0]?.id || "");
+  const [targetListId, setTargetListId] = useState("");
+  const [newListName, setNewListName] = useState("");
+  const selectedListId = targetListId || lists[0]?.id || "new";
+  const creatingList = selectedListId === "new";
   const [adding, setAdding] = useState(false);
   const [addResult, setAddResult] = useState(null);
 
@@ -121,20 +124,31 @@ function RecipeDetail({ recipeId, onClose, lists, onAdded }) {
     setRecipe(null);
     setAddResult(null);
     apiRecipeDetail(recipeId)
-      .then((r) => { if (alive) setRecipe(r); })
+      .then((r) => { if (alive) { setRecipe(r); setNewListName((r.title || "Recipe ingredients").slice(0, 100)); } })
       .catch((e) => { if (alive) setError(e?.message || "Failed to load recipe"); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [recipeId]);
 
   async function onAdd() {
-    if (!targetListId || !recipe) return;
+    if (adding || !recipe || (creatingList && !newListName.trim())) return;
     setAdding(true);
     setAddResult(null);
     try {
-      const result = await apiRecipeAddToList(recipe.external_id, Number(targetListId));
-      setAddResult(result);
-      onAdded?.(result);
+      let listId = Number(selectedListId);
+      let listName = lists.find((list) => list.id === listId)?.name;
+      if (creatingList) {
+        const created = await safeCreateList(newListName.trim());
+        listId = created.id;
+        listName = created.name;
+        // Keep the created list selected if adding ingredients fails, so retry
+        // adds to it instead of creating another empty list.
+        onListCreated(created);
+        setTargetListId(String(listId));
+      }
+      const result = await apiRecipeAddToList(recipe.external_id, listId);
+      setAddResult({ ...result, listId, listName });
+      onAdded?.({ ...result, listId, listName });
     } catch (e) {
       setAddResult({ error: e?.message || "Couldn't add to list" });
     } finally {
@@ -198,47 +212,48 @@ function RecipeDetail({ recipeId, onClose, lists, onAdded }) {
             <h3 className="lm-recipe-detail__h3">
               <i className="bi bi-cart-plus" /> Add to list
             </h3>
-            {lists.length === 0 ? (
-              <p className="text-muted" style={{ fontSize: 13 }}>
-                You don't have any lists yet. <Link to="/lists">Create one</Link> first.
-              </p>
-            ) : (
-              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div>
+                <label className="form-label" htmlFor="recipe-target-list">Shopping list</label>
                 <select
+                  id="recipe-target-list"
                   className="form-select"
-                  value={targetListId}
-                  onChange={(e) => setTargetListId(e.target.value)}
-                  style={{ height: 40, maxWidth: 280 }}
+                  value={selectedListId}
+                  onChange={(e) => { setTargetListId(e.target.value); setAddResult(null); }}
+                  disabled={adding}
+                  style={{ maxWidth: 360 }}
                 >
-                  {lists.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
+                  {lists.map((list) => <option key={list.id} value={list.id}>{list.name}</option>)}
+                  <option value="new">Create a new list…</option>
                 </select>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={onAdd}
-                  disabled={adding || !targetListId}
-                >
+              </div>
+              {creatingList && (
+                <div>
+                  <label className="form-label" htmlFor="recipe-new-list-name">New list name</label>
+                  <input id="recipe-new-list-name" className="form-control" value={newListName}
+                    onChange={(e) => setNewListName(e.target.value)} maxLength={100}
+                    disabled={adding} style={{ maxWidth: 360 }} />
+                  <p className="text-muted" style={{ fontSize: 13, margin: "6px 0 0" }}>
+                    Create a list with this recipe’s ingredients. You can edit it afterwards.
+                  </p>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <button type="button" className="btn btn-primary" onClick={onAdd}
+                  disabled={adding || (creatingList && !newListName.trim())}>
                   {adding ? <span className="lm-spinner" /> : <i className="bi bi-plus-lg" />}
-                  {adding ? "Adding…" : "Add ingredients"}
+                  {adding ? "Adding…" : creatingList ? "Create list & add ingredients" : "Add ingredients"}
                 </button>
+                {addResult?.listId && !addResult.error && <Link to="/lists" className="btn btn-secondary">View lists</Link>}
                 {recipe.source_url && (
-                  <a
-                    href={recipe.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-ghost btn-sm"
-                  >
+                  <a href={recipe.source_url} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-sm">
                     <i className="bi bi-box-arrow-up-right" /> Full recipe
                   </a>
                 )}
               </div>
-            )}
+            </div>
             {addResult && !addResult.error && (
-              <div className="lm-recipe-detail__result lm-recipe-detail__result--ok">
+              <div className="lm-recipe-detail__result lm-recipe-detail__result--ok" role="status">
                 <i className="bi bi-check-circle" /> Added {addResult.added} ingredient{addResult.added === 1 ? "" : "s"}
                 {addResult.skipped && addResult.skipped.length > 0 && (
                   <span className="text-muted" style={{ fontSize: 12, marginLeft: 6 }}>
@@ -248,7 +263,7 @@ function RecipeDetail({ recipeId, onClose, lists, onAdded }) {
               </div>
             )}
             {addResult?.error && (
-              <div className="lm-recipe-detail__result lm-recipe-detail__result--err">
+              <div className="lm-recipe-detail__result lm-recipe-detail__result--err" role="alert">
                 <i className="bi bi-x-circle" /> {addResult.error}
               </div>
             )}
@@ -334,7 +349,8 @@ export default function Recipes() {
     const list = lists.find((l) => l.id === Number(result?.listId));
     const skipped = result?.skipped?.length || 0;
     let msg = `Added ${result.added} ingredient${result.added === 1 ? "" : "s"}`;
-    if (list) msg += ` to "${list.name}"`;
+    const listName = result.listName || list?.name;
+    if (listName) msg += ` to "${listName}"`;
     if (skipped > 0) msg += ` (skipped ${skipped})`;
     pushToast({ message: msg, variant: "success" });
   }
@@ -448,6 +464,7 @@ export default function Recipes() {
           lists={lists}
           onClose={() => setActiveRecipeId(null)}
           onAdded={onAddedToList}
+          onListCreated={(created) => setLists((current) => [...current.filter((list) => list.id !== created.id), created])}
         />
       )}
 
