@@ -1,0 +1,9 @@
+# ToBuyLists
+
+ToBuyLists is a grocery list website for planning shopping, saving recipes, and tracking groceries bought often. Account and shopping list pages require sign-in.
+
+## Public pages
+
+- [Sign in and try the demo](https://www.tobuylists.com/login): Try a simple grocery list or sign in to save lists.
+- [Terms and privacy](https://www.tobuylists.com/terms): Information about using ToBuyLists.
+- [Sitemap](https://www.tobuylists.com/sitemap.xml): Public pages available for discovery.

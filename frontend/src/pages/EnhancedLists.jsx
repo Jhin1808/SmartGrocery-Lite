@@ -217,7 +217,7 @@ function ShareSheet({
           <section>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
               <span className="eyebrow" style={{ fontSize: 11 }}>
-                <i className="bi bi-link-45deg" style={{ marginRight: 6 }} /> Share link
+                <i className="bi bi-link-45deg" style={{ marginRight: 6 }} /> List link for invited people
               </span>
             </div>
             <div className="lm-share-link">
@@ -326,7 +326,7 @@ function ShareSheet({
               <div className="lm-empty" style={{ padding: "24px 12px" }}>
                 <div className="lm-empty__art" style={{ width: 56, height: 56, fontSize: 24 }}><i className="bi bi-people" /></div>
                 <p className="lm-empty__title">Just you so far</p>
-                <p className="lm-empty__desc">Share the link or invite by email to collaborate in real time.</p>
+                <p className="lm-empty__desc">Invite someone by email to give them access. Then send them the list link.</p>
               </div>
             ) : (
               <div className="lm-share-people">

@@ -105,7 +105,6 @@ export async function safeRevokeShare(listId, shareId) {
 export async function safeGetShareLink(listId) {
   if (isDemo()) return demoGetShareLink(listId);
   const origin = (typeof window !== "undefined" && window.location && window.location.origin) || "";
-  // Backend may return { url, token }; fall back to a /share/:id URL.
-  return safeCall(() => api.apiGetShareLink(listId), { url: `${origin}/share/${listId}` })
-    .then((r) => (r && r.url) || `${origin}/share/${listId}`);
+  // List access is granted through email invitations; this link only opens the list.
+  return `${origin}/lists/${listId}`;
 }

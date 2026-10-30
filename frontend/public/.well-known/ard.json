@@ -1,0 +1,22 @@
+{
+  "name": "ToBuyLists",
+  "description": "Grocery lists, recipes, and everyday shopping shortcuts.",
+  "url": "https://www.tobuylists.com/",
+  "resources": [
+    {
+      "name": "Website",
+      "url": "https://www.tobuylists.com/login",
+      "type": "website"
+    },
+    {
+      "name": "Site guide",
+      "url": "https://www.tobuylists.com/llms.txt",
+      "type": "documentation"
+    },
+    {
+      "name": "Sitemap",
+      "url": "https://www.tobuylists.com/sitemap.xml",
+      "type": "sitemap"
+    }
+  ]
+}
