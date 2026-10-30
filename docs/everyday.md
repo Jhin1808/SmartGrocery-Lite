@@ -2,11 +2,13 @@
 
 The signed-in **Everyday** page provides personal staples, recent purchases, groceries to use first, and a manual weekly restock. It is also linked from Shopping lists. Demo mode stays a simple paper-style list.
 
-- Pin a grocery and quantity as a staple. “We’re out” adds it to the selected editable list.
+- **My regulars** starts with a grocery-name form for a new user. Save groceries you buy often; quantity defaults to one and can be expanded. **Add to list** adds a saved grocery to the selected editable shopping list and changes to **On list**. **Open list** opens that exact list. Row options contain removal and saving from purchase history.
 - Check a grocery off as bought in a shopping list to record it in **Buy again**. History is private to the account doing the checkoff, survives deletion of the original item, and starts recording after this release. Demo imports also record explicitly checked-off items.
-- **Restock staples** adds missing names, restores bought matches and clears their old expiry/reminder dates. Existing pending groceries and unrelated items are preserved. A list-level PostgreSQL row lock serializes shortcut writes. The page indicates whether the account has restocked that list in the current Monday–Sunday week. It never schedules automatic changes.
-- **Use first** shows bought groceries from accessible lists with entered expiry dates up to three days ahead, including past dates. Its feed spans accessible lists; the destination selector applies to additions/restocking. Dates are user-entered, not a food-safety determination. Find recipes opens ingredient search.
+- **Add all missing** adds missing names, restores bought matches and clears their old expiry/reminder dates. Existing pending groceries and unrelated items are preserved. A list-level PostgreSQL row lock serializes shortcut writes. The page indicates whether the account has restocked that list in the current Monday–Sunday week. It never schedules automatic changes.
+- **Use soon** shows bought groceries from accessible lists with entered expiry dates up to three days ahead, including past dates. Its feed spans accessible lists; the destination selector appears only for additions/restocking, keeping date checks focused. Dates are user-entered, not a food-safety determination. Find recipes opens ingredient search.
 - **Keep this list** in demo stages only the selected list, including checked-off state, in session storage for that browser tab. Nothing is sent until sign-in/account creation completes. The signed-in app waits for import before loading lists. Failed imports retain the draft with retry/continue choices. A UUID import key is scoped to the receiving account and makes repeat requests safe. Refreshing the original demo still resets its in-memory edits unless Keep this list was explicitly chosen. Closing the tab can discard a staged draft. Maximum: 200 items per imported list.
+
+The simplified Everyday interface uses the existing API and schema; this UI update needs no additional migration.
 
 ## Deployment
 
