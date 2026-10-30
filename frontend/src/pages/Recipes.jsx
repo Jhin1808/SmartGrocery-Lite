@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   apiRecipeSearch,
   apiRecipeDetail,
@@ -276,8 +276,10 @@ export function RecipeDetail({ recipeId, onClose, lists, onAdded, onListCreated 
 
 export default function Recipes() {
   const { user } = useAuth();
-  const [mode, setMode] = useState("name"); // "name" | "ingredient"
-  const [query, setQuery] = useState("");
+  const { search } = useLocation();
+  const initialIngredient = new URLSearchParams(search).get("ingredient") || "";
+  const [mode, setMode] = useState(initialIngredient ? "ingredient" : "name"); // "name" | "ingredient"
+  const [query, setQuery] = useState(initialIngredient);
   const debounced = useDebounced(query, 350);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);

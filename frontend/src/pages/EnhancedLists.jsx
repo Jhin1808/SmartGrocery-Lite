@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../pages/AuthContext";
 import { isDemo, subscribeDemo } from "../demo";
 import {
@@ -960,6 +961,7 @@ export default function EnhancedLists() {
       <div className="workspace-heading">
         <div>
           <h1>Shopping lists</h1>
+          <Link to="/everyday" className="workspace-everyday-link">Restock your regulars</Link>
         </div>
         <span className="workspace-list-total">{visibleLists.length} {visibleLists.length === 1 ? "list" : "lists"}</span>
       </div>

@@ -11,6 +11,7 @@ from app.database import engine
 from app.access_log import install_access_log_redaction
 from app.config import load_secret, CATALOG_TIMEOUT_SECONDS, get_frontend_origins
 from app.security_cookies import COOKIE_NAME
+from app.routers.everyday import router as everyday_router
 from app.routers.lists import router as lists_router
 from app.routers.auth import router as auth_router
 from app.routers.catalog import router as catalog_router
@@ -116,6 +117,7 @@ async def reject_cross_site_cookie_mutations(request: Request, call_next):
         if not _allowed_request_origin(request):
             return JSONResponse({"detail": "CSRF origin check failed"}, status_code=403)
     return await call_next(request)
+app.include_router(everyday_router)
 app.include_router(lists_router)
 app.include_router(auth_router)
 if google_router is not None:

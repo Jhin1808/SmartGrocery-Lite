@@ -151,6 +151,7 @@ export default function NavBar() {
 
   const links = [
     { to: "/lists", icon: "bi-list-check", label: "Lists" },
+    { to: "/everyday", icon: "bi-arrow-repeat", label: "Everyday" },
     ...(FEATURE_KROGER ? [{ to: "/stores", icon: "bi-shop", label: "Stores" }] : []),
     ...(FEATURE_RECIPES ? [{ to: "/recipes", icon: "bi-journal-text", label: "Recipes" }] : []),
     ...(FEATURE_TEMPLATES ? [{ to: "/templates", icon: "bi-collection", label: "Templates" }] : []),

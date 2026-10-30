@@ -1,12 +1,14 @@
 import React, { Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./pages/AuthContext";
+import DemoImportGate from "./components/DemoImportGate";
 import PageMetadata from "./components/PageMetadata";
 
 const AuthTabs = React.lazy(() => import("./pages/EnhancedAuthTabs"));
 const DemoLists = React.lazy(() => import("./pages/DemoLists"));
 const Lists = React.lazy(() => import("./pages/EnhancedLists"));
 const ListDetail = React.lazy(() => import("./pages/ListDetail"));
+const Everyday = React.lazy(() => import("./pages/Everyday"));
 const Account = React.lazy(() => import("./pages/Account"));
 const Help = React.lazy(() => import("./pages/Help"));
 const OAuthCallback = React.lazy(() => import("./pages/OAuthCallback"));
@@ -53,6 +55,7 @@ function AppShell() {
   }
 
   return (
+    <DemoImportGate key={user?.id || "guest"} userId={user?.id}>
     <div className="app-shell">
       <PageMetadata />
       <Suspense fallback={null}>
@@ -70,6 +73,7 @@ function AppShell() {
 
             <Route path="/lists" element={<RequireAuth><Lists /></RequireAuth>} />
             <Route path="/lists/:id" element={<RequireAuth><ListDetail /></RequireAuth>} />
+            <Route path="/everyday" element={<RequireAuth><Everyday /></RequireAuth>} />
             <Route path="/account" element={<RequireAuth><Account /></RequireAuth>} />
             <Route path="/help" element={<RequireAuth><Help /></RequireAuth>} />
             <Route path="/stores" element={<RequireAuth><Stores /></RequireAuth>} />
@@ -81,6 +85,7 @@ function AppShell() {
         </Suspense>
       </main>
     </div>
+    </DemoImportGate>
   );
 }
 

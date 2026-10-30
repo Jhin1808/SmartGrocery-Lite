@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { demoAddItem, demoCreateList, demoDeleteItem, demoGetItems, demoGetLists, demoUpdateItem } from "../demo";
+import { stageDemoList } from "../demoTransfer";
 import "./DemoLists.css";
 
 export default function DemoLists() {
@@ -12,6 +13,7 @@ export default function DemoLists() {
   const [listName, setListName] = useState("");
   const [itemName, setItemName] = useState("");
   const [items, setItems] = useState(() => demoGetItems(selectedId));
+  const [saveError, setSaveError] = useState("");
   const [notice, setNotice] = useState("");
   const itemInput = useRef(null);
   const boughtCount = items.filter((item) => item.purchased).length;
@@ -116,6 +118,18 @@ export default function DemoLists() {
           ) : <p className="simple-demo-empty">Give your list a name above to get started.</p>}
         </section>
         <p role="status" className="simple-demo-status">{notice}</p>
+        <section className="simple-demo-keep" aria-labelledby="demo-keep-title">
+          <h2 id="demo-keep-title">Make this list yours</h2>
+          <p>Sign in or create an account to keep a copy of this list, including the groceries you’ve crossed off.</p>
+          <button type="button" disabled={!selectedList} onClick={async () => {
+            try {
+              stageDemoList(selectedList, items);
+              await logout();
+              navigate("/login?tab=register&keep_demo=1", { replace: true });
+            } catch (error) { setSaveError(error.message || "Couldn’t keep this draft. Please retry."); }
+          }}>Keep this list</button>
+          {saveError && <p role="alert">{saveError}</p>}
+        </section>
       </main>
     </div>
   );

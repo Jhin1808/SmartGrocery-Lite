@@ -3349,3 +3349,11 @@ textarea.form-control { resize: vertical; min-height: 60px; line-height: 1.5; }
 @media (max-width: 540px) {
   .account-form-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+.demo-import-message { max-width: 640px; margin: 0 auto; padding: 48px 24px; }
+.demo-import-message .btn { margin: 12px 8px 0 0; }
+.demo-import-confirmation { background: #edf0e7; color: #263c32; border-bottom: 1px solid #d4daca; padding: 20px 24px; display: flex; gap: 16px; align-items: center; justify-content: space-between; margin-top: var(--nav-height); }
+.demo-import-confirmation button { min-height: 44px; padding: 8px; color: #315c48; background: none; border: 0; text-decoration: underline; }
+.auth-kept-draft { padding: 16px; background: #fffdf7; color: #315c48; border: 1px solid #d4daca; line-height: 1.6; }
+.workspace-everyday-link { display: inline-block; min-height: 44px; padding-top: 10px; color: #315c48; text-decoration: underline; text-underline-offset: 3px; }
+.demo-import-confirmation { overflow-wrap: anywhere; }

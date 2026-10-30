@@ -16,6 +16,8 @@ from app.schemas import (
 from app.deps import get_current_user_any as get_current_user
 from app.catalog.auto_categorize import categorize as auto_categorize
 
+from app.everyday import record_purchase
+
 router = APIRouter(prefix="/lists", tags=["lists"])
 
 # ---------- helpers ----------
@@ -239,6 +241,8 @@ def add_item(
         nutrition_json=payload.nutrition_json,
     )
     db.add(item)
+    if item.purchased:
+        record_purchase(db, current_user.id, item)
     db.commit()
     db.refresh(item)
     return item
@@ -286,6 +290,8 @@ def update_item(
         item.remind_on = payload.remind_on
         item.reminded_at = None
     if payload.purchased is not None:
+        if payload.purchased and not item.purchased:
+            record_purchase(db, current_user.id, item)
         item.purchased = bool(payload.purchased)
 
     # Catalog fields

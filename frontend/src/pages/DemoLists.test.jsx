@@ -68,3 +68,18 @@ test("new groceries appear after the existing entries and start unchecked", () =
   expect(screen.getByRole("checkbox", { name: "Apples" })).not.toBeChecked();
   expect(screen.getByRole("status")).toHaveTextContent("Added Apples");
 });
+
+test("keeping a demo list stages its checked state before leaving for account creation", async () => {
+  const originalCrypto = global.crypto;
+  Object.defineProperty(global, "crypto", { configurable: true, value: { randomUUID: () => "12345678-1234-4234-8234-123456789000" } });
+  try {
+    render(<DemoLists />);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Milk' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Keep this list' }));
+    await screen.findByRole('heading', { name: 'Make this list yours' });
+    expect(mockNavigate).toHaveBeenCalledWith('/login?tab=register&keep_demo=1', { replace: true });
+    const saved = JSON.parse(sessionStorage.getItem('sg-demo-transfer'));
+    expect(saved.items.find((item) => item.name === 'Milk').purchased).toBe(true);
+    expect(saved.name).toBe('Weekly groceries');
+  } finally { Object.defineProperty(global, "crypto", { configurable: true, value: originalCrypto }); sessionStorage.clear(); }
+});

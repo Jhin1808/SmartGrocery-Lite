@@ -4,6 +4,8 @@ import path from "path";
 import EnhancedLists from "./EnhancedLists";
 import * as apiSafe from "../apiSafe";
 
+jest.mock("react-router-dom", () => ({ Link: ({ to, children, ...props }) => <a href={to} {...props}>{children}</a> }), { virtual: true });
+
 jest.mock("./AuthContext", () => ({
   useAuth: () => ({
     user: { id: 1, email: "owner@example.com" },

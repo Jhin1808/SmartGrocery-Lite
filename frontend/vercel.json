@@ -31,6 +31,7 @@
     { "source": "/login", "destination": "/index.html" },
     { "source": "/lists/:path*", "destination": "/index.html" },
     { "source": "/account", "destination": "/index.html" },
+    { "source": "/everyday", "destination": "/index.html" },
     { "source": "/help", "destination": "/index.html" },
     { "source": "/stores", "destination": "/index.html" },
     { "source": "/recipes", "destination": "/index.html" },
@@ -39,6 +40,7 @@
     { "source": "/terms", "destination": "/index.html" }
   ],
   "headers": [
+    {"source": "/everyday", "headers": [{"key": "X-Robots-Tag", "value": "noindex, follow"}]},
     {"source": "/lists/:path*", "headers": [{"key": "X-Robots-Tag", "value": "noindex, follow"}]},
     {"source": "/account", "headers": [{"key": "X-Robots-Tag", "value": "noindex, follow"}]},
     {"source": "/help", "headers": [{"key": "X-Robots-Tag", "value": "noindex, follow"}]},

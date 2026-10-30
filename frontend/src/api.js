@@ -310,3 +310,15 @@ export const apiCloneTemplate = (slug, { list_id, list_name } = {}) =>
     method: "POST",
     body: { list_id, list_name },
   });
+
+// Everyday shortcuts are private to the signed-in account.
+export const localDay = () => {
+  const day = new Date();
+  return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+};
+export const apiEveryday = () => request(`/everyday?on=${localDay()}`);
+export const apiPinStaple = (grocery) => request('/everyday/staples', { method: 'POST', body: grocery });
+export const apiUnpinStaple = (id) => request(`/everyday/staples/${id}`, { method: 'DELETE' });
+export const apiQuickAdd = (grocery) => request('/everyday/add', { method: 'POST', body: grocery });
+export const apiRestock = (list_id) => request(`/everyday/restock?on=${localDay()}`, { method: 'POST', body: { list_id } });
+export const apiImportDemo = (draft) => request('/everyday/import-demo', { method: 'POST', body: draft });

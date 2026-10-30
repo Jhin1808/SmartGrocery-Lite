@@ -272,3 +272,42 @@ class ListTemplateItem(Base):
     sort_index = Column(Integer, nullable=False, server_default="100")
 
     template = relationship("ListTemplate", back_populates="items")
+
+
+class Staple(Base):
+    __tablename__ = "staple"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    name_key = Column(String(300), nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)
+    __table_args__ = (UniqueConstraint("user_id", "name_key", name="uq_staple_user_name"),)
+
+
+class PurchaseHistory(Base):
+    __tablename__ = "purchase_history"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    name_key = Column(String(300), nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)
+    last_purchased_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    __table_args__ = (UniqueConstraint("user_id", "name_key", name="uq_purchase_user_name"),)
+
+
+class RestockRun(Base):
+    __tablename__ = "restock_run"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
+    list_id = Column(Integer, ForeignKey("grocery_list.id", ondelete="CASCADE"), nullable=False)
+    week_start = Column(Date, nullable=False)
+    __table_args__ = (UniqueConstraint("user_id", "list_id", "week_start", name="uq_restock_user_list_week"),)
+
+
+class DemoImport(Base):
+    __tablename__ = "demo_import"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
+    import_key = Column(String(36), nullable=False)
+    list_id = Column(Integer, ForeignKey("grocery_list.id", ondelete="SET NULL"), nullable=True)
+    __table_args__ = (UniqueConstraint("user_id", "import_key", name="uq_demo_import_user_key"),)

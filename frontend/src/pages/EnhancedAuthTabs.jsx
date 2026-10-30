@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
+import { pendingDemo } from "../demoTransfer";
 import { useAuth } from "./AuthContext";
 import {
   apiLogin,
@@ -154,7 +155,7 @@ export default function EnhancedAuthTabs() {
     }
   };
 
-  const [activeTab, setActiveTab] = useState("login");
+  const [activeTab, setActiveTab] = useState(new URLSearchParams(search).get("tab") === "register" ? "register" : "login");
   const [showLoginPwd, setShowLoginPwd] = useState(false);
   const [showRegPwd, setShowRegPwd] = useState(false);
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
@@ -273,6 +274,7 @@ export default function EnhancedAuthTabs() {
           <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em" }}>ToBuyLists</span>
         </div>
 
+        {pendingDemo() && <p className="auth-kept-draft" role="status">Your demo list is waiting. Sign in or create an account to save it.</p>}
         <section className="auth-demo-entry" aria-labelledby="auth-demo-title">
           <h2 id="auth-demo-title">Need a quick grocery list?</h2>
           <p id="auth-demo-description">Try demo mode to add groceries and cross them off as you shop. No sign-in or account needed.</p>

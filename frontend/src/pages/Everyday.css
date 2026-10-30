@@ -1,0 +1,55 @@
+.everyday-page { --everyday-ink: #315c48; --everyday-muted: #52614f; --everyday-error: #a53127; max-width: 920px; margin: 0 auto; padding: 36px 24px 112px; color: var(--text); }
+.everyday-heading { margin-bottom: 32px; }
+.everyday-heading h1 { font: 500 clamp(34px, 5vw, 48px)/1.1 var(--font-display); margin-bottom: 16px; }
+.everyday-heading p { color: var(--text-secondary); max-width: 60ch; margin-bottom: 12px; }
+.everyday-page a { color: var(--everyday-ink); text-decoration: underline; text-underline-offset: 3px; }
+.everyday-destination { max-width: 460px; margin-bottom: 28px; }
+.everyday-page label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.everyday-page input, .everyday-page select { min-width: 0; width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #a7b3a4; border-radius: 6px; color: #263c32; background: #fff; font-size: 16px; caret-color: #315c48; }
+.everyday-page input::placeholder { color: #687165; }
+.everyday-page button, .everyday-recipe-link { min-height: 46px; padding: 10px 16px; background: #315c48; color: white; border: 1px solid #315c48; border-radius: 6px; font-size: 14px; font-weight: 600; }
+.everyday-page button:hover { background: #264a39; }
+.everyday-page button:disabled { color: #596659; background: #e8ece8; border-color: #cdd4cd; cursor: not-allowed; }
+.everyday-page p { line-height: 1.65; }
+.everyday-destination p, .everyday-restock-note { font-size: 13px; color: var(--everyday-muted); margin: 12px 0 0; }
+.everyday-input-row { display: flex; gap: 8px; }
+.everyday-input-row button { flex-shrink: 0; }
+.everyday-tabs { display: flex; border-bottom: 1px solid var(--border); gap: 24px; }
+.everyday-tabs button { background: transparent; color: var(--text-secondary); border: none; border-bottom: 2px solid transparent; border-radius: 0; padding: 12px 0; }
+.everyday-tabs button[aria-pressed="true"] { color: var(--everyday-ink); border-bottom-color: var(--everyday-ink); }
+.everyday-tabs button:hover { background: transparent; color: var(--everyday-ink); }
+.everyday-feedback { min-height: 28px; padding-top: 12px; font-size: 14px; color: var(--everyday-ink); }
+.everyday-error { color: var(--everyday-error); }
+.everyday-paper { --everyday-ink: #315c48; --everyday-muted: #52614f; --everyday-error: #a53127; margin-top: 16px; padding: 28px; background: #fffdf7; color: #263c32; border: 1px solid #d4daca; }
+.everyday-paper h2 { font: 500 28px/1.2 var(--font-display); margin-bottom: 12px; color: inherit; }
+.everyday-paper > p { color: #43594b; max-width: 64ch; }
+.everyday-pin-form { display: grid; grid-template-columns: minmax(0, 1fr) 90px auto; gap: 12px; align-items: end; margin: 24px 0; }
+.everyday-empty { padding: 24px 0; }
+.everyday-rows { list-style: none; padding: 0; margin: 24px 0 0; }
+.everyday-rows li { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 20px 0; border-bottom: 1px solid #d4daca; }
+.everyday-row-copy { display: flex; flex-direction: column; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+.everyday-row-copy span, .everyday-row-copy time { color: #52614f; font-size: 13px; }
+.everyday-row-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; flex-shrink: 0; max-width: 55%; }
+.everyday-page .everyday-text-button { background: transparent; color: var(--everyday-ink); border: 0; text-decoration: underline; text-underline-offset: 3px; padding: 10px 8px; }
+.everyday-page .everyday-text-button:hover { background: #edf0e7; }
+.everyday-restock { margin-top: 32px; padding-top: 8px; }
+.everyday-restock h3 { color: #263c32; font-size: 18px; }
+.everyday-restock p { color: #43594b; }
+.everyday-page :focus-visible { outline: 2px solid var(--everyday-ink); outline-offset: 3px; }
+.everyday-page ::selection { background: #d7e2cd; color: #263c32; }
+@media (max-width: 540px) {
+  .everyday-page { padding: 24px 20px 112px; }
+  .everyday-paper { padding: 24px 16px; }
+  .everyday-pin-form { grid-template-columns: minmax(0, 1fr) 80px; }
+  .everyday-pin-form > button { grid-column: 1 / -1; }
+  .everyday-rows li { flex-direction: column; align-items: stretch; gap: 12px; }
+  .everyday-row-actions { justify-content: flex-start; max-width: none; }
+  .everyday-tabs { gap: 24px; }
+}
+.everyday-page .everyday-recipe-link { color: #fff; display: inline-flex; align-items: center; text-decoration: none; }
+.everyday-page .everyday-recipe-link:hover { color: #fff; background: #264a39; }
+
+[data-theme="dark"] .everyday-page { --everyday-ink: #99f6e4; --everyday-muted: #d1ded5; --everyday-error: #ffb4a9; }
+
+.everyday-destination .everyday-text-button:hover { background: var(--surface-hover); }
+.everyday-feedback, .everyday-error { overflow-wrap: anywhere; }

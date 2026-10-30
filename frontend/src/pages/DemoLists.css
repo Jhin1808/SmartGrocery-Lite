@@ -46,3 +46,7 @@
   .simple-demo-input-row > input { flex: 1 1 180px; }
   .simple-demo-input-row > button { flex: 1 1 auto; }
 }
+
+.simple-demo-keep { margin-top: 32px; padding-top: 24px; border-top: 1px solid #d4daca; }
+.simple-demo-keep h2 { font-size: 26px; margin-bottom: 12px; }
+.simple-demo-keep p { color: #43594b; margin-bottom: 16px; line-height: 1.65; }
